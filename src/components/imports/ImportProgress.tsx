@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { FileUp, FileSearch, Database, CheckCircle2 } from "lucide-react";
+import { FileUp, FileSearch, Database, CheckCircle2, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ImportProgressProps {
   progress: number;
@@ -9,6 +10,16 @@ interface ImportProgressProps {
   message?: string;
   uploadedBytes?: number;
   totalBytes?: number;
+  estimatedTimeRemaining?: number | null;
+  onCancel?: () => void;
+  canCancel?: boolean;
+}
+
+function formatTimeRemaining(seconds: number | null): string | null {
+  if (seconds === null || seconds <= 0) return null;
+  if (seconds < 60) return `About ${seconds} second${seconds !== 1 ? 's' : ''} remaining`;
+  const minutes = Math.ceil(seconds / 60);
+  return `About ${minutes} minute${minutes !== 1 ? 's' : ''} remaining`;
 }
 
 const stages = [
@@ -32,7 +43,10 @@ export function ImportProgress({
   fileName, 
   message,
   uploadedBytes,
-  totalBytes 
+  totalBytes,
+  estimatedTimeRemaining,
+  onCancel,
+  canCancel
 }: ImportProgressProps) {
   const [displayProgress, setDisplayProgress] = useState(0);
 
@@ -89,6 +103,11 @@ export function ImportProgress({
           {uploadDetails && (
             <span className="text-xs font-mono text-primary font-medium">
               {uploadDetails}
+            </span>
+          )}
+          {stage === 'uploading' && estimatedTimeRemaining && estimatedTimeRemaining > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {formatTimeRemaining(estimatedTimeRemaining)}
             </span>
           )}
         </div>
@@ -165,6 +184,19 @@ export function ImportProgress({
         )}>
           {message}
         </p>
+      )}
+
+      {/* Cancel Button */}
+      {canCancel && onCancel && (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onCancel}
+          className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+        >
+          <XCircle className="mr-2 h-4 w-4" />
+          Cancel Import
+        </Button>
       )}
     </div>
   );
