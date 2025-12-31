@@ -11,6 +11,7 @@ interface ImportProgressProps {
   uploadedBytes?: number;
   totalBytes?: number;
   estimatedTimeRemaining?: number | null;
+  uploadSpeed?: number | null;
   onCancel?: () => void;
   canCancel?: boolean;
 }
@@ -37,6 +38,16 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+function formatSpeed(bytesPerSec: number | null): string | null {
+  if (!bytesPerSec || bytesPerSec <= 0) return null;
+  const mbps = bytesPerSec / (1024 * 1024);
+  if (mbps >= 1) {
+    return `${mbps.toFixed(1)} MB/s`;
+  }
+  const kbps = bytesPerSec / 1024;
+  return `${kbps.toFixed(0)} KB/s`;
+}
+
 export function ImportProgress({ 
   progress, 
   stage, 
@@ -45,6 +56,7 @@ export function ImportProgress({
   uploadedBytes,
   totalBytes,
   estimatedTimeRemaining,
+  uploadSpeed,
   onCancel,
   canCancel
 }: ImportProgressProps) {
@@ -86,7 +98,9 @@ export function ImportProgress({
     if (stage !== 'uploading' || !totalBytes) return null;
     const uploaded = uploadedBytes ?? 0;
     const percent = Math.round((uploaded / totalBytes) * 100);
-    return `${formatBytes(uploaded)} / ${formatBytes(totalBytes)} (${percent}%)`;
+    const speedDisplay = formatSpeed(uploadSpeed);
+    const baseDetails = `${formatBytes(uploaded)} / ${formatBytes(totalBytes)} (${percent}%)`;
+    return speedDisplay ? `${baseDetails} • ${speedDisplay}` : baseDetails;
   };
 
   const uploadDetails = getUploadDetails();
