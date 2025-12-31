@@ -9,6 +9,7 @@ import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
 import { ImportProgress } from "@/components/imports/ImportProgress";
 import { DropZone, FileList } from "@/components/imports/DropZone";
+import { ImportHistoryTable } from "@/components/imports/ImportHistoryTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +35,10 @@ export default function ImportData() {
   const [uploadedBytes, setUploadedBytes] = useState(0);
   const [totalBytes, setTotalBytes] = useState(0);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
+  const [uploadSpeed, setUploadSpeed] = useState<number | null>(null);
   const [activeXhr, setActiveXhr] = useState<XMLHttpRequest | null>(null);
+  const [importHistoryId, setImportHistoryId] = useState<string | null>(null);
+  const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
   const [result, setResult] = useState<{
     type?: 'district' | 'school';
     success?: boolean;
@@ -65,7 +69,7 @@ export default function ImportData() {
     file: File,
     url: string,
     accessToken: string,
-    onProgress: (loaded: number, total: number, estimatedSeconds: number | null) => void,
+    onProgress: (loaded: number, total: number, estimatedSeconds: number | null, speedBytesPerSec: number) => void,
     onXhrCreated: (xhr: XMLHttpRequest) => void
   ): Promise<{ data: any; error: any; cancelled?: boolean }> => {
     return new Promise((resolve) => {
@@ -85,7 +89,7 @@ export default function ImportData() {
           const estimatedSeconds = bytesPerSecond > 0 
             ? Math.ceil(remainingBytes / bytesPerSecond) 
             : null;
-          onProgress(e.loaded, e.total, estimatedSeconds);
+          onProgress(e.loaded, e.total, estimatedSeconds, bytesPerSecond);
         }
       });
 
@@ -117,16 +121,29 @@ export default function ImportData() {
     });
   };
 
-  const handleCancelImport = () => {
+  const handleCancelImport = async () => {
     if (activeXhr) {
       activeXhr.abort();
       setActiveXhr(null);
+    }
+    // Update history record as cancelled
+    if (importHistoryId) {
+      await supabase
+        .from('import_history')
+        .update({
+          status: 'cancelled',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', importHistoryId);
+      setHistoryRefreshTrigger(prev => prev + 1);
     }
     setImporting(false);
     setStage('idle');
     setProgress(0);
     setStageMessage('');
     setEstimatedTimeRemaining(null);
+    setUploadSpeed(null);
+    setImportHistoryId(null);
     toast.info('Import cancelled');
   };
 
@@ -171,13 +188,34 @@ export default function ImportData() {
     setUploadedBytes(0);
     setTotalBytes(0);
     setEstimatedTimeRemaining(null);
+    setUploadSpeed(null);
     setStageMessage('Starting upload...');
     setResult(null);
 
+    const importStartTime = Date.now();
     let totalInserted = 0;
     let totalRows = 0;
     let totalDistricts = 0;
     let lastFormat = '';
+    let currentHistoryId: string | null = null;
+
+    // Create initial history record
+    const { data: historyRecord } = await supabase
+      .from('import_history')
+      .insert({
+        user_id: session.user.id,
+        file_name: schoolFiles.map(f => f.name).join(', '),
+        file_size_bytes: schoolFiles.reduce((sum, f) => sum + f.size, 0),
+        import_type: 'schools',
+        status: 'in_progress',
+      })
+      .select('id')
+      .single();
+
+    if (historyRecord) {
+      currentHistoryId = historyRecord.id;
+      setImportHistoryId(historyRecord.id);
+    }
 
     try {
       for (let i = 0; i < schoolFiles.length; i++) {
@@ -201,9 +239,10 @@ export default function ImportData() {
           file,
           url,
           session.access_token,
-          (loaded, total, estimatedSeconds) => {
+          (loaded, total, estimatedSeconds, speedBytesPerSec) => {
             setUploadedBytes(loaded);
             setEstimatedTimeRemaining(estimatedSeconds);
+            setUploadSpeed(speedBytesPerSec);
             // Upload is 0-40% of each file's share
             const uploadPercent = (loaded / total) * 40;
             setProgress(Math.round(fileProgressBase + (uploadPercent / 100) * fileProgressShare));
@@ -217,6 +256,7 @@ export default function ImportData() {
         }
 
         setActiveXhr(null);
+        setUploadSpeed(null);
         setEstimatedTimeRemaining(null);
 
         // Move to parsing stage (40-60% of file's share)
@@ -261,6 +301,24 @@ export default function ImportData() {
       setProgress(100);
       setStageMessage('Import complete!');
 
+      // Update history record with success
+      if (currentHistoryId) {
+        const durationSeconds = Math.round((Date.now() - importStartTime) / 1000);
+        await supabase
+          .from('import_history')
+          .update({
+            status: 'completed',
+            total_rows: totalRows,
+            rows_inserted: totalInserted,
+            districts_processed: totalDistricts,
+            completed_at: new Date().toISOString(),
+            duration_seconds: durationSeconds,
+            format: lastFormat,
+          })
+          .eq('id', currentHistoryId);
+        setHistoryRefreshTrigger(prev => prev + 1);
+      }
+
       toast.success(`Successfully imported ${totalInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
     } catch (error: any) {
       console.error('Import error:', error);
@@ -268,6 +326,19 @@ export default function ImportData() {
       setStageMessage(error.message || 'Import failed');
       toast.error(error.message || "Import failed");
       setResult({ type: 'school', success: false, errors: [error.message] });
+
+      // Update history record with failure
+      if (currentHistoryId) {
+        await supabase
+          .from('import_history')
+          .update({
+            status: 'failed',
+            error_message: error.message,
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', currentHistoryId);
+        setHistoryRefreshTrigger(prev => prev + 1);
+      }
     } finally {
       setImporting(false);
     }
@@ -383,6 +454,7 @@ export default function ImportData() {
                   uploadedBytes={uploadedBytes}
                   totalBytes={totalBytes}
                   estimatedTimeRemaining={estimatedTimeRemaining}
+                  uploadSpeed={uploadSpeed}
                   onCancel={handleCancelImport}
                   canCancel={stage === 'uploading'}
                 />
@@ -516,6 +588,9 @@ export default function ImportData() {
             </CardContent>
           </Card>
         )}
+
+        {/* Import History */}
+        <ImportHistoryTable refreshTrigger={historyRefreshTrigger} />
 
         {/* Data Management */}
         <Card className="border-destructive/20">

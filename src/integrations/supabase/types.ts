@@ -271,6 +271,75 @@ export type Database = {
         }
         Relationships: []
       }
+      import_history: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          districts_processed: number | null
+          duration_seconds: number | null
+          error_message: string | null
+          expected_total: number | null
+          file_name: string
+          file_size_bytes: number | null
+          format: string | null
+          id: string
+          import_type: string
+          matches_expected: boolean | null
+          rows_inserted: number | null
+          rows_skipped: number | null
+          started_at: string | null
+          state_breakdown: Json | null
+          status: string
+          status_breakdown: Json | null
+          total_rows: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          districts_processed?: number | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          expected_total?: number | null
+          file_name: string
+          file_size_bytes?: number | null
+          format?: string | null
+          id?: string
+          import_type?: string
+          matches_expected?: boolean | null
+          rows_inserted?: number | null
+          rows_skipped?: number | null
+          started_at?: string | null
+          state_breakdown?: Json | null
+          status?: string
+          status_breakdown?: Json | null
+          total_rows?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          districts_processed?: number | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          expected_total?: number | null
+          file_name?: string
+          file_size_bytes?: number | null
+          format?: string | null
+          id?: string
+          import_type?: string
+          matches_expected?: boolean | null
+          rows_inserted?: number | null
+          rows_skipped?: number | null
+          started_at?: string | null
+          state_breakdown?: Json | null
+          status?: string
+          status_breakdown?: Json | null
+          total_rows?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           address: string | null
