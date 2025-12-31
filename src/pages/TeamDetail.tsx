@@ -42,7 +42,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, Building, Calendar, Trophy, Edit } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, Building, Calendar, Trophy, Edit, UserPlus } from "lucide-react";
+import { CoachDelegationDialog } from "@/components/teams/CoachDelegationDialog";
 
 interface Profile {
   id: string;
@@ -71,6 +72,7 @@ export default function TeamDetail() {
 
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [newMember, setNewMember] = useState({
     user_id: "",
     role: "athlete",
@@ -244,6 +246,17 @@ export default function TeamDetail() {
               {team.sports?.name} • {team.seasons?.name}
             </p>
           </div>
+          <Button variant="outline" onClick={() => setIsInviteOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite
+          </Button>
+          <CoachDelegationDialog
+            open={isInviteOpen}
+            onOpenChange={setIsInviteOpen}
+            teamId={id!}
+            teamName={team.name}
+            organizationId={team.organization_id || undefined}
+          />
           <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
