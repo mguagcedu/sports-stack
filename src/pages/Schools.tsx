@@ -9,10 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight, X, ArrowUpDown } from 'lucide-react';
+import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight, X, ArrowUpDown, Download } from 'lucide-react';
+import { convertToCSV, downloadCSV, schoolColumns, generateFilename } from '@/lib/csvExport';
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -23,6 +25,7 @@ const US_STATES = [
 ];
 
 const PAGE_SIZE = 50;
+const EXPORT_BATCH_SIZE = 1000;
 
 interface School {
   id: string;
@@ -55,6 +58,8 @@ export default function Schools() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
   const [page, setPage] = useState(0);
 
   // Get district filter from URL
@@ -262,6 +267,65 @@ export default function Schools() {
     }
   };
 
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    setExportProgress(0);
+    
+    try {
+      const allSchools: School[] = [];
+      let hasMore = true;
+      let offset = 0;
+      
+      while (hasMore) {
+        let query = supabase
+          .from('schools')
+          .select('*')
+          .order('name')
+          .range(offset, offset + EXPORT_BATCH_SIZE - 1);
+        
+        if (searchQuery) query = query.ilike('name', `%${searchQuery}%`);
+        if (stateFilter) query = query.eq('state', stateFilter);
+        if (levelFilter) query = query.eq('level', levelFilter);
+        if (typeFilter) query = query.eq('school_type', typeFilter);
+        if (districtFilter) query = query.eq('district_id', districtFilter);
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allSchools.push(...(data as School[]));
+          offset += EXPORT_BATCH_SIZE;
+          setExportProgress(allSchools.length);
+          hasMore = data.length === EXPORT_BATCH_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+      
+      if (allSchools.length === 0) {
+        toast({ title: 'No data to export', description: 'No schools match the current filters.' });
+        return;
+      }
+      
+      const csv = convertToCSV(allSchools, schoolColumns);
+      downloadCSV(csv, generateFilename('schools'));
+      
+      toast({ 
+        title: 'Export Complete', 
+        description: `Exported ${allSchools.length.toLocaleString()} schools to CSV.` 
+      });
+    } catch (error) {
+      toast({ 
+        title: 'Export Failed', 
+        description: error instanceof Error ? error.message : 'Unknown error', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   return (
     <DashboardLayout title="School Database">
       <div className="space-y-6 animate-fade-in">
@@ -287,6 +351,23 @@ export default function Schools() {
             )}
           </div>
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleExportCSV} 
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {exportProgress > 0 ? `${exportProgress.toLocaleString()}...` : 'Exporting...'}
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </>
+              )}
+            </Button>
             <Button variant="outline" onClick={() => navigate('/import')}>
               <Upload className="mr-2 h-4 w-4" />
               Import CSV
@@ -632,14 +713,21 @@ export default function Schools() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openMaps(school)}
-                            disabled={!school.address && !school.latitude}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openMaps(school)}
+                                  disabled={!school.address && !school.latitude}
+                                >
+                                  <MapPin className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>View on Google Maps</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     ))}

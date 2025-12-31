@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Building2, MapPin, Phone, Globe, Loader2, ChevronRight, GraduationCap } from "lucide-react";
+import { Search, MapPin, Phone, Globe, Loader2, ChevronRight, GraduationCap, Download, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { convertToCSV, downloadCSV, generateFilename } from "@/lib/csvExport";
 
 const US_STATES = [
   { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" }, { code: "AZ", name: "Arizona" },
@@ -32,11 +34,31 @@ const US_STATES = [
   { code: "WI", name: "Wisconsin" }, { code: "WY", name: "Wyoming" }, { code: "DC", name: "District of Columbia" }
 ];
 
+const EXPORT_BATCH_SIZE = 1000;
+
+const districtExportColumns = [
+  { key: 'nces_id', header: 'NCES ID' },
+  { key: 'name', header: 'Name' },
+  { key: 'city', header: 'City' },
+  { key: 'state', header: 'State' },
+  { key: 'address', header: 'Address' },
+  { key: 'zip', header: 'ZIP' },
+  { key: 'phone', header: 'Phone' },
+  { key: 'website', header: 'Website' },
+  { key: 'lea_type_text', header: 'Type' },
+  { key: 'lowest_grade', header: 'Lowest Grade' },
+  { key: 'highest_grade', header: 'Highest Grade' },
+  { key: 'school_count', header: 'School Count' },
+];
+
 export default function Districts() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
   const pageSize = 25;
 
   const { data, isLoading, error } = useQuery({
@@ -73,14 +95,105 @@ export default function Districts() {
 
   const totalPages = Math.ceil((data?.total || 0) / pageSize);
 
+  const openDistrictMaps = (district: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const address = encodeURIComponent(
+      `${district.address || ''}, ${district.city || ''}, ${district.state || ''} ${district.zip || ''}`.trim()
+    );
+    window.open(`https://www.google.com/maps/search/${address}`, '_blank');
+  };
+
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    setExportProgress(0);
+    
+    try {
+      const allDistricts: any[] = [];
+      let hasMore = true;
+      let offset = 0;
+      
+      while (hasMore) {
+        let query = supabase
+          .from('districts')
+          .select('*, schools(count)')
+          .order('name')
+          .range(offset, offset + EXPORT_BATCH_SIZE - 1);
+        
+        if (searchQuery) {
+          query = query.or(`name.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%,nces_id.ilike.%${searchQuery}%`);
+        }
+        if (stateFilter && stateFilter !== "all") {
+          query = query.eq('state', stateFilter);
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const districtsWithCount = data.map((d: any) => ({
+            ...d,
+            school_count: d.schools?.[0]?.count || 0
+          }));
+          allDistricts.push(...districtsWithCount);
+          offset += EXPORT_BATCH_SIZE;
+          setExportProgress(allDistricts.length);
+          hasMore = data.length === EXPORT_BATCH_SIZE;
+        } else {
+          hasMore = false;
+        }
+      }
+      
+      if (allDistricts.length === 0) {
+        toast({ title: 'No data to export', description: 'No districts match the current filters.' });
+        return;
+      }
+      
+      const csv = convertToCSV(allDistricts, districtExportColumns);
+      downloadCSV(csv, generateFilename('districts'));
+      
+      toast({ 
+        title: 'Export Complete', 
+        description: `Exported ${allDistricts.length.toLocaleString()} districts to CSV.` 
+      });
+    } catch (error) {
+      toast({ 
+        title: 'Export Failed', 
+        description: error instanceof Error ? error.message : 'Unknown error', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Districts</h1>
-          <p className="text-muted-foreground">
-            Browse and search {data?.total?.toLocaleString() || '—'} school districts nationwide
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Districts</h1>
+            <p className="text-muted-foreground">
+              Browse and search {data?.total?.toLocaleString() || '—'} school districts nationwide
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleExportCSV} 
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {exportProgress > 0 ? `${exportProgress.toLocaleString()}...` : 'Exporting...'}
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Filters */}
@@ -146,6 +259,7 @@ export default function Districts() {
                         <TableHead>Type</TableHead>
                         <TableHead>Grades</TableHead>
                         <TableHead className="text-right">Schools</TableHead>
+                        <TableHead className="w-[80px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -215,6 +329,22 @@ export default function Districts() {
                                     </p>
                                   </div>
                                 </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => openDistrictMaps(district, e)}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View on Google Maps</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           </TableCell>
