@@ -7,6 +7,8 @@ interface ImportProgressProps {
   stage: 'idle' | 'uploading' | 'parsing' | 'importing' | 'complete' | 'error';
   fileName?: string;
   message?: string;
+  uploadedBytes?: number;
+  totalBytes?: number;
 }
 
 const stages = [
@@ -16,7 +18,22 @@ const stages = [
   { key: 'complete', label: 'Complete', icon: CheckCircle2 },
 ] as const;
 
-export function ImportProgress({ progress, stage, fileName, message }: ImportProgressProps) {
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+export function ImportProgress({ 
+  progress, 
+  stage, 
+  fileName, 
+  message,
+  uploadedBytes,
+  totalBytes 
+}: ImportProgressProps) {
   const [displayProgress, setDisplayProgress] = useState(0);
 
   // Smooth progress animation
@@ -50,13 +67,30 @@ export function ImportProgress({ progress, stage, fileName, message }: ImportPro
 
   if (stage === 'idle') return null;
 
+  // Build upload details string
+  const getUploadDetails = () => {
+    if (stage !== 'uploading' || !totalBytes) return null;
+    const uploaded = uploadedBytes ?? 0;
+    const percent = Math.round((uploaded / totalBytes) * 100);
+    return `${formatBytes(uploaded)} / ${formatBytes(totalBytes)} (${percent}%)`;
+  };
+
+  const uploadDetails = getUploadDetails();
+
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* File info */}
+      {/* File info with upload details */}
       {fileName && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <FileUp className="h-4 w-4" />
-          <span className="truncate">{fileName}</span>
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <FileUp className={cn("h-4 w-4", stage === 'uploading' && "animate-bounce")} />
+            <span className="truncate max-w-[200px]">{fileName}</span>
+          </div>
+          {uploadDetails && (
+            <span className="text-xs font-mono text-primary font-medium">
+              {uploadDetails}
+            </span>
+          )}
         </div>
       )}
 

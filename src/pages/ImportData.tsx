@@ -31,6 +31,8 @@ export default function ImportData() {
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState<ImportStage>('idle');
   const [stageMessage, setStageMessage] = useState('');
+  const [uploadedBytes, setUploadedBytes] = useState(0);
+  const [totalBytes, setTotalBytes] = useState(0);
   const [result, setResult] = useState<{
     type?: 'district' | 'school';
     success?: boolean;
@@ -55,6 +57,48 @@ export default function ImportData() {
   const [clearing, setClearing] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Upload with progress tracking using XMLHttpRequest
+  const uploadWithProgress = (
+    file: File,
+    url: string,
+    accessToken: string,
+    onProgress: (loaded: number, total: number) => void
+  ): Promise<{ data: any; error: any }> => {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      formData.append('file', file);
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          onProgress(e.loaded, e.total);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve({ data: response, error: null });
+          } else {
+            resolve({ data: null, error: { message: response.error || 'Upload failed' } });
+          }
+        } catch {
+          resolve({ data: null, error: { message: 'Invalid response from server' } });
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        resolve({ data: null, error: { message: 'Network error during upload' } });
+      });
+
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+      xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+      xhr.send(formData);
+    });
+  };
 
   // Fetch school count
   useEffect(() => {
@@ -84,10 +128,19 @@ export default function ImportData() {
       return;
     }
 
+    // Get session for auth token
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Please sign in to import data");
+      return;
+    }
+
     setImporting(true);
     setStage('uploading');
-    setProgress(5);
-    setStageMessage('Starting import...');
+    setProgress(0);
+    setUploadedBytes(0);
+    setTotalBytes(0);
+    setStageMessage('Starting upload...');
     setResult(null);
 
     let totalInserted = 0;
@@ -101,30 +154,52 @@ export default function ImportData() {
         const isCSV = file.name.toLowerCase().endsWith('.csv');
         const endpoint = isCSV ? 'import-schools-csv' : 'import-schools';
 
-        setStageMessage(`Processing file ${i + 1} of ${schoolFiles.length}: ${file.name}`);
-        setProgress(Math.round(((i) / schoolFiles.length) * 100));
+        // Reset upload tracking for this file
+        setStage('uploading');
+        setTotalBytes(file.size);
+        setUploadedBytes(0);
+        setStageMessage(`Uploading file ${i + 1} of ${schoolFiles.length}: ${file.name}`);
 
-        const formData = new FormData();
-        formData.append('file', file);
+        // Calculate base progress for this file
+        const fileProgressBase = (i / schoolFiles.length) * 100;
+        const fileProgressShare = 100 / schoolFiles.length;
 
+        // Upload with real-time progress
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`;
+        const response = await uploadWithProgress(
+          file,
+          url,
+          session.access_token,
+          (loaded, total) => {
+            setUploadedBytes(loaded);
+            // Upload is 0-40% of each file's share
+            const uploadPercent = (loaded / total) * 40;
+            setProgress(Math.round(fileProgressBase + (uploadPercent / 100) * fileProgressShare));
+          }
+        );
+
+        // Move to parsing stage (40-60% of file's share)
         setStage('parsing');
-        
-        const response = await supabase.functions.invoke(endpoint, {
-          body: formData,
-        });
+        setStageMessage(`Parsing ${file.name}...`);
+        setProgress(Math.round(fileProgressBase + (40 / 100) * fileProgressShare));
 
         if (response.error) {
           throw new Error(`Error in ${file.name}: ${response.error.message}`);
         }
 
+        // Move to importing stage (60-95% of file's share)
+        setStage('importing');
+        setStageMessage(`Inserting records from ${file.name}...`);
+        setProgress(Math.round(fileProgressBase + (70 / 100) * fileProgressShare));
+
         totalInserted += response.data.schoolsInserted || 0;
         totalRows += response.data.totalRows || 0;
         totalDistricts += response.data.districtsProcessed || 0;
         lastFormat = response.data.format || lastFormat;
-        
+
         // Capture validation data from last response
         if (i === schoolFiles.length - 1) {
-          setResult({ 
+          setResult({
             type: 'school',
             success: true,
             total: totalRows,
@@ -138,15 +213,13 @@ export default function ImportData() {
           });
         }
 
-        setProgress(Math.round(((i + 1) / schoolFiles.length) * 100));
+        setProgress(Math.round(fileProgressBase + fileProgressShare));
       }
 
       setStage('complete');
       setProgress(100);
       setStageMessage('Import complete!');
-      
-      toast.success(`Successfully imported ${totalInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
-      
+
       toast.success(`Successfully imported ${totalInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
     } catch (error: any) {
       console.error('Import error:', error);
@@ -266,6 +339,8 @@ export default function ImportData() {
                 stage={stage}
                 fileName={schoolFiles[0]?.name}
                 message={stageMessage}
+                uploadedBytes={uploadedBytes}
+                totalBytes={totalBytes}
               />
             )}
 
