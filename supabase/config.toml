@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.import-schools]
 verify_jwt = false
+
+[functions.import-schools-csv]
+verify_jwt = false
