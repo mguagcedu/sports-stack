@@ -15,7 +15,17 @@ export type AppRole =
   | 'registrar'
   | 'finance_admin'
   | 'gate_staff'
-  | 'viewer';
+  | 'viewer'
+  | 'superadmin'
+  | 'district_owner'
+  | 'district_admin'
+  | 'district_viewer'
+  | 'school_owner'
+  | 'school_admin'
+  | 'school_viewer'
+  | 'trainer'
+  | 'scorekeeper'
+  | 'finance_clerk';
 
 interface UserRole {
   id: string;
