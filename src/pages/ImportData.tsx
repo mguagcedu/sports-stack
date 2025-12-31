@@ -45,6 +45,8 @@ export default function ImportData() {
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
   const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [currentBatch, setCurrentBatch] = useState<number>(0);
+  const [totalBatches, setTotalBatches] = useState<number>(0);
   const [result, setResult] = useState<{
     type?: 'district' | 'school';
     success?: boolean;
@@ -271,11 +273,13 @@ export default function ImportData() {
         setImportHistoryId(currentHistoryId);
 
         // Split schools into batches
-        const totalBatches = Math.ceil(schools.length / BATCH_SIZE);
+        const batchCount = Math.ceil(schools.length / BATCH_SIZE);
+        setTotalBatches(batchCount);
         setStage('processing');
         setPollingTotalRows(cumulativeTotal);
 
-        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+          setCurrentBatch(batchIndex + 1);
           if (isCancelled) {
             await supabase
               .from('import_history')
@@ -293,10 +297,10 @@ export default function ImportData() {
 
           const overallProgress = 10 + (
             (fileIndex / schoolFiles.length) * 85 +
-            ((batchIndex + 1) / totalBatches) * (85 / schoolFiles.length)
+            ((batchIndex + 1) / batchCount) * (85 / schoolFiles.length)
           );
           setProgress(Math.round(overallProgress));
-          setStageMessage(`File ${fileIndex + 1}/${schoolFiles.length}: Batch ${batchIndex + 1}/${totalBatches} (${(cumulativeInserted + end).toLocaleString()} records)...`);
+          setStageMessage(`File ${fileIndex + 1}/${schoolFiles.length}: Batch ${batchIndex + 1}/${batchCount} (${(cumulativeInserted + end).toLocaleString()} records)...`);
 
           // Send batch to edge function
           const response = await fetch(
@@ -313,8 +317,8 @@ export default function ImportData() {
                 schools: batchSchools,
                 districts: batchDistricts,
                 batchIndex,
-                totalBatches,
-                isLastBatch: batchIndex === totalBatches - 1,
+                totalBatches: batchCount,
+                isLastBatch: batchIndex === batchCount - 1,
               }),
             }
           );
@@ -499,7 +503,7 @@ export default function ImportData() {
                 <ImportProgress 
                   progress={progress} 
                   stage={stage}
-                  fileName={schoolFiles[0]?.name}
+                  fileName={schoolFiles[currentFileIndex]?.name}
                   message={stageMessage}
                   uploadedBytes={uploadedBytes}
                   totalBytes={totalBytes}
@@ -509,6 +513,8 @@ export default function ImportData() {
                   canCancel={stage === 'uploading' || stage === 'processing'}
                   rowsInserted={pollingRowsInserted}
                   totalRows={pollingTotalRows}
+                  currentBatch={currentBatch}
+                  totalBatches={totalBatches}
                 />
               )}
 
