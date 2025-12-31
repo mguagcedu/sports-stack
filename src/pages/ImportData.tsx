@@ -22,6 +22,7 @@ export default function ImportData() {
     total?: number;
     inserted?: number;
     skipped?: number;
+    districtsCreated?: number;
     errors?: string[];
   } | null>(null);
 
@@ -67,7 +68,7 @@ export default function ImportData() {
 
   const handleSchoolImport = async () => {
     if (!schoolFile) {
-      toast.error("Please select a school CSV file");
+      toast.error("Please select a school file");
       return;
     }
 
@@ -135,7 +136,7 @@ export default function ImportData() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Import Data</h1>
           <p className="text-muted-foreground">
-            Import NCES school and district data from CSV files
+            Import NCES school and district data from CSV or Excel files
           </p>
         </div>
 
@@ -204,14 +205,14 @@ export default function ImportData() {
                 Import Schools
               </CardTitle>
               <CardDescription>
-                Upload the NCES School directory CSV file (ccd_sch_029_2425_w_0a_051425.csv)
+                Upload school data (CSV or Excel). Districts will be auto-created from school data.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
                 <Input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={(e) => setSchoolFile(e.target.files?.[0] || null)}
                   disabled={!!importing}
                 />
@@ -227,15 +228,15 @@ export default function ImportData() {
                 <div className="space-y-2">
                   <Progress value={progress} className="h-2" />
                   <p className="text-sm text-muted-foreground">
-                    Importing schools... This may take a few minutes.
+                    Importing schools and auto-creating districts... This may take a few minutes.
                   </p>
                 </div>
               )}
 
               <Alert>
-                <AlertCircle className="h-4 w-4" />
+                <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>
-                  Import districts first to link schools to their districts.
+                  Districts are automatically extracted and created from school data.
                 </AlertDescription>
               </Alert>
 
@@ -282,6 +283,11 @@ export default function ImportData() {
                   <p className="text-sm">
                     <span className="font-medium">Records imported:</span> {result.inserted?.toLocaleString()}
                   </p>
+                  {result.districtsCreated !== undefined && result.districtsCreated > 0 && (
+                    <p className="text-sm">
+                      <span className="font-medium">Districts auto-created:</span> {result.districtsCreated?.toLocaleString()}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">
