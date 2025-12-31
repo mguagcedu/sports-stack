@@ -43,6 +43,10 @@ export default function ImportData() {
     duplicatesRemoved?: number;
     scientificNotationFixed?: number;
     format?: string;
+    statusBreakdown?: Record<string, number>;
+    stateBreakdown?: Record<string, number>;
+    expectedTotal?: number;
+    matchesExpected?: boolean;
   } | null>(null);
 
   // Clear schools state
@@ -117,6 +121,22 @@ export default function ImportData() {
         totalRows += response.data.totalRows || 0;
         totalDistricts += response.data.districtsProcessed || 0;
         lastFormat = response.data.format || lastFormat;
+        
+        // Capture validation data from last response
+        if (i === schoolFiles.length - 1) {
+          setResult({ 
+            type: 'school',
+            success: true,
+            total: totalRows,
+            inserted: totalInserted,
+            districtsCreated: totalDistricts,
+            format: lastFormat,
+            statusBreakdown: response.data.statusBreakdown,
+            stateBreakdown: response.data.stateBreakdown,
+            expectedTotal: response.data.expectedTotal,
+            matchesExpected: response.data.matchesExpected,
+          });
+        }
 
         setProgress(Math.round(((i + 1) / schoolFiles.length) * 100));
       }
@@ -124,15 +144,8 @@ export default function ImportData() {
       setStage('complete');
       setProgress(100);
       setStageMessage('Import complete!');
-
-      setResult({ 
-        type: 'school',
-        success: true,
-        total: totalRows,
-        inserted: totalInserted,
-        districtsCreated: totalDistricts,
-        format: lastFormat,
-      });
+      
+      toast.success(`Successfully imported ${totalInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
       
       toast.success(`Successfully imported ${totalInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
     } catch (error: any) {
@@ -292,13 +305,29 @@ export default function ImportData() {
             <CardContent>
               {result.success ? (
                 <div className="space-y-4">
+                  {/* Validation Banner */}
+                  {result.expectedTotal && (
+                    <Alert className={result.matchesExpected ? "border-success bg-success/10" : "border-warning bg-warning/10"}>
+                      <CheckCircle2 className={`h-4 w-4 ${result.matchesExpected ? "text-success" : "text-warning"}`} />
+                      <AlertTitle>
+                        {result.matchesExpected 
+                          ? "✓ Record count matches CCD official total" 
+                          : "⚠ Record count differs from expected"}
+                      </AlertTitle>
+                      <AlertDescription>
+                        Expected: {result.expectedTotal.toLocaleString()} | 
+                        Imported: {result.inserted?.toLocaleString()}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Rows</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Rows Parsed</p>
                       <p className="text-2xl font-bold">{result.total?.toLocaleString()}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Imported</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Records Inserted</p>
                       <p className="text-2xl font-bold text-success">{result.inserted?.toLocaleString()}</p>
                     </div>
                   </div>
@@ -309,35 +338,51 @@ export default function ImportData() {
                     </p>
                   )}
 
-                  {(result.duplicatesRemoved || result.scientificNotationFixed || result.format) && (
+                  {/* Status Breakdown */}
+                  {result.statusBreakdown && Object.keys(result.statusBreakdown).length > 0 && (
                     <div className="border-t pt-4 mt-4">
-                      <p className="text-sm font-medium mb-2">Auto-Corrections Applied</p>
-                      <div className="space-y-1.5">
-                        {result.format && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-2">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                            Format detected: <span className="font-medium">{result.format}</span>
-                          </p>
-                        )}
-                        {result.duplicatesRemoved !== undefined && result.duplicatesRemoved > 0 && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-2">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                            Duplicates removed: <span className="font-medium">{result.duplicatesRemoved.toLocaleString()}</span>
-                          </p>
-                        )}
-                        {result.scientificNotationFixed !== undefined && result.scientificNotationFixed > 0 && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-2">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                            NCES IDs fixed (scientific notation): <span className="font-medium">{result.scientificNotationFixed.toLocaleString()}</span>
-                          </p>
-                        )}
-                        {result.uniqueSchools !== undefined && (
-                          <p className="text-sm text-muted-foreground flex items-center gap-2">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                            Unique schools: <span className="font-medium">{result.uniqueSchools.toLocaleString()}</span>
-                          </p>
-                        )}
+                      <p className="text-sm font-medium mb-3">Count by SY_STATUS</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {Object.entries(result.statusBreakdown)
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([status, count]) => (
+                            <div key={status} className="flex justify-between items-center p-2 rounded bg-muted/50">
+                              <span className="text-sm truncate">{status || 'Unknown'}</span>
+                              <span className="text-sm font-mono font-medium ml-2">{count.toLocaleString()}</span>
+                            </div>
+                          ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* State Breakdown */}
+                  {result.stateBreakdown && Object.keys(result.stateBreakdown).length > 0 && (
+                    <div className="border-t pt-4 mt-4">
+                      <p className="text-sm font-medium mb-3">Count by State (Top 15)</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        {Object.entries(result.stateBreakdown)
+                          .slice(0, 15)
+                          .map(([state, count]) => (
+                            <div key={state} className="flex justify-between items-center p-2 rounded bg-muted/50">
+                              <span className="text-sm font-medium">{state}</span>
+                              <span className="text-sm font-mono">{count.toLocaleString()}</span>
+                            </div>
+                          ))}
+                      </div>
+                      {Object.keys(result.stateBreakdown).length > 15 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          + {Object.keys(result.stateBreakdown).length - 15} more states
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {result.format && (
+                    <div className="border-t pt-4 mt-4">
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                        Format detected: <span className="font-medium">{result.format}</span>
+                      </p>
                     </div>
                   )}
                 </div>

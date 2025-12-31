@@ -430,61 +430,82 @@ export type Database = {
       schools: {
         Row: {
           address: string | null
+          charter_status: string | null
           city: string | null
           county: string | null
           created_at: string
           district_id: string | null
           id: string
           latitude: number | null
+          lea_id: string | null
           level: string | null
           longitude: number | null
+          magnet_status: string | null
           name: string
           nces_id: string | null
           operational_status: string | null
           phone: string | null
           school_type: string | null
+          school_year: string | null
           state: string | null
+          sy_status: string | null
+          title1_status: string | null
           updated_at: string
+          virtual_status: string | null
           website: string | null
           zip: string | null
         }
         Insert: {
           address?: string | null
+          charter_status?: string | null
           city?: string | null
           county?: string | null
           created_at?: string
           district_id?: string | null
           id?: string
           latitude?: number | null
+          lea_id?: string | null
           level?: string | null
           longitude?: number | null
+          magnet_status?: string | null
           name: string
           nces_id?: string | null
           operational_status?: string | null
           phone?: string | null
           school_type?: string | null
+          school_year?: string | null
           state?: string | null
+          sy_status?: string | null
+          title1_status?: string | null
           updated_at?: string
+          virtual_status?: string | null
           website?: string | null
           zip?: string | null
         }
         Update: {
           address?: string | null
+          charter_status?: string | null
           city?: string | null
           county?: string | null
           created_at?: string
           district_id?: string | null
           id?: string
           latitude?: number | null
+          lea_id?: string | null
           level?: string | null
           longitude?: number | null
+          magnet_status?: string | null
           name?: string
           nces_id?: string | null
           operational_status?: string | null
           phone?: string | null
           school_type?: string | null
+          school_year?: string | null
           state?: string | null
+          sy_status?: string | null
+          title1_status?: string | null
           updated_at?: string
+          virtual_status?: string | null
           website?: string | null
           zip?: string | null
         }
