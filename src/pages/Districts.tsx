@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Building2, MapPin, Phone, Globe, Loader2, ChevronRight } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Search, Building2, MapPin, Phone, Globe, Loader2, ChevronRight, GraduationCap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -182,9 +183,40 @@ export default function Districts() {
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Badge variant={district.school_count > 0 ? "default" : "outline"} className="font-mono">
-                              {district.school_count}
-                            </Badge>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge 
+                                    variant={district.school_count > 0 ? "default" : "outline"} 
+                                    className="font-mono cursor-help"
+                                  >
+                                    <GraduationCap className="h-3 w-3 mr-1" />
+                                    {district.school_count}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-xs">
+                                  <div className="space-y-1">
+                                    <p className="font-semibold">{district.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {district.city}, {district.state}
+                                    </p>
+                                    {district.phone && (
+                                      <p className="text-xs flex items-center gap-1">
+                                        <Phone className="h-3 w-3" /> {district.phone}
+                                      </p>
+                                    )}
+                                    {district.website && (
+                                      <p className="text-xs flex items-center gap-1">
+                                        <Globe className="h-3 w-3" /> {district.website}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-primary pt-1">
+                                      Click to view {district.school_count} school{district.school_count !== 1 ? 's' : ''}
+                                    </p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </TableCell>
                         </TableRow>
                       ))}

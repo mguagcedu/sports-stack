@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight, X, ArrowUpDown } from 'lucide-react';
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -46,9 +46,13 @@ export default function Schools() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
+  const [districtSearchQuery, setDistrictSearchQuery] = useState('');
   const [stateFilter, setStateFilter] = useState<string>('');
   const [levelFilter, setLevelFilter] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>('');
   const [districtFilter, setDistrictFilter] = useState<string>('');
+  const [sortField, setSortField] = useState<string>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [page, setPage] = useState(0);
@@ -91,9 +95,25 @@ export default function Schools() {
     nces_id: ''
   });
 
+  // Search districts for filter
+  const { data: matchingDistricts } = useQuery({
+    queryKey: ['district-search', districtSearchQuery],
+    queryFn: async () => {
+      if (!districtSearchQuery || districtSearchQuery.length < 2) return [];
+      const { data, error } = await supabase
+        .from('districts')
+        .select('id, name, city, state')
+        .ilike('name', `%${districtSearchQuery}%`)
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: districtSearchQuery.length >= 2 && !districtFilter
+  });
+
   // Get total count
   const { data: totalCount } = useQuery({
-    queryKey: ['schools-count', searchQuery, stateFilter, levelFilter, districtFilter],
+    queryKey: ['schools-count', searchQuery, stateFilter, levelFilter, typeFilter, districtFilter],
     queryFn: async () => {
       let query = supabase
         .from('schools')
@@ -108,6 +128,9 @@ export default function Schools() {
       if (levelFilter) {
         query = query.eq('level', levelFilter);
       }
+      if (typeFilter) {
+        query = query.eq('school_type', typeFilter);
+      }
       if (districtFilter) {
         query = query.eq('district_id', districtFilter);
       }
@@ -119,12 +142,12 @@ export default function Schools() {
   });
 
   const { data: schools, isLoading, refetch } = useQuery({
-    queryKey: ['schools', searchQuery, stateFilter, levelFilter, districtFilter, page],
+    queryKey: ['schools', searchQuery, stateFilter, levelFilter, typeFilter, districtFilter, page, sortField, sortOrder],
     queryFn: async () => {
       let query = supabase
         .from('schools')
         .select('*')
-        .order('name')
+        .order(sortField, { ascending: sortOrder === 'asc' })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) {
@@ -135,6 +158,9 @@ export default function Schools() {
       }
       if (levelFilter) {
         query = query.eq('level', levelFilter);
+      }
+      if (typeFilter) {
+        query = query.eq('school_type', typeFilter);
       }
       if (districtFilter) {
         query = query.eq('district_id', districtFilter);
@@ -148,7 +174,25 @@ export default function Schools() {
 
   const clearDistrictFilter = () => {
     setDistrictFilter('');
+    setDistrictSearchQuery('');
     setSearchParams({});
+    setPage(0);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+    setPage(0);
+  };
+
+  const selectDistrict = (districtId: string) => {
+    setDistrictFilter(districtId);
+    setDistrictSearchQuery('');
+    setSearchParams({ district: districtId });
     setPage(0);
   };
 
@@ -396,39 +440,79 @@ export default function Schools() {
         {/* Search and Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search schools by name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search schools by name..."
+                    value={searchQuery}
+                    onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
+                    className="pl-10"
+                  />
+                </div>
+                {!districtFilter && (
+                  <div className="relative flex-1 sm:max-w-xs">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by district name..."
+                      value={districtSearchQuery}
+                      onChange={(e) => setDistrictSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                    {matchingDistricts && matchingDistricts.length > 0 && (
+                      <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
+                        {matchingDistricts.map((d) => (
+                          <button
+                            key={d.id}
+                            className="w-full px-3 py-2 text-left hover:bg-accent text-sm flex flex-col"
+                            onClick={() => selectDistrict(d.id)}
+                          >
+                            <span className="font-medium">{d.name}</span>
+                            <span className="text-xs text-muted-foreground">{d.city}, {d.state}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <Select value={stateFilter || "all"} onValueChange={(value) => setStateFilter(value === "all" ? "" : value)}>
-                <SelectTrigger className="w-full sm:w-32">
-                  <SelectValue placeholder="State" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All States</SelectItem>
-                  {US_STATES.map((state) => (
-                    <SelectItem key={state} value={state}>{state}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={levelFilter || "all"} onValueChange={(value) => setLevelFilter(value === "all" ? "" : value)}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="elementary">Elementary</SelectItem>
-                  <SelectItem value="middle">Middle School</SelectItem>
-                  <SelectItem value="high">High School</SelectItem>
-                  <SelectItem value="k12">K-12</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                <Select value={stateFilter || "all"} onValueChange={(value) => { setStateFilter(value === "all" ? "" : value); setPage(0); }}>
+                  <SelectTrigger className="w-full sm:w-32">
+                    <SelectValue placeholder="State" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All States</SelectItem>
+                    {US_STATES.map((state) => (
+                      <SelectItem key={state} value={state}>{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={levelFilter || "all"} onValueChange={(value) => { setLevelFilter(value === "all" ? "" : value); setPage(0); }}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    <SelectItem value="elementary">Elementary</SelectItem>
+                    <SelectItem value="middle">Middle School</SelectItem>
+                    <SelectItem value="high">High School</SelectItem>
+                    <SelectItem value="k12">K-12</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={typeFilter || "all"} onValueChange={(value) => { setTypeFilter(value === "all" ? "" : value); setPage(0); }}>
+                  <SelectTrigger className="w-full sm:w-32">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="public">Public</SelectItem>
+                    <SelectItem value="private">Private</SelectItem>
+                    <SelectItem value="charter">Charter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -466,10 +550,30 @@ export default function Schools() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Level</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Location</TableHead>
+                      <TableHead>
+                        <Button variant="ghost" size="sm" className="h-8 -ml-3" onClick={() => handleSort('name')}>
+                          Name
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" size="sm" className="h-8 -ml-3" onClick={() => handleSort('level')}>
+                          Level
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" size="sm" className="h-8 -ml-3" onClick={() => handleSort('school_type')}>
+                          Type
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" size="sm" className="h-8 -ml-3" onClick={() => handleSort('city')}>
+                          Location
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        </Button>
+                      </TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
