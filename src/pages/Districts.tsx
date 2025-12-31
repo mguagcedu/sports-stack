@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { convertToCSV, downloadCSV, generateFilename } from "@/lib/csvExport";
+import { formatDistrictName } from "@/lib/formatters";
 
 const US_STATES = [
   { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" }, { code: "AZ", name: "Arizona" },
@@ -293,7 +294,7 @@ export default function Districts() {
                           <TableCell>
                             <div className="space-y-1">
                               <div className="font-medium flex items-center gap-2 group-hover:text-primary transition-colors">
-                                {district.name}
+                                {formatDistrictName(district.name)}
                                 <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                               </div>
                               <div className="text-xs text-muted-foreground">
