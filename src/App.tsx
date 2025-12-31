@@ -5,12 +5,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AIChatbot } from "@/components/chat/AIChatbot";
+import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Schools from "./pages/Schools";
 import Organizations from "./pages/Organizations";
 import Districts from "./pages/Districts";
 import ImportData from "./pages/ImportData";
+import CoachDashboard from "./pages/CoachDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +23,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <ImpersonationBanner />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Dashboard />} />
@@ -29,6 +32,7 @@ const App = () => (
             <Route path="/districts" element={<Districts />} />
             <Route path="/organizations" element={<Organizations />} />
             <Route path="/import" element={<ImportData />} />
+            <Route path="/coach" element={<CoachDashboard />} />
             {/* Placeholder routes */}
             <Route path="/teams" element={<Dashboard />} />
             <Route path="/registrations" element={<Dashboard />} />

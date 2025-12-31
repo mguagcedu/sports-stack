@@ -149,14 +149,14 @@ export default function ImportData() {
                 Import Districts (LEA)
               </CardTitle>
               <CardDescription>
-                Upload the NCES LEA directory CSV file (ccd_lea_029_2425_w_0a_051425.csv)
+                Upload NCES LEA directory (CSV or Excel). Supports flexible column mapping.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
                 <Input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={(e) => setDistrictFile(e.target.files?.[0] || null)}
                   disabled={!!importing}
                 />

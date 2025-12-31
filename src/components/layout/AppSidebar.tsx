@@ -12,7 +12,8 @@ import {
   Database,
   Shield,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  ClipboardList
 } from 'lucide-react';
 import { NavLink as RouterNavLink, useNavigate } from 'react-router-dom';
 import {
@@ -44,6 +45,7 @@ const mainNavItems = [
   { title: 'Dashboard', url: '/', icon: Home },
   { title: 'Organizations', url: '/organizations', icon: Building2 },
   { title: 'Teams', url: '/teams', icon: Users },
+  { title: 'Coach Dashboard', url: '/coach', icon: ClipboardList },
 ];
 
 const managementNavItems = [
@@ -76,6 +78,16 @@ const roleLabels: Record<AppRole, string> = {
   finance_admin: 'Finance Admin',
   gate_staff: 'Gate Staff',
   viewer: 'Viewer',
+  superadmin: 'Superadmin',
+  district_owner: 'District Owner',
+  district_admin: 'District Admin',
+  district_viewer: 'District Viewer',
+  school_owner: 'School Owner',
+  school_admin: 'School Admin',
+  school_viewer: 'School Viewer',
+  trainer: 'Trainer',
+  scorekeeper: 'Scorekeeper',
+  finance_clerk: 'Finance Clerk',
 };
 
 export function AppSidebar() {
