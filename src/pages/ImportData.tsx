@@ -26,9 +26,8 @@ type ImportStage = 'idle' | 'uploading' | 'parsing' | 'importing' | 'complete' |
 
 export default function ImportData() {
   const { isAdmin, loading: rolesLoading } = useUserRoles();
-  const [districtFiles, setDistrictFiles] = useState<File[]>([]);
   const [schoolFiles, setSchoolFiles] = useState<File[]>([]);
-  const [importing, setImporting] = useState<'district' | 'school' | null>(null);
+  const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState<ImportStage>('idle');
   const [stageMessage, setStageMessage] = useState('');
@@ -75,68 +74,13 @@ export default function ImportData() {
     fetchSchoolCount();
   }, [result]); // Refresh after import
 
-  const handleDistrictImport = async () => {
-    if (districtFiles.length === 0) {
-      toast.error("Please select a district CSV file");
-      return;
-    }
-
-    const districtFile = districtFiles[0];
-    setImporting('district');
-    setStage('uploading');
-    setProgress(10);
-    setStageMessage('Uploading file...');
-    setResult(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', districtFile);
-
-      setStage('parsing');
-      setProgress(30);
-      setStageMessage('Parsing district data...');
-      
-      const response = await supabase.functions.invoke('import-districts', {
-        body: formData,
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      setStage('importing');
-      setProgress(70);
-      setStageMessage('Importing to database...');
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      setStage('complete');
-      setProgress(100);
-      setStageMessage('Import complete!');
-
-      setResult({ ...response.data, type: 'district' });
-      
-      if (response.data.success) {
-        toast.success(`Successfully imported ${response.data.inserted} districts`);
-      }
-    } catch (error: any) {
-      console.error('Import error:', error);
-      setStage('error');
-      setStageMessage(error.message || 'Import failed');
-      toast.error(error.message || "Import failed");
-      setResult({ type: 'district', success: false, errors: [error.message] });
-    } finally {
-      setImporting(null);
-    }
-  };
-
   const handleSchoolImport = async () => {
     if (schoolFiles.length === 0) {
       toast.error("Please select school files");
       return;
     }
 
-    setImporting('school');
+    setImporting(true);
     setStage('uploading');
     setProgress(5);
     setStageMessage('Starting import...');
@@ -198,7 +142,7 @@ export default function ImportData() {
       toast.error(error.message || "Import failed");
       setResult({ type: 'school', success: false, errors: [error.message] });
     } finally {
-      setImporting(null);
+      setImporting(false);
     }
   };
 
@@ -236,11 +180,6 @@ export default function ImportData() {
     setResult(null);
   };
 
-  const removeDistrictFile = (index: number) => {
-    setDistrictFiles(prev => prev.filter((_, i) => i !== index));
-    resetImport();
-  };
-
   const removeSchoolFile = (index: number) => {
     setSchoolFiles(prev => prev.filter((_, i) => i !== index));
     resetImport();
@@ -276,132 +215,66 @@ export default function ImportData() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Import Data</h1>
           <p className="text-muted-foreground">
-            Import NCES school and district data from CSV files
+            Import NCES school data from CSV files. Districts are automatically created.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* District Import Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5" />
-                Import Districts (LEA)
-              </CardTitle>
-              <CardDescription>
-                Upload NCES LEA directory CSV file
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <DropZone
-                onFilesSelected={(files) => {
-                  setDistrictFiles(files.slice(0, 1)); // Only 1 file for districts
-                  resetImport();
-                }}
-                accept=".csv"
-                maxFiles={1}
-                disabled={!!importing}
-              />
-              
-              <FileList 
-                files={districtFiles} 
-                onRemove={removeDistrictFile}
-                disabled={!!importing}
-              />
+        {/* School Import Card */}
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Import Schools
+            </CardTitle>
+            <CardDescription>
+              Upload NCES school data CSV files. Districts are automatically created from the school data.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <DropZone
+              onFilesSelected={(files) => {
+                setSchoolFiles(files);
+                resetImport();
+              }}
+              accept=".csv"
+              maxFiles={300}
+              disabled={importing}
+            />
+            
+            <FileList 
+              files={schoolFiles} 
+              onRemove={removeSchoolFile}
+              disabled={importing}
+            />
 
-              {importing === 'district' && (
-                <ImportProgress 
-                  progress={progress} 
-                  stage={stage}
-                  fileName={districtFiles[0]?.name}
-                  message={stageMessage}
-                />
+            {importing && (
+              <ImportProgress 
+                progress={progress} 
+                stage={stage}
+                fileName={schoolFiles[0]?.name}
+                message={stageMessage}
+              />
+            )}
+
+            <Button 
+              onClick={handleSchoolImport} 
+              disabled={schoolFiles.length === 0 || importing}
+              className="w-full"
+            >
+              {importing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import Schools ({schoolFiles.length} file{schoolFiles.length !== 1 ? 's' : ''})
+                </>
               )}
-
-              <Button 
-                onClick={handleDistrictImport} 
-                disabled={districtFiles.length === 0 || !!importing}
-                className="w-full"
-              >
-                {importing === 'district' ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Import Districts
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* School Import Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5" />
-                Import Schools
-              </CardTitle>
-              <CardDescription>
-                Upload school data CSV files. Districts will be auto-created.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <DropZone
-                onFilesSelected={(files) => {
-                  setSchoolFiles(files);
-                  resetImport();
-                }}
-                accept=".csv"
-                maxFiles={300}
-                disabled={!!importing}
-              />
-              
-              <FileList 
-                files={schoolFiles} 
-                onRemove={removeSchoolFile}
-                disabled={!!importing}
-              />
-
-              {importing === 'school' && (
-                <ImportProgress 
-                  progress={progress} 
-                  stage={stage}
-                  fileName={schoolFiles[0]?.name}
-                  message={stageMessage}
-                />
-              )}
-
-              <Alert>
-                <CheckCircle2 className="h-4 w-4" />
-                <AlertDescription>
-                  Use CSV format for large files. Districts are automatically created.
-                </AlertDescription>
-              </Alert>
-
-              <Button 
-                onClick={handleSchoolImport} 
-                disabled={schoolFiles.length === 0 || !!importing}
-                className="w-full"
-              >
-                {importing === 'school' ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Import Schools ({schoolFiles.length} file{schoolFiles.length !== 1 ? 's' : ''})
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Import Results */}
         {result && (
@@ -413,7 +286,7 @@ export default function ImportData() {
                 ) : (
                   <AlertCircle className="h-5 w-5 text-destructive" />
                 )}
-                {result.type === 'school' ? 'School' : 'District'} Import Results
+                Import Results
               </CardTitle>
             </CardHeader>
             <CardContent>
