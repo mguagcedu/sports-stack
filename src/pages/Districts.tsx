@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, MapPin, Phone, Globe, Loader2, ChevronRight, GraduationCap, Download, ExternalLink } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +60,7 @@ export default function Districts() {
   const [page, setPage] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [exportTotal, setExportTotal] = useState(0);
   const pageSize = 25;
 
   const { data, isLoading, error } = useQuery({
@@ -106,6 +108,7 @@ export default function Districts() {
   const handleExportCSV = async () => {
     setIsExporting(true);
     setExportProgress(0);
+    setExportTotal(data?.total || 0);
     
     try {
       const allDistricts: any[] = [];
@@ -164,11 +167,29 @@ export default function Districts() {
     } finally {
       setIsExporting(false);
       setExportProgress(0);
+      setExportTotal(0);
     }
   };
 
   return (
     <DashboardLayout>
+      {/* Export Progress Modal */}
+      {isExporting && exportTotal > 0 && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="w-80">
+            <CardContent className="pt-6 space-y-4">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                <p className="font-medium">Exporting Data</p>
+                <p className="text-sm text-muted-foreground">
+                  Exporting {exportProgress.toLocaleString()} of {exportTotal.toLocaleString()} records
+                </p>
+              </div>
+              <Progress value={(exportProgress / exportTotal) * 100} className="h-2" />
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

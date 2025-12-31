@@ -13,7 +13,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight, X, ArrowUpDown, Download } from 'lucide-react';
+import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight, X, ArrowUpDown, Download, Eye } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { convertToCSV, downloadCSV, schoolColumns, generateFilename } from '@/lib/csvExport';
 
 const US_STATES = [
@@ -60,6 +61,7 @@ export default function Schools() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [exportTotal, setExportTotal] = useState(0);
   const [page, setPage] = useState(0);
 
   // Get district filter from URL
@@ -270,6 +272,7 @@ export default function Schools() {
   const handleExportCSV = async () => {
     setIsExporting(true);
     setExportProgress(0);
+    setExportTotal(totalCount || 0);
     
     try {
       const allSchools: School[] = [];
@@ -323,11 +326,29 @@ export default function Schools() {
     } finally {
       setIsExporting(false);
       setExportProgress(0);
+      setExportTotal(0);
     }
   };
 
   return (
     <DashboardLayout title="School Database">
+      {/* Export Progress Modal */}
+      {isExporting && exportTotal > 0 && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="w-80">
+            <CardContent className="pt-6 space-y-4">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+                <p className="font-medium">Exporting Data</p>
+                <p className="text-sm text-muted-foreground">
+                  Exporting {exportProgress.toLocaleString()} of {exportTotal.toLocaleString()} records
+                </p>
+              </div>
+              <Progress value={(exportProgress / exportTotal) * 100} className="h-2" />
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -663,7 +684,12 @@ export default function Schools() {
                     {schools.map((school) => (
                       <TableRow key={school.id}>
                         <TableCell>
-                          <div className="font-medium">{school.name}</div>
+                          <button
+                            className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                            onClick={() => navigate(`/schools/${school.id}`)}
+                          >
+                            {school.name}
+                          </button>
                           {school.nces_id && (
                             <div className="text-xs text-muted-foreground">
                               NCES: {school.nces_id}
@@ -684,10 +710,15 @@ export default function Schools() {
                           <div className="flex items-start gap-1">
                             <MapPin className="h-3 w-3 mt-1 text-muted-foreground shrink-0" />
                             <div className="text-sm">
-                              {school.city && school.state 
-                                ? `${school.city}, ${school.state}` 
-                                : school.state || '-'}
-                              {school.zip && <span className="text-muted-foreground"> {school.zip}</span>}
+                              {school.address && (
+                                <div>{school.address}</div>
+                              )}
+                              <div className="text-muted-foreground">
+                                {school.city && school.state 
+                                  ? `${school.city}, ${school.state}` 
+                                  : school.state || '-'}
+                                {school.zip && ` ${school.zip}`}
+                              </div>
                             </div>
                           </div>
                         </TableCell>
@@ -713,21 +744,37 @@ export default function Schools() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openMaps(school)}
-                                  disabled={!school.address && !school.latitude}
-                                >
-                                  <MapPin className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>View on Google Maps</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <div className="flex gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => navigate(`/schools/${school.id}`)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View Details</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openMaps(school)}
+                                    disabled={!school.address && !school.latitude}
+                                  >
+                                    <MapPin className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View on Google Maps</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
