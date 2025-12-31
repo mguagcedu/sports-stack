@@ -326,23 +326,23 @@ export default function Schools() {
                   className="pl-10"
                 />
               </div>
-              <Select value={stateFilter} onValueChange={setStateFilter}>
+              <Select value={stateFilter || "all"} onValueChange={(value) => setStateFilter(value === "all" ? "" : value)}>
                 <SelectTrigger className="w-full sm:w-32">
                   <SelectValue placeholder="State" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All States</SelectItem>
+                  <SelectItem value="all">All States</SelectItem>
                   {US_STATES.map((state) => (
                     <SelectItem key={state} value={state}>{state}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={levelFilter} onValueChange={setLevelFilter}>
+              <Select value={levelFilter || "all"} onValueChange={(value) => setLevelFilter(value === "all" ? "" : value)}>
                 <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Levels</SelectItem>
+                  <SelectItem value="all">All Levels</SelectItem>
                   <SelectItem value="elementary">Elementary</SelectItem>
                   <SelectItem value="middle">Middle School</SelectItem>
                   <SelectItem value="high">High School</SelectItem>
