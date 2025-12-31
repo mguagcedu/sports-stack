@@ -1,11 +1,17 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -14,12 +20,38 @@ import {
   Building2, 
   GraduationCap,
   Info,
-  ExternalLink
+  ExternalLink,
+  Pencil,
+  Loader2
 } from 'lucide-react';
+
+const US_STATES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+];
 
 export default function SchoolDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    level: '',
+    school_type: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
+    website: ''
+  });
 
   const { data: school, isLoading, error } = useQuery({
     queryKey: ['school-detail', id],
@@ -55,11 +87,65 @@ export default function SchoolDetail() {
     ? `https://maps.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`
     : null;
 
-  const openInGoogleMaps = () => {
-    if (school?.latitude && school?.longitude) {
-      window.open(`https://www.google.com/maps?q=${school.latitude},${school.longitude}`, '_blank');
-    } else if (fullAddress) {
-      window.open(`https://www.google.com/maps/search/${encodeURIComponent(fullAddress)}`, '_blank');
+  const openEditDialog = () => {
+    if (school) {
+      setEditForm({
+        name: school.name || '',
+        level: school.level || '',
+        school_type: school.school_type || '',
+        address: school.address || '',
+        city: school.city || '',
+        state: school.state || '',
+        zip: school.zip || '',
+        phone: school.phone || '',
+        website: school.website || ''
+      });
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editForm.name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'School name is required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    const { error } = await supabase
+      .from('schools')
+      .update({
+        name: editForm.name.trim(),
+        level: editForm.level || null,
+        school_type: editForm.school_type || null,
+        address: editForm.address || null,
+        city: editForm.city || null,
+        state: editForm.state || null,
+        zip: editForm.zip || null,
+        phone: editForm.phone || null,
+        website: editForm.website || null
+      })
+      .eq('id', id);
+
+    setIsSubmitting(false);
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'School Updated',
+        description: 'School information has been updated successfully.'
+      });
+      setIsEditDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['school-detail', id] });
     }
   };
 
@@ -93,7 +179,13 @@ export default function SchoolDetail() {
               </>
             ) : (
               <>
-                <h1 className="text-2xl font-bold">{school?.name}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold">{school?.name}</h1>
+                  <Button variant="outline" size="sm" onClick={openEditDialog}>
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   {school?.level && (
                     <Badge variant="outline" className="capitalize">{school.level}</Badge>
@@ -169,11 +261,6 @@ export default function SchoolDetail() {
                       </a>
                     </div>
                   )}
-
-                  <Button variant="outline" className="w-full mt-4" onClick={openInGoogleMaps}>
-                    <MapPin className="mr-2 h-4 w-4" />
-                    Open in Google Maps
-                  </Button>
                 </>
               )}
             </CardContent>
@@ -200,7 +287,7 @@ export default function SchoolDetail() {
                     <Button 
                       variant="link" 
                       className="p-0 h-auto text-base font-medium"
-                      onClick={() => navigate(`/schools?district=${school.districts.id}`)}
+                      onClick={() => navigate(`/districts/${school.districts.id}`)}
                     >
                       {school.districts.name}
                     </Button>
@@ -306,6 +393,130 @@ export default function SchoolDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit School</DialogTitle>
+            <DialogDescription>
+              Update school information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="edit-name">School Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-level">Level</Label>
+                <Select
+                  value={editForm.level}
+                  onValueChange={(value) => setEditForm({ ...editForm, level: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="elementary">Elementary</SelectItem>
+                    <SelectItem value="middle">Middle School</SelectItem>
+                    <SelectItem value="high">High School</SelectItem>
+                    <SelectItem value="k12">K-12</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-type">Type</Label>
+                <Select
+                  value={editForm.school_type}
+                  onValueChange={(value) => setEditForm({ ...editForm, school_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Public</SelectItem>
+                    <SelectItem value="private">Private</SelectItem>
+                    <SelectItem value="charter">Charter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="edit-address">Address</Label>
+                <Input
+                  id="edit-address"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-city">City</Label>
+                <Input
+                  id="edit-city"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-state">State</Label>
+                  <Select
+                    value={editForm.state}
+                    onValueChange={(value) => setEditForm({ ...editForm, state: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {US_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-zip">ZIP</Label>
+                  <Input
+                    id="edit-zip"
+                    value={editForm.zip}
+                    onChange={(e) => setEditForm({ ...editForm, zip: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-website">Website</Label>
+                <Input
+                  id="edit-website"
+                  value={editForm.website}
+                  onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

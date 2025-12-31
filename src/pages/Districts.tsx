@@ -288,7 +288,7 @@ export default function Districts() {
                         <TableRow 
                           key={district.id} 
                           className="cursor-pointer hover:bg-primary/5 transition-colors group"
-                          onClick={() => navigate(`/schools?district=${district.id}`)}
+                          onClick={() => navigate(`/districts/${district.id}`)}
                         >
                           <TableCell>
                             <div className="space-y-1">

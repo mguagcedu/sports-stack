@@ -12,6 +12,7 @@ import Schools from "./pages/Schools";
 import SchoolDetail from "./pages/SchoolDetail";
 import Organizations from "./pages/Organizations";
 import Districts from "./pages/Districts";
+import DistrictDetail from "./pages/DistrictDetail";
 import ImportData from "./pages/ImportData";
 import CoachDashboard from "./pages/CoachDashboard";
 import NotFound from "./pages/NotFound";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/schools" element={<Schools />} />
             <Route path="/schools/:id" element={<SchoolDetail />} />
             <Route path="/districts" element={<Districts />} />
+            <Route path="/districts/:id" element={<DistrictDetail />} />
             <Route path="/organizations" element={<Organizations />} />
             <Route path="/import" element={<ImportData />} />
             <Route path="/coach" element={<CoachDashboard />} />
