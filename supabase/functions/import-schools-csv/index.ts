@@ -23,6 +23,13 @@ interface SchoolRow {
   county?: string
   latitude?: number
   longitude?: number
+  // New CCD fields
+  school_year?: string
+  sy_status?: string
+  charter_status?: string
+  magnet_status?: string
+  virtual_status?: string
+  title1_status?: string
 }
 
 // Parse scientific notation like 2.91107E+11 to full integer string
@@ -45,21 +52,6 @@ function detectHeaderlessCSV(firstLine: string): boolean {
   const trimmed = firstLine.trim()
   // Part 2 format starts with school year like "2024-2025"
   return /^\d{4}-\d{4}/.test(trimmed) || /^"\d{4}-\d{4}"/.test(trimmed)
-}
-
-// De-duplicate rows by NCES ID (later entries win)
-function deduplicateByNcesId(rows: SchoolRow[]): { unique: SchoolRow[]; duplicatesRemoved: number } {
-  const uniqueMap = new Map<string, SchoolRow>()
-  for (const row of rows) {
-    if (row.nces_id) {
-      uniqueMap.set(row.nces_id, row)
-    }
-  }
-  const unique = Array.from(uniqueMap.values())
-  return {
-    unique,
-    duplicatesRemoved: rows.length - unique.length
-  }
 }
 
 function parseCSVLine(line: string): string[] {
@@ -107,7 +99,8 @@ function mapPositionalColumns(values: string[]): SchoolRow | null {
   const ncesId = parseScientificNotation(ncesIdRaw)
   const name = cleanValue(values[4])
   
-  if (!ncesId || !name) return null
+  // Only skip if name is completely empty - we want ALL rows
+  if (!name) return null
   
   const districtNcesRaw = values[9] || ''
   const districtNces = parseScientificNotation(districtNcesRaw)
@@ -130,10 +123,16 @@ function mapPositionalColumns(values: string[]): SchoolRow | null {
     county: cleanValue(values[14]),
     latitude: parseFloat(cleanValue(values[22])) || undefined,
     longitude: parseFloat(cleanValue(values[23])) || undefined,
+    school_year: cleanValue(values[0]),
+    sy_status: cleanValue(values[31]),
+    charter_status: cleanValue(values[36]),
+    magnet_status: cleanValue(values[37]),
+    virtual_status: cleanValue(values[38]),
+    title1_status: cleanValue(values[45]),
   }
 }
 
-// Parse CSV with headers (Part 1 format)
+// Parse CSV with headers (Part 1 format) - NO DEDUPLICATION, include ALL rows
 function parseCSVWithHeaders(csvText: string): SchoolRow[] {
   const lines = csvText.split('\n').filter(line => line.trim())
   if (lines.length < 2) return []
@@ -154,12 +153,14 @@ function parseCSVWithHeaders(csvText: string): SchoolRow[] {
   
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i])
-    if (values.length < 10) continue
+    if (values.length < 5) continue
     
-    const ncesId = parseScientificNotation(getValue(values, 'NCESSCH') || getValue(values, 'NCES_ID') || getValue(values, 'SCHOOLID'))
     const name = getValue(values, 'SCH_NAME') || getValue(values, 'SCHOOL_NAME') || getValue(values, 'NAME')
     
-    if (!ncesId || !name) continue
+    // Only skip if name is completely empty - we want ALL rows
+    if (!name) continue
+    
+    const ncesId = parseScientificNotation(getValue(values, 'NCESSCH') || getValue(values, 'NCES_ID') || getValue(values, 'SCHOOLID'))
     
     rows.push({
       nces_id: ncesId,
@@ -179,6 +180,12 @@ function parseCSVWithHeaders(csvText: string): SchoolRow[] {
       county: getValue(values, 'CNTY') || getValue(values, 'COUNTY'),
       latitude: parseFloat(getValue(values, 'LAT')) || undefined,
       longitude: parseFloat(getValue(values, 'LON')) || undefined,
+      school_year: getValue(values, 'SCHOOL_YEAR') || getValue(values, 'SY_YEAR'),
+      sy_status: getValue(values, 'SY_STATUS') || getValue(values, 'SY_STATUS_TEXT'),
+      charter_status: getValue(values, 'CHARTER') || getValue(values, 'CHARTER_TEXT'),
+      magnet_status: getValue(values, 'MAGNET') || getValue(values, 'MAGNET_TEXT'),
+      virtual_status: getValue(values, 'VIRTUAL') || getValue(values, 'VIRTUAL_TEXT'),
+      title1_status: getValue(values, 'TITLE1_STATUS') || getValue(values, 'TITLE_I_ELIGIBLE'),
     })
   }
   
@@ -289,7 +296,7 @@ Deno.serve(async (req) => {
       schools = parseCSVWithHeaders(csvText)
     }
     
-    console.log(`Parsed ${schools.length} schools`)
+    console.log(`Parsed ${schools.length} schools - NO DEDUPLICATION, inserting ALL rows`)
 
     if (schools.length === 0) {
       return new Response(JSON.stringify({ error: 'No valid school data found in CSV' }), {
@@ -298,13 +305,9 @@ Deno.serve(async (req) => {
       })
     }
 
-    // De-duplicate all schools by NCES ID
-    const { unique: uniqueSchools, duplicatesRemoved: totalDuplicates } = deduplicateByNcesId(schools)
-    console.log(`De-duplicated: ${uniqueSchools.length} unique schools, ${totalDuplicates} duplicates removed`)
-
-    // Extract and upsert districts first
+    // Extract and upsert districts first (districts CAN be deduplicated)
     const districtMap = new Map<string, { name: string, state: string, state_name: string }>()
-    for (const row of uniqueSchools) {
+    for (const row of schools) {
       if (row.district_nces_id && !districtMap.has(row.district_nces_id)) {
         districtMap.set(row.district_nces_id, {
           name: row.district_name,
@@ -346,24 +349,35 @@ Deno.serve(async (req) => {
     
     const districtIdMap = new Map(districts?.map(d => [d.nces_id, d.id]) || [])
 
-    // Prepare and upsert schools in batches with deduplication per batch
-    const SCHOOL_BATCH_SIZE = 500
+    // INSERT schools in batches - NO DEDUPLICATION, each row creates a new record
+    const SCHOOL_BATCH_SIZE = 1000
     let inserted = 0
     let errors = 0
+    const statusCounts: Record<string, number> = {}
+    const stateCounts: Record<string, number> = {}
 
-    for (let i = 0; i < uniqueSchools.length; i += SCHOOL_BATCH_SIZE) {
-      const batch = uniqueSchools.slice(i, i + SCHOOL_BATCH_SIZE)
+    console.log(`Inserting ${schools.length} schools (no deduplication)...`)
+
+    for (let i = 0; i < schools.length; i += SCHOOL_BATCH_SIZE) {
+      const batch = schools.slice(i, i + SCHOOL_BATCH_SIZE)
       
-      // De-duplicate within batch to prevent "ON CONFLICT DO UPDATE cannot affect row a second time"
-      const { unique: uniqueBatch } = deduplicateByNcesId(batch)
+      // Track status and state counts
+      for (const row of batch) {
+        const status = row.sy_status || row.operational_status || 'Unknown'
+        statusCounts[status] = (statusCounts[status] || 0) + 1
+        
+        const state = row.state || 'Unknown'
+        stateCounts[state] = (stateCounts[state] || 0) + 1
+      }
       
-      const schoolData = uniqueBatch.map(row => ({
-        nces_id: row.nces_id,
+      const schoolData = batch.map(row => ({
+        // Let Supabase auto-generate UUID for id
+        nces_id: row.nces_id || null,
         name: row.name,
-        state: row.state,
-        city: row.city,
-        address: row.address,
-        zip: row.zip,
+        state: row.state || null,
+        city: row.city || null,
+        address: row.address || null,
+        zip: row.zip || null,
         phone: row.phone || null,
         website: row.website || null,
         level: row.level || null,
@@ -373,37 +387,55 @@ Deno.serve(async (req) => {
         county: row.county || null,
         latitude: row.latitude || null,
         longitude: row.longitude || null,
+        // New CCD fields
+        school_year: row.school_year || null,
+        sy_status: row.sy_status || null,
+        charter_status: row.charter_status || null,
+        magnet_status: row.magnet_status || null,
+        virtual_status: row.virtual_status || null,
+        title1_status: row.title1_status || null,
+        lea_id: row.district_nces_id || null,
       }))
       
+      // Use INSERT instead of UPSERT - every row creates a new record
       const { error: schoolError } = await supabase
         .from('schools')
-        .upsert(schoolData, { onConflict: 'nces_id' })
+        .insert(schoolData)
       
       if (schoolError) {
         console.error(`School batch ${Math.floor(i / SCHOOL_BATCH_SIZE) + 1} error:`, schoolError)
-        errors += uniqueBatch.length
+        errors += batch.length
       } else {
-        inserted += uniqueBatch.length
+        inserted += batch.length
       }
       
-      if ((i + SCHOOL_BATCH_SIZE) % 5000 === 0 || i + SCHOOL_BATCH_SIZE >= uniqueSchools.length) {
-        console.log(`Progress: ${Math.min(i + SCHOOL_BATCH_SIZE, uniqueSchools.length)}/${uniqueSchools.length} schools`)
+      if ((i + SCHOOL_BATCH_SIZE) % 10000 === 0 || i + SCHOOL_BATCH_SIZE >= schools.length) {
+        console.log(`Progress: ${Math.min(i + SCHOOL_BATCH_SIZE, schools.length)}/${schools.length} schools`)
       }
     }
+
+    // Sort state counts for display
+    const sortedStates = Object.entries(stateCounts)
+      .sort((a, b) => b[1] - a[1])
 
     const result = {
       success: true,
       totalRows: schools.length,
-      uniqueSchools: uniqueSchools.length,
-      duplicatesRemoved: totalDuplicates,
-      scientificNotationFixed,
-      districtsProcessed,
       schoolsInserted: inserted,
       errors,
+      districtsProcessed,
+      scientificNotationFixed,
       format: isHeaderless ? 'headerless (Part 2)' : 'with headers (Part 1)',
+      // Validation data
+      statusBreakdown: statusCounts,
+      stateBreakdown: Object.fromEntries(sortedStates),
+      expectedTotal: 101333,
+      matchesExpected: schools.length === 101333,
     }
 
     console.log(`Import complete:`, result)
+    console.log(`Status breakdown:`, statusCounts)
+    console.log(`Total by state (top 10):`, sortedStates.slice(0, 10))
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
