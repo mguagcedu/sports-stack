@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -34,6 +33,26 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Calendar, MapPin, Ticket, Clock } from "lucide-react";
 import { format } from "date-fns";
 
+interface EventWithTeams {
+  id: string;
+  organization_id: string;
+  name: string;
+  event_type: string;
+  start_time: string;
+  end_time: string | null;
+  venue_name: string | null;
+  venue_address: string | null;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  ticket_price: number;
+  max_capacity: number | null;
+  tickets_sold: number | null;
+  is_cancelled: boolean | null;
+  organizations?: { name: string };
+  home_team_name?: string;
+  away_team_name?: string;
+}
+
 export default function Events() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -54,22 +73,41 @@ export default function Events() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   const { data: events, isLoading } = useQuery({
     queryKey: ["events"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: eventsData, error } = await supabase
         .from("events")
         .select(`
           *,
-          organizations(name),
-          home_team:home_team_id(name),
-          away_team:away_team_id(name)
+          organizations(name)
         `)
         .order("start_time", { ascending: true });
       if (error) throw error;
-      return data;
+
+      // Fetch team names separately
+      if (eventsData && eventsData.length > 0) {
+        const teamIds = [
+          ...eventsData.map(e => e.home_team_id).filter(Boolean),
+          ...eventsData.map(e => e.away_team_id).filter(Boolean)
+        ] as string[];
+
+        if (teamIds.length > 0) {
+          const { data: teams } = await supabase
+            .from("teams")
+            .select("id, name")
+            .in("id", teamIds);
+
+          const teamMap = new Map(teams?.map(t => [t.id, t.name]) || []);
+          return eventsData.map(e => ({
+            ...e,
+            home_team_name: e.home_team_id ? teamMap.get(e.home_team_id) : undefined,
+            away_team_name: e.away_team_id ? teamMap.get(e.away_team_id) : undefined
+          })) as EventWithTeams[];
+        }
+      }
+      return eventsData as EventWithTeams[];
     },
   });
 
@@ -437,9 +475,9 @@ export default function Events() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {event.home_team || event.away_team ? (
+                      {event.home_team_name || event.away_team_name ? (
                         <div className="text-sm">
-                          {event.home_team?.name || "TBD"} vs {event.away_team?.name || "TBD"}
+                          {event.home_team_name || "TBD"} vs {event.away_team_name || "TBD"}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>

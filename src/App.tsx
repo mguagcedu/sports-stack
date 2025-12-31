@@ -18,6 +18,14 @@ import CoachDashboard from "./pages/CoachDashboard";
 import Sports from "./pages/Sports";
 import Seasons from "./pages/Seasons";
 import Users from "./pages/Users";
+import Teams from "./pages/Teams";
+import TeamDetail from "./pages/TeamDetail";
+import Registrations from "./pages/Registrations";
+import Events from "./pages/Events";
+import Payments from "./pages/Payments";
+import Settings from "./pages/Settings";
+import Reports from "./pages/Reports";
+import AuditLogs from "./pages/AuditLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,15 +52,19 @@ const App = () => (
             <Route path="/sports" element={<Sports />} />
             <Route path="/seasons" element={<Seasons />} />
             <Route path="/users" element={<Users />} />
+            {/* Priority 2: Teams */}
+            <Route path="/teams" element={<Teams />} />
+            <Route path="/teams/:id" element={<TeamDetail />} />
+            {/* Priority 3: Operations */}
+            <Route path="/registrations" element={<Registrations />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/payments" element={<Payments />} />
+            {/* Priority 4: Admin */}
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
             {/* Placeholder routes */}
-            <Route path="/teams" element={<Dashboard />} />
-            <Route path="/registrations" element={<Dashboard />} />
-            <Route path="/payments" element={<Dashboard />} />
-            <Route path="/events" element={<Dashboard />} />
             <Route path="/messages" element={<Dashboard />} />
-            <Route path="/reports" element={<Dashboard />} />
-            <Route path="/audit-logs" element={<Dashboard />} />
-            <Route path="/settings" element={<Dashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

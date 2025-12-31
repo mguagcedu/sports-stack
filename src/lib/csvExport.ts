@@ -110,3 +110,16 @@ export function generateFilename(prefix: string): string {
   const date = new Date().toISOString().split('T')[0];
   return `${prefix}-${date}.csv`;
 }
+
+/**
+ * Simple export to CSV from an array of objects
+ * Automatically extracts headers from object keys
+ */
+export function exportToCSV<T extends Record<string, any>>(data: T[], filename: string): void {
+  if (!data.length) return;
+  
+  const headers = Object.keys(data[0]);
+  const columns: ColumnConfig[] = headers.map(key => ({ key, header: key }));
+  const csvContent = convertToCSV(data, columns);
+  downloadCSV(csvContent, filename);
+}

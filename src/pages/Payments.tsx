@@ -26,6 +26,27 @@ import { format } from "date-fns";
 import { exportToCSV } from "@/lib/csvExport";
 import { useToast } from "@/hooks/use-toast";
 
+interface Profile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
+interface Payment {
+  id: string;
+  organization_id: string;
+  user_id: string | null;
+  amount: number;
+  currency: string;
+  payment_type: string;
+  status: string;
+  description: string | null;
+  created_at: string;
+  organizations?: { name: string };
+  profile?: Profile;
+}
+
 export default function Payments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -35,21 +56,37 @@ export default function Payments() {
   const { data: payments, isLoading } = useQuery({
     queryKey: ["payments"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: paymentsData, error } = await supabase
         .from("payments")
         .select(`
           *,
-          organizations(name),
-          profiles:user_id(first_name, last_name, email)
+          organizations(name)
         `)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+
+      // Fetch profiles separately
+      if (paymentsData && paymentsData.length > 0) {
+        const userIds = paymentsData.map(p => p.user_id).filter(Boolean) as string[];
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name, email")
+            .in("id", userIds);
+
+          const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+          return paymentsData.map(p => ({
+            ...p,
+            profile: p.user_id ? profileMap.get(p.user_id) : undefined
+          })) as Payment[];
+        }
+      }
+      return paymentsData as Payment[];
     },
   });
 
   const filteredPayments = payments?.filter((payment) => {
-    const payerName = `${payment.profiles?.first_name || ""} ${payment.profiles?.last_name || ""}`.toLowerCase();
+    const payerName = `${payment.profile?.first_name || ""} ${payment.profile?.last_name || ""}`.toLowerCase();
     const matchesSearch = payerName.includes(searchTerm.toLowerCase()) ||
       payment.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.organizations?.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -106,8 +143,8 @@ export default function Payments() {
 
     const exportData = filteredPayments.map((p) => ({
       Date: format(new Date(p.created_at), "yyyy-MM-dd HH:mm"),
-      Payer: `${p.profiles?.first_name || ""} ${p.profiles?.last_name || ""}`.trim() || "N/A",
-      Email: p.profiles?.email || "N/A",
+      Payer: `${p.profile?.first_name || ""} ${p.profile?.last_name || ""}`.trim() || "N/A",
+      Email: p.profile?.email || "N/A",
       Organization: p.organizations?.name || "N/A",
       Type: p.payment_type,
       Description: p.description || "",
@@ -249,9 +286,9 @@ export default function Payments() {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">
-                        {payment.profiles?.first_name} {payment.profiles?.last_name}
+                        {payment.profile?.first_name} {payment.profile?.last_name}
                       </div>
-                      <div className="text-xs text-muted-foreground">{payment.profiles?.email}</div>
+                      <div className="text-xs text-muted-foreground">{payment.profile?.email}</div>
                     </TableCell>
                     <TableCell>{payment.organizations?.name || "-"}</TableCell>
                     <TableCell>{getTypeBadge(payment.payment_type)}</TableCell>

@@ -30,13 +30,38 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Search, CheckCircle, XCircle, Clock, Users, FileText } from "lucide-react";
+import { Search, CheckCircle, XCircle, Clock, FileText } from "lucide-react";
 import { format } from "date-fns";
+
+interface Profile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
+interface Registration {
+  id: string;
+  team_id: string;
+  athlete_user_id: string;
+  parent_user_id: string | null;
+  status: string;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  medical_notes: string | null;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  notes: string | null;
+  teams?: { name: string; sports?: { name: string }; seasons?: { name: string } };
+  athlete?: Profile;
+  parent?: Profile;
+}
 
 export default function Registrations() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
+  const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
 
   const { toast } = useToast();
@@ -45,17 +70,34 @@ export default function Registrations() {
   const { data: registrations, isLoading } = useQuery({
     queryKey: ["registrations"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: regsData, error } = await supabase
         .from("registrations")
         .select(`
           *,
-          teams(name, sports(name), seasons(name)),
-          athlete:athlete_user_id(first_name, last_name, email),
-          parent:parent_user_id(first_name, last_name, email)
+          teams(name, sports(name), seasons(name))
         `)
         .order("submitted_at", { ascending: false });
       if (error) throw error;
-      return data;
+
+      // Fetch profiles separately
+      if (regsData && regsData.length > 0) {
+        const athleteIds = regsData.map(r => r.athlete_user_id);
+        const parentIds = regsData.map(r => r.parent_user_id).filter(Boolean) as string[];
+        const allUserIds = [...new Set([...athleteIds, ...parentIds])];
+
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, email")
+          .in("id", allUserIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        return regsData.map(r => ({
+          ...r,
+          athlete: profileMap.get(r.athlete_user_id),
+          parent: r.parent_user_id ? profileMap.get(r.parent_user_id) : undefined
+        })) as Registration[];
+      }
+      return regsData as Registration[];
     },
   });
 
