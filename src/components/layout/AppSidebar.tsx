@@ -55,6 +55,8 @@ const managementNavItems = [
 
 const adminNavItems = [
   { title: 'School Database', url: '/schools', icon: GraduationCap },
+  { title: 'Districts', url: '/districts', icon: Building2 },
+  { title: 'Import Data', url: '/import', icon: Database },
   { title: 'User Management', url: '/users', icon: Users },
   { title: 'Reports', url: '/reports', icon: BarChart3 },
   { title: 'Audit Logs', url: '/audit-logs', icon: Database },

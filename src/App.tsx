@@ -8,6 +8,8 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Schools from "./pages/Schools";
 import Organizations from "./pages/Organizations";
+import Districts from "./pages/Districts";
+import ImportData from "./pages/ImportData";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +25,9 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/schools" element={<Schools />} />
+            <Route path="/districts" element={<Districts />} />
             <Route path="/organizations" element={<Organizations />} />
+            <Route path="/import" element={<ImportData />} />
             {/* Placeholder routes */}
             <Route path="/teams" element={<Dashboard />} />
             <Route path="/registrations" element={<Dashboard />} />
