@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 
-type ImportStage = 'idle' | 'uploading' | 'parsing' | 'importing' | 'complete' | 'error';
+type ImportStage = 'idle' | 'uploading' | 'parsing' | 'importing' | 'processing' | 'complete' | 'error';
 
 export default function ImportData() {
   const { isAdmin, loading: rolesLoading } = useUserRoles();
@@ -39,6 +39,8 @@ export default function ImportData() {
   const [activeXhr, setActiveXhr] = useState<XMLHttpRequest | null>(null);
   const [importHistoryId, setImportHistoryId] = useState<string | null>(null);
   const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
+  const [pollingRowsInserted, setPollingRowsInserted] = useState<number>(0);
+  const [pollingTotalRows, setPollingTotalRows] = useState<number>(0);
   const [result, setResult] = useState<{
     type?: 'district' | 'school';
     success?: boolean;
@@ -70,12 +72,16 @@ export default function ImportData() {
     url: string,
     accessToken: string,
     onProgress: (loaded: number, total: number, estimatedSeconds: number | null, speedBytesPerSec: number) => void,
-    onXhrCreated: (xhr: XMLHttpRequest) => void
+    onXhrCreated: (xhr: XMLHttpRequest) => void,
+    historyId?: string
   ): Promise<{ data: any; error: any; cancelled?: boolean }> => {
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
       const formData = new FormData();
       formData.append('file', file);
+      if (historyId) {
+        formData.append('historyId', historyId);
+      }
       const startTime = Date.now();
 
       // Expose XHR for cancellation
@@ -191,13 +197,8 @@ export default function ImportData() {
     setUploadSpeed(null);
     setStageMessage('Starting upload...');
     setResult(null);
-
-    const importStartTime = Date.now();
-    let totalInserted = 0;
-    let totalRows = 0;
-    let totalDistricts = 0;
-    let lastFormat = '';
-    let currentHistoryId: string | null = null;
+    setPollingRowsInserted(0);
+    setPollingTotalRows(0);
 
     // Create initial history record
     const { data: historyRecord } = await supabase
@@ -207,119 +208,136 @@ export default function ImportData() {
         file_name: schoolFiles.map(f => f.name).join(', '),
         file_size_bytes: schoolFiles.reduce((sum, f) => sum + f.size, 0),
         import_type: 'schools',
-        status: 'in_progress',
+        status: 'uploading',
       })
       .select('id')
       .single();
 
-    if (historyRecord) {
-      currentHistoryId = historyRecord.id;
-      setImportHistoryId(historyRecord.id);
+    if (!historyRecord) {
+      toast.error("Failed to create import history record");
+      setImporting(false);
+      return;
     }
 
+    const currentHistoryId = historyRecord.id;
+    setImportHistoryId(currentHistoryId);
+
     try {
-      for (let i = 0; i < schoolFiles.length; i++) {
-        const file = schoolFiles[i];
-        const isCSV = file.name.toLowerCase().endsWith('.csv');
-        const endpoint = isCSV ? 'import-schools-csv' : 'import-schools';
+      // We only process one file at a time for background processing
+      const file = schoolFiles[0];
+      const isCSV = file.name.toLowerCase().endsWith('.csv');
+      const endpoint = isCSV ? 'import-schools-csv' : 'import-schools';
 
-        // Reset upload tracking for this file
-        setStage('uploading');
-        setTotalBytes(file.size);
-        setUploadedBytes(0);
-        setStageMessage(`Uploading file ${i + 1} of ${schoolFiles.length}: ${file.name}`);
+      setTotalBytes(file.size);
+      setStageMessage(`Uploading: ${file.name}`);
 
-        // Calculate base progress for this file
-        const fileProgressBase = (i / schoolFiles.length) * 100;
-        const fileProgressShare = 100 / schoolFiles.length;
+      // Create form data with historyId
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('historyId', currentHistoryId);
 
-        // Upload with real-time progress
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`;
-        const response = await uploadWithProgress(
-          file,
-          url,
-          session.access_token,
-          (loaded, total, estimatedSeconds, speedBytesPerSec) => {
-            setUploadedBytes(loaded);
-            setEstimatedTimeRemaining(estimatedSeconds);
-            setUploadSpeed(speedBytesPerSec);
-            // Upload is 0-40% of each file's share
-            const uploadPercent = (loaded / total) * 40;
-            setProgress(Math.round(fileProgressBase + (uploadPercent / 100) * fileProgressShare));
-          },
-          (xhr) => setActiveXhr(xhr)
-        );
+      // Upload with progress
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`;
+      const response = await uploadWithProgress(
+        file,
+        url,
+        session.access_token,
+        (loaded, total, estimatedSeconds, speedBytesPerSec) => {
+          setUploadedBytes(loaded);
+          setEstimatedTimeRemaining(estimatedSeconds);
+          setUploadSpeed(speedBytesPerSec);
+          setProgress(Math.round((loaded / total) * 30)); // Upload is 0-30%
+        },
+        (xhr) => setActiveXhr(xhr),
+        currentHistoryId // Pass historyId to include in form data
+      );
 
-        // Check if cancelled
-        if (response.cancelled) {
+      if (response.cancelled) {
+        return;
+      }
+
+      setActiveXhr(null);
+      setUploadSpeed(null);
+      setEstimatedTimeRemaining(null);
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      // Switch to processing stage and start polling
+      setStage('processing');
+      setProgress(35);
+      setStageMessage('Processing in background...');
+
+      // Poll for completion
+      const pollInterval = setInterval(async () => {
+        const { data: history, error: pollError } = await supabase
+          .from('import_history')
+          .select('*')
+          .eq('id', currentHistoryId)
+          .single();
+
+        if (pollError) {
+          console.error('Polling error:', pollError);
           return;
         }
 
-        setActiveXhr(null);
-        setUploadSpeed(null);
-        setEstimatedTimeRemaining(null);
+        if (history) {
+          const inserted = history.rows_inserted || 0;
+          const total = history.total_rows || 0;
+          
+          setPollingRowsInserted(inserted);
+          setPollingTotalRows(total);
+          
+          if (total > 0) {
+            // Progress: 35% + (inserted/total * 60%) = up to 95%
+            const processingProgress = 35 + Math.round((inserted / total) * 60);
+            setProgress(Math.min(processingProgress, 95));
+          }
 
-        // Move to parsing stage (40-60% of file's share)
-        setStage('parsing');
-        setStageMessage(`Parsing ${file.name}...`);
-        setProgress(Math.round(fileProgressBase + (40 / 100) * fileProgressShare));
+          setStageMessage(`Processing: ${inserted.toLocaleString()} / ${total.toLocaleString()} records...`);
 
-        if (response.error) {
-          throw new Error(`Error in ${file.name}: ${response.error.message}`);
+          if (history.status === 'completed') {
+            clearInterval(pollInterval);
+            setStage('complete');
+            setProgress(100);
+            setStageMessage('Import complete!');
+            setHistoryRefreshTrigger(prev => prev + 1);
+            
+            setResult({
+              type: 'school',
+              success: true,
+              total: history.total_rows,
+              inserted: history.rows_inserted,
+              districtsCreated: history.districts_processed,
+              format: history.format,
+              statusBreakdown: history.status_breakdown as Record<string, number>,
+              stateBreakdown: history.state_breakdown as Record<string, number>,
+            });
+            
+            toast.success(`Successfully imported ${history.rows_inserted?.toLocaleString()} schools`);
+            setImporting(false);
+          } else if (history.status === 'failed') {
+            clearInterval(pollInterval);
+            setStage('error');
+            setStageMessage(history.error_message || 'Import failed');
+            setHistoryRefreshTrigger(prev => prev + 1);
+            toast.error(history.error_message || 'Import failed');
+            setResult({ type: 'school', success: false, errors: [history.error_message || 'Unknown error'] });
+            setImporting(false);
+          } else if (history.status === 'cancelled') {
+            clearInterval(pollInterval);
+            setStage('idle');
+            setHistoryRefreshTrigger(prev => prev + 1);
+            toast.info('Import cancelled');
+            setImporting(false);
+          }
         }
+      }, 2000); // Poll every 2 seconds
 
-        // Move to importing stage (60-95% of file's share)
-        setStage('importing');
-        setStageMessage(`Inserting records from ${file.name}...`);
-        setProgress(Math.round(fileProgressBase + (70 / 100) * fileProgressShare));
+      // Store interval ID for cleanup
+      return () => clearInterval(pollInterval);
 
-        totalInserted += response.data.schoolsInserted || 0;
-        totalRows += response.data.totalRows || 0;
-        totalDistricts += response.data.districtsProcessed || 0;
-        lastFormat = response.data.format || lastFormat;
-
-        // Capture validation data from last response
-        if (i === schoolFiles.length - 1) {
-          setResult({
-            type: 'school',
-            success: true,
-            total: totalRows,
-            inserted: totalInserted,
-            districtsCreated: totalDistricts,
-            format: lastFormat,
-            statusBreakdown: response.data.statusBreakdown,
-            stateBreakdown: response.data.stateBreakdown,
-            expectedTotal: response.data.expectedTotal,
-            matchesExpected: response.data.matchesExpected,
-          });
-        }
-
-        setProgress(Math.round(fileProgressBase + fileProgressShare));
-      }
-
-      setStage('complete');
-      setProgress(100);
-      setStageMessage('Import complete!');
-
-      // Update history record with success
-      if (currentHistoryId) {
-        const durationSeconds = Math.round((Date.now() - importStartTime) / 1000);
-        await supabase
-          .from('import_history')
-          .update({
-            status: 'completed',
-            total_rows: totalRows,
-            rows_inserted: totalInserted,
-            districts_processed: totalDistricts,
-            completed_at: new Date().toISOString(),
-            duration_seconds: durationSeconds,
-            format: lastFormat,
-          })
-          .eq('id', currentHistoryId);
-        setHistoryRefreshTrigger(prev => prev + 1);
-      }
-
-      toast.success(`Successfully imported ${totalInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
     } catch (error: any) {
       console.error('Import error:', error);
       setStage('error');
@@ -328,18 +346,15 @@ export default function ImportData() {
       setResult({ type: 'school', success: false, errors: [error.message] });
 
       // Update history record with failure
-      if (currentHistoryId) {
-        await supabase
-          .from('import_history')
-          .update({
-            status: 'failed',
-            error_message: error.message,
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', currentHistoryId);
-        setHistoryRefreshTrigger(prev => prev + 1);
-      }
-    } finally {
+      await supabase
+        .from('import_history')
+        .update({
+          status: 'failed',
+          error_message: error.message,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', currentHistoryId);
+      setHistoryRefreshTrigger(prev => prev + 1);
       setImporting(false);
     }
   };
@@ -457,6 +472,8 @@ export default function ImportData() {
                   uploadSpeed={uploadSpeed}
                   onCancel={handleCancelImport}
                   canCancel={stage === 'uploading'}
+                  rowsInserted={pollingRowsInserted}
+                  totalRows={pollingTotalRows}
                 />
               )}
 
