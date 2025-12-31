@@ -26,6 +26,7 @@ import Payments from "./pages/Payments";
 import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
 import AuditLogs from "./pages/AuditLogs";
+import JoinTeam from "./pages/JoinTeam";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,8 @@ const App = () => (
             {/* Priority 2: Teams */}
             <Route path="/teams" element={<Teams />} />
             <Route path="/teams/:id" element={<TeamDetail />} />
+            <Route path="/join/:code" element={<JoinTeam />} />
+            <Route path="/join" element={<JoinTeam />} />
             {/* Priority 3: Operations */}
             <Route path="/registrations" element={<Registrations />} />
             <Route path="/events" element={<Events />} />
