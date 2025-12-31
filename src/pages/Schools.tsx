@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -44,12 +44,38 @@ interface School {
 export default function Schools() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [stateFilter, setStateFilter] = useState<string>('');
   const [levelFilter, setLevelFilter] = useState<string>('');
+  const [districtFilter, setDistrictFilter] = useState<string>('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [page, setPage] = useState(0);
+
+  // Get district filter from URL
+  useEffect(() => {
+    const districtId = searchParams.get('district');
+    if (districtId) {
+      setDistrictFilter(districtId);
+    }
+  }, [searchParams]);
+
+  // Get district name for display
+  const { data: districtInfo } = useQuery({
+    queryKey: ['district-info', districtFilter],
+    queryFn: async () => {
+      if (!districtFilter) return null;
+      const { data, error } = await supabase
+        .from('districts')
+        .select('name, city, state')
+        .eq('id', districtFilter)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!districtFilter
+  });
 
   // Form state for adding a school
   const [newSchool, setNewSchool] = useState({
@@ -67,7 +93,7 @@ export default function Schools() {
 
   // Get total count
   const { data: totalCount } = useQuery({
-    queryKey: ['schools-count', searchQuery, stateFilter, levelFilter],
+    queryKey: ['schools-count', searchQuery, stateFilter, levelFilter, districtFilter],
     queryFn: async () => {
       let query = supabase
         .from('schools')
@@ -82,6 +108,9 @@ export default function Schools() {
       if (levelFilter) {
         query = query.eq('level', levelFilter);
       }
+      if (districtFilter) {
+        query = query.eq('district_id', districtFilter);
+      }
 
       const { count, error } = await query;
       if (error) throw error;
@@ -90,7 +119,7 @@ export default function Schools() {
   });
 
   const { data: schools, isLoading, refetch } = useQuery({
-    queryKey: ['schools', searchQuery, stateFilter, levelFilter, page],
+    queryKey: ['schools', searchQuery, stateFilter, levelFilter, districtFilter, page],
     queryFn: async () => {
       let query = supabase
         .from('schools')
@@ -107,12 +136,21 @@ export default function Schools() {
       if (levelFilter) {
         query = query.eq('level', levelFilter);
       }
+      if (districtFilter) {
+        query = query.eq('district_id', districtFilter);
+      }
 
       const { data, error } = await query;
       if (error) throw error;
       return data as School[];
     }
   });
+
+  const clearDistrictFilter = () => {
+    setDistrictFilter('');
+    setSearchParams({});
+    setPage(0);
+  };
 
   const handleAddSchool = async () => {
     if (!newSchool.name.trim()) {
@@ -190,6 +228,19 @@ export default function Schools() {
             <p className="text-muted-foreground">
               Search and manage the national K-12 school directory
             </p>
+            {districtInfo && (
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="secondary" className="text-sm py-1 px-3">
+                  <span className="mr-2">District: {districtInfo.name}</span>
+                  <button 
+                    onClick={clearDistrictFilter}
+                    className="hover:bg-muted rounded-full p-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate('/import')}>

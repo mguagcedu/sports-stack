@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Building2, MapPin, Phone, Globe, Loader2 } from "lucide-react";
+import { Search, Building2, MapPin, Phone, Globe, Loader2, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,6 +32,7 @@ const US_STATES = [
 ];
 
 export default function Districts() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
@@ -140,10 +142,17 @@ export default function Districts() {
                     </TableHeader>
                     <TableBody>
                       {data?.districts?.map((district) => (
-                        <TableRow key={district.id}>
+                        <TableRow 
+                          key={district.id} 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/schools?district=${district.id}`)}
+                        >
                           <TableCell>
                             <div className="space-y-1">
-                              <div className="font-medium">{district.name}</div>
+                              <div className="font-medium flex items-center gap-2">
+                                {district.name}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              </div>
                               <div className="text-xs text-muted-foreground">
                                 NCES: {district.nces_id}
                               </div>
