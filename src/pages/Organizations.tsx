@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Building2, Plus, Search, MapPin, Loader2, Users } from 'lucide-react';
 import { DistrictSearchCombobox, District } from '@/components/organizations/DistrictSearchCombobox';
+import { SchoolSearchCombobox, School } from '@/components/organizations/SchoolSearchCombobox';
 
 type OrganizationType = 'school' | 'district' | 'league' | 'club' | 'youth_organization';
 type SubscriptionTier = 'free' | 'starter' | 'school' | 'district' | 'enterprise';
@@ -53,6 +54,7 @@ export default function Organizations() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
+  const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
 
   const [newOrg, setNewOrg] = useState({
     name: '',
@@ -67,6 +69,7 @@ export default function Organizations() {
 
   const handleDistrictSelect = (district: District | null) => {
     setSelectedDistrict(district);
+    setSelectedSchool(null); // Reset school when district changes
     if (district) {
       setNewOrg({
         ...newOrg,
@@ -78,6 +81,35 @@ export default function Organizations() {
         phone: district.phone || '',
         website: district.website || '',
         type: 'district'
+      });
+    } else {
+      // Clear form if district is cleared
+      setNewOrg({
+        name: '',
+        type: 'school',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        phone: '',
+        website: ''
+      });
+    }
+  };
+
+  const handleSchoolSelect = (school: School | null) => {
+    setSelectedSchool(school);
+    if (school) {
+      setNewOrg({
+        ...newOrg,
+        name: school.name,
+        address: school.address || newOrg.address,
+        city: school.city || newOrg.city,
+        state: school.state || newOrg.state,
+        zip: school.zip || newOrg.zip,
+        phone: school.phone || newOrg.phone,
+        website: school.website || newOrg.website,
+        type: 'school'
       });
     }
   };
@@ -133,7 +165,8 @@ export default function Organizations() {
         zip: newOrg.zip || null,
         phone: newOrg.phone || null,
         website: newOrg.website || null,
-        district_id: selectedDistrict?.id || null
+        district_id: selectedDistrict?.id || null,
+        school_id: selectedSchool?.id || null
       })
       .select()
       .single();
@@ -170,6 +203,7 @@ export default function Organizations() {
 
     setIsAddDialogOpen(false);
     setSelectedDistrict(null);
+    setSelectedSchool(null);
     setNewOrg({
       name: '',
       type: 'school',
@@ -218,6 +252,18 @@ export default function Organizations() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Selecting a district will auto-fill organization details
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Link to School (optional)</Label>
+                  <SchoolSearchCombobox
+                    value={selectedSchool}
+                    onSelect={handleSchoolSelect}
+                    districtId={selectedDistrict?.id}
+                    placeholder={selectedDistrict ? "Search schools in district..." : "Search all schools..."}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Selecting a school will auto-fill organization details
                   </p>
                 </div>
                 <div className="space-y-2">
