@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Building2, Plus, Search, MapPin, Loader2, Users } from 'lucide-react';
+import { DistrictSearchCombobox, District } from '@/components/organizations/DistrictSearchCombobox';
 
 type OrganizationType = 'school' | 'district' | 'league' | 'club' | 'youth_organization';
 type SubscriptionTier = 'free' | 'starter' | 'school' | 'district' | 'enterprise';
@@ -51,6 +52,7 @@ export default function Organizations() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
 
   const [newOrg, setNewOrg] = useState({
     name: '',
@@ -62,6 +64,23 @@ export default function Organizations() {
     phone: '',
     website: ''
   });
+
+  const handleDistrictSelect = (district: District | null) => {
+    setSelectedDistrict(district);
+    if (district) {
+      setNewOrg({
+        ...newOrg,
+        name: district.name,
+        address: district.address || '',
+        city: district.city || '',
+        state: district.state || '',
+        zip: district.zip || '',
+        phone: district.phone || '',
+        website: district.website || '',
+        type: 'district'
+      });
+    }
+  };
 
   const { data: organizations, isLoading, refetch } = useQuery({
     queryKey: ['organizations', searchQuery],
@@ -113,7 +132,8 @@ export default function Organizations() {
         state: newOrg.state || null,
         zip: newOrg.zip || null,
         phone: newOrg.phone || null,
-        website: newOrg.website || null
+        website: newOrg.website || null,
+        district_id: selectedDistrict?.id || null
       })
       .select()
       .single();
@@ -149,6 +169,7 @@ export default function Organizations() {
     });
 
     setIsAddDialogOpen(false);
+    setSelectedDistrict(null);
     setNewOrg({
       name: '',
       type: 'school',
@@ -188,6 +209,17 @@ export default function Organizations() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Link to District (optional)</Label>
+                  <DistrictSearchCombobox
+                    value={selectedDistrict}
+                    onSelect={handleDistrictSelect}
+                    placeholder="Search and select a district..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Selecting a district will auto-fill organization details
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="org-name">Organization Name *</Label>
                   <Input

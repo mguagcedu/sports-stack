@@ -157,6 +157,7 @@ export type Database = {
           address: string | null
           city: string | null
           created_at: string
+          district_id: string | null
           id: string
           logo_url: string | null
           name: string
@@ -174,6 +175,7 @@ export type Database = {
           address?: string | null
           city?: string | null
           created_at?: string
+          district_id?: string | null
           id?: string
           logo_url?: string | null
           name: string
@@ -191,6 +193,7 @@ export type Database = {
           address?: string | null
           city?: string | null
           created_at?: string
+          district_id?: string | null
           id?: string
           logo_url?: string | null
           name?: string
@@ -210,6 +213,13 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organizations_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
             referencedColumns: ["id"]
           },
         ]
