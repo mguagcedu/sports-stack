@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 interface ImportProgressProps {
   progress: number;
-  stage: 'idle' | 'uploading' | 'parsing' | 'importing' | 'complete' | 'error';
+  stage: 'idle' | 'uploading' | 'parsing' | 'importing' | 'processing' | 'complete' | 'error';
   fileName?: string;
   message?: string;
   uploadedBytes?: number;
@@ -14,6 +14,9 @@ interface ImportProgressProps {
   uploadSpeed?: number | null;
   onCancel?: () => void;
   canCancel?: boolean;
+  // Background processing stats
+  rowsInserted?: number;
+  totalRows?: number;
 }
 
 function formatTimeRemaining(seconds: number | null): string | null {
@@ -25,8 +28,7 @@ function formatTimeRemaining(seconds: number | null): string | null {
 
 const stages = [
   { key: 'uploading', label: 'Upload', icon: FileUp },
-  { key: 'parsing', label: 'Parse', icon: FileSearch },
-  { key: 'importing', label: 'Import', icon: Database },
+  { key: 'processing', label: 'Processing', icon: Database },
   { key: 'complete', label: 'Complete', icon: CheckCircle2 },
 ] as const;
 
@@ -58,7 +60,9 @@ export function ImportProgress({
   estimatedTimeRemaining,
   uploadSpeed,
   onCancel,
-  canCancel
+  canCancel,
+  rowsInserted,
+  totalRows
 }: ImportProgressProps) {
   const [displayProgress, setDisplayProgress] = useState(0);
 
@@ -82,9 +86,10 @@ export function ImportProgress({
   const getCurrentStageIndex = () => {
     switch (stage) {
       case 'uploading': return 0;
-      case 'parsing': return 1;
-      case 'importing': return 2;
-      case 'complete': return 3;
+      case 'parsing': 
+      case 'importing':
+      case 'processing': return 1;
+      case 'complete': return 2;
       default: return -1;
     }
   };
@@ -198,6 +203,18 @@ export function ImportProgress({
         )}>
           {message}
         </p>
+      )}
+
+      {/* Background processing stats */}
+      {stage === 'processing' && rowsInserted !== undefined && totalRows !== undefined && totalRows > 0 && (
+        <div className="text-center space-y-1">
+          <p className="text-lg font-bold text-primary">
+            {rowsInserted.toLocaleString()} / {totalRows.toLocaleString()} records
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Processing in background... Please wait.
+          </p>
+        </div>
       )}
 
       {/* Cancel Button */}

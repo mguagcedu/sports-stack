@@ -23,7 +23,6 @@ interface SchoolRow {
   county?: string
   latitude?: number
   longitude?: number
-  // New CCD fields
   school_year?: string
   sy_status?: string
   charter_status?: string
@@ -37,7 +36,6 @@ function parseScientificNotation(value: string): string {
   if (!value) return ''
   const trimmed = value.trim().replace(/^"|"$/g, '')
   
-  // Match scientific notation like 2.91107E+11 or 2.91107e+11
   const match = trimmed.match(/^(\d+\.?\d*)E\+(\d+)$/i)
   if (match) {
     const base = parseFloat(match[1])
@@ -50,7 +48,6 @@ function parseScientificNotation(value: string): string {
 // Detect if CSV is headerless (Part 2 format starts with year like "2024-2025")
 function detectHeaderlessCSV(firstLine: string): boolean {
   const trimmed = firstLine.trim()
-  // Part 2 format starts with school year like "2024-2025"
   return /^\d{4}-\d{4}/.test(trimmed) || /^"\d{4}-\d{4}"/.test(trimmed)
 }
 
@@ -81,25 +78,16 @@ function parseCSVLine(line: string): string[] {
   return values
 }
 
-// Clean value by removing surrounding quotes
 function cleanValue(val: string | undefined): string {
   if (!val) return ''
   return val.trim().replace(/^"|"$/g, '')
 }
 
-// Map columns by position for headerless Part 2 format
 function mapPositionalColumns(values: string[]): SchoolRow | null {
-  // Part 2 column positions (0-indexed based on NCES format):
-  // 0=School Year, 1=FIPST, 2=State Name, 3=State Abbrev, 4=School Name, 5=District Name
-  // 9=LEA ID (district NCES), 11=NCES School ID (may be scientific notation)
-  // 16=City, 18=ZIP, 20=Street Address, 27=Phone, 28=Website
-  // 31=Operational Status, 35=School Type, 62=School Level
-  
   const ncesIdRaw = values[11] || ''
   const ncesId = parseScientificNotation(ncesIdRaw)
   const name = cleanValue(values[4])
   
-  // Only skip if name is completely empty - we want ALL rows
   if (!name) return null
   
   const districtNcesRaw = values[9] || ''
@@ -132,7 +120,6 @@ function mapPositionalColumns(values: string[]): SchoolRow | null {
   }
 }
 
-// Parse CSV with headers (Part 1 format) - NO DEDUPLICATION, include ALL rows
 function parseCSVWithHeaders(csvText: string): SchoolRow[] {
   const lines = csvText.split('\n').filter(line => line.trim())
   if (lines.length < 2) return []
@@ -140,7 +127,6 @@ function parseCSVWithHeaders(csvText: string): SchoolRow[] {
   const headers = parseCSVLine(lines[0])
   const rows: SchoolRow[] = []
   
-  // Build header index map (case-insensitive, trim quotes)
   const headerMap: Record<string, number> = {}
   headers.forEach((h, i) => {
     headerMap[cleanValue(h).toUpperCase()] = i
@@ -157,7 +143,6 @@ function parseCSVWithHeaders(csvText: string): SchoolRow[] {
     
     const name = getValue(values, 'SCH_NAME') || getValue(values, 'SCHOOL_NAME') || getValue(values, 'NAME')
     
-    // Only skip if name is completely empty - we want ALL rows
     if (!name) continue
     
     const ncesId = parseScientificNotation(getValue(values, 'NCESSCH') || getValue(values, 'NCES_ID') || getValue(values, 'SCHOOLID'))
@@ -192,7 +177,6 @@ function parseCSVWithHeaders(csvText: string): SchoolRow[] {
   return rows
 }
 
-// Parse headerless CSV (Part 2 format)
 function parseCSVWithoutHeaders(csvText: string): { rows: SchoolRow[]; scientificNotationFixed: number } {
   const lines = csvText.split('\n').filter(line => line.trim())
   const rows: SchoolRow[] = []
@@ -203,7 +187,6 @@ function parseCSVWithoutHeaders(csvText: string): { rows: SchoolRow[]; scientifi
     const row = mapPositionalColumns(values)
     
     if (row) {
-      // Check if we fixed scientific notation
       const rawNces = values[11] || ''
       if (/E\+/i.test(rawNces)) {
         scientificNotationFixed++
@@ -214,6 +197,202 @@ function parseCSVWithoutHeaders(csvText: string): { rows: SchoolRow[]; scientifi
   
   return { rows, scientificNotationFixed }
 }
+
+// Background processing function
+async function processImportInBackground(
+  csvText: string,
+  historyId: string,
+  supabase: any,
+  isHeaderless: boolean
+) {
+  console.log(`[Background] Starting import processing for history ${historyId}`)
+  
+  try {
+    // Parse CSV
+    let schools: SchoolRow[]
+    let scientificNotationFixed = 0
+    
+    if (isHeaderless) {
+      console.log('[Background] Parsing headerless CSV...')
+      const result = parseCSVWithoutHeaders(csvText)
+      schools = result.rows
+      scientificNotationFixed = result.scientificNotationFixed
+    } else {
+      console.log('[Background] Parsing CSV with headers...')
+      schools = parseCSVWithHeaders(csvText)
+    }
+    
+    console.log(`[Background] Parsed ${schools.length} schools`)
+
+    // Update history with total rows
+    await supabase
+      .from('import_history')
+      .update({ 
+        total_rows: schools.length,
+        status: 'processing'
+      })
+      .eq('id', historyId)
+
+    if (schools.length === 0) {
+      await supabase
+        .from('import_history')
+        .update({
+          status: 'failed',
+          error_message: 'No valid school data found in CSV',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', historyId)
+      return
+    }
+
+    // Extract and upsert districts
+    const districtMap = new Map<string, { name: string, state: string, state_name: string }>()
+    for (const row of schools) {
+      if (row.district_nces_id && !districtMap.has(row.district_nces_id)) {
+        districtMap.set(row.district_nces_id, {
+          name: row.district_name,
+          state: row.state,
+          state_name: row.state_name
+        })
+      }
+    }
+
+    console.log(`[Background] Upserting ${districtMap.size} districts...`)
+    
+    const districtData = Array.from(districtMap.entries()).map(([nces_id, data]) => ({
+      nces_id,
+      name: data.name,
+      state: data.state,
+      state_name: data.state_name
+    }))
+
+    const DISTRICT_BATCH_SIZE = 500
+    let districtsProcessed = 0
+    for (let i = 0; i < districtData.length; i += DISTRICT_BATCH_SIZE) {
+      const batch = districtData.slice(i, i + DISTRICT_BATCH_SIZE)
+      const { error: districtError } = await supabase
+        .from('districts')
+        .upsert(batch, { onConflict: 'nces_id' })
+      
+      if (districtError) {
+        console.error(`[Background] District batch error:`, districtError)
+      } else {
+        districtsProcessed += batch.length
+      }
+    }
+
+    // Get all districts for mapping
+    const { data: districts } = await supabase
+      .from('districts')
+      .select('id, nces_id')
+    
+    const districtIdMap = new Map(districts?.map((d: any) => [d.nces_id, d.id]) || [])
+
+    // INSERT schools in batches - smaller batch size to avoid CPU limits
+    const SCHOOL_BATCH_SIZE = 250
+    let inserted = 0
+    let errors = 0
+    const statusCounts: Record<string, number> = {}
+    const stateCounts: Record<string, number> = {}
+
+    console.log(`[Background] Inserting ${schools.length} schools...`)
+
+    for (let i = 0; i < schools.length; i += SCHOOL_BATCH_SIZE) {
+      const batch = schools.slice(i, i + SCHOOL_BATCH_SIZE)
+      
+      // Track status and state counts
+      for (const row of batch) {
+        const status = row.sy_status || row.operational_status || 'Unknown'
+        statusCounts[status] = (statusCounts[status] || 0) + 1
+        
+        const state = row.state || 'Unknown'
+        stateCounts[state] = (stateCounts[state] || 0) + 1
+      }
+      
+      const schoolData = batch.map(row => ({
+        nces_id: row.nces_id || null,
+        name: row.name,
+        state: row.state || null,
+        city: row.city || null,
+        address: row.address || null,
+        zip: row.zip || null,
+        phone: row.phone || null,
+        website: row.website || null,
+        level: row.level || null,
+        school_type: row.school_type || null,
+        operational_status: row.operational_status || null,
+        district_id: districtIdMap.get(row.district_nces_id) || null,
+        county: row.county || null,
+        latitude: row.latitude || null,
+        longitude: row.longitude || null,
+        school_year: row.school_year || null,
+        sy_status: row.sy_status || null,
+        charter_status: row.charter_status || null,
+        magnet_status: row.magnet_status || null,
+        virtual_status: row.virtual_status || null,
+        title1_status: row.title1_status || null,
+        lea_id: row.district_nces_id || null,
+      }))
+      
+      const { error: schoolError } = await supabase
+        .from('schools')
+        .insert(schoolData)
+      
+      if (schoolError) {
+        console.error(`[Background] School batch error at ${i}:`, schoolError.message)
+        errors += batch.length
+      } else {
+        inserted += batch.length
+      }
+      
+      // Update progress every 5000 schools
+      if (inserted % 5000 === 0 || i + SCHOOL_BATCH_SIZE >= schools.length) {
+        console.log(`[Background] Progress: ${inserted}/${schools.length} inserted`)
+        await supabase
+          .from('import_history')
+          .update({ 
+            rows_inserted: inserted,
+            districts_processed: districtsProcessed,
+          })
+          .eq('id', historyId)
+      }
+    }
+
+    // Sort state counts for display
+    const sortedStates = Object.entries(stateCounts).sort((a, b) => b[1] - a[1])
+
+    // Final update
+    console.log(`[Background] Import complete: ${inserted} inserted, ${errors} errors`)
+    await supabase
+      .from('import_history')
+      .update({
+        status: 'completed',
+        rows_inserted: inserted,
+        districts_processed: districtsProcessed,
+        completed_at: new Date().toISOString(),
+        status_breakdown: statusCounts,
+        state_breakdown: Object.fromEntries(sortedStates),
+        format: isHeaderless ? 'headerless (Part 2)' : 'with headers (Part 1)',
+      })
+      .eq('id', historyId)
+
+  } catch (error) {
+    console.error('[Background] Import error:', error)
+    await supabase
+      .from('import_history')
+      .update({
+        status: 'failed',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', historyId)
+  }
+}
+
+// Handle shutdown gracefully
+addEventListener('beforeunload', (ev: any) => {
+  console.log(`[Shutdown] Function shutting down: ${ev.detail?.reason}`)
+})
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -265,6 +444,7 @@ Deno.serve(async (req) => {
     // Get form data
     const formData = await req.formData()
     const file = formData.get('file') as File | null
+    const historyId = formData.get('historyId') as string | null
     
     if (!file) {
       return new Response(JSON.stringify({ error: 'No file provided' }), {
@@ -273,171 +453,44 @@ Deno.serve(async (req) => {
       })
     }
 
-    console.log(`Processing CSV file: ${file.name}, size: ${file.size}`)
-
-    const csvText = await file.text()
-    console.log(`CSV text loaded, parsing...`)
-    
-    // Detect format and parse accordingly
-    const firstLine = csvText.split('\n')[0] || ''
-    const isHeaderless = detectHeaderlessCSV(firstLine)
-    
-    let schools: SchoolRow[]
-    let scientificNotationFixed = 0
-    
-    if (isHeaderless) {
-      console.log('Detected headerless CSV (Part 2 format), using positional mapping...')
-      const result = parseCSVWithoutHeaders(csvText)
-      schools = result.rows
-      scientificNotationFixed = result.scientificNotationFixed
-      console.log(`Fixed ${scientificNotationFixed} scientific notation NCES IDs`)
-    } else {
-      console.log('Detected CSV with headers (Part 1 format)...')
-      schools = parseCSVWithHeaders(csvText)
-    }
-    
-    console.log(`Parsed ${schools.length} schools - NO DEDUPLICATION, inserting ALL rows`)
-
-    if (schools.length === 0) {
-      return new Response(JSON.stringify({ error: 'No valid school data found in CSV' }), {
+    if (!historyId) {
+      return new Response(JSON.stringify({ error: 'No historyId provided' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Extract and upsert districts first (districts CAN be deduplicated)
-    const districtMap = new Map<string, { name: string, state: string, state_name: string }>()
-    for (const row of schools) {
-      if (row.district_nces_id && !districtMap.has(row.district_nces_id)) {
-        districtMap.set(row.district_nces_id, {
-          name: row.district_name,
-          state: row.state,
-          state_name: row.state_name
-        })
-      }
-    }
+    console.log(`Processing CSV file: ${file.name}, size: ${file.size}, historyId: ${historyId}`)
 
-    console.log(`Upserting ${districtMap.size} unique districts...`)
+    const csvText = await file.text()
+    console.log(`CSV text loaded (${csvText.length} chars)`)
     
-    const districtData = Array.from(districtMap.entries()).map(([nces_id, data]) => ({
-      nces_id,
-      name: data.name,
-      state: data.state,
-      state_name: data.state_name
-    }))
-
-    // Upsert districts in batches
-    const DISTRICT_BATCH_SIZE = 500
-    let districtsProcessed = 0
-    for (let i = 0; i < districtData.length; i += DISTRICT_BATCH_SIZE) {
-      const batch = districtData.slice(i, i + DISTRICT_BATCH_SIZE)
-      const { error: districtError } = await supabase
-        .from('districts')
-        .upsert(batch, { onConflict: 'nces_id' })
-      
-      if (districtError) {
-        console.error(`District batch error:`, districtError)
-      } else {
-        districtsProcessed += batch.length
-      }
-    }
-
-    // Get all districts for mapping
-    const { data: districts } = await supabase
-      .from('districts')
-      .select('id, nces_id')
+    // Detect format
+    const firstLine = csvText.split('\n')[0] || ''
+    const isHeaderless = detectHeaderlessCSV(firstLine)
     
-    const districtIdMap = new Map(districts?.map(d => [d.nces_id, d.id]) || [])
+    console.log(`Format detected: ${isHeaderless ? 'headerless' : 'with headers'}`)
 
-    // INSERT schools in batches - NO DEDUPLICATION, each row creates a new record
-    const SCHOOL_BATCH_SIZE = 1000
-    let inserted = 0
-    let errors = 0
-    const statusCounts: Record<string, number> = {}
-    const stateCounts: Record<string, number> = {}
+    // Update history to show we received the file
+    await supabase
+      .from('import_history')
+      .update({ 
+        status: 'processing',
+        started_at: new Date().toISOString()
+      })
+      .eq('id', historyId)
 
-    console.log(`Inserting ${schools.length} schools (no deduplication)...`)
+    // Process in background using EdgeRuntime.waitUntil
+    // @ts-ignore - EdgeRuntime is available in Deno Deploy
+    EdgeRuntime.waitUntil(processImportInBackground(csvText, historyId, supabase, isHeaderless))
 
-    for (let i = 0; i < schools.length; i += SCHOOL_BATCH_SIZE) {
-      const batch = schools.slice(i, i + SCHOOL_BATCH_SIZE)
-      
-      // Track status and state counts
-      for (const row of batch) {
-        const status = row.sy_status || row.operational_status || 'Unknown'
-        statusCounts[status] = (statusCounts[status] || 0) + 1
-        
-        const state = row.state || 'Unknown'
-        stateCounts[state] = (stateCounts[state] || 0) + 1
-      }
-      
-      const schoolData = batch.map(row => ({
-        // Let Supabase auto-generate UUID for id
-        nces_id: row.nces_id || null,
-        name: row.name,
-        state: row.state || null,
-        city: row.city || null,
-        address: row.address || null,
-        zip: row.zip || null,
-        phone: row.phone || null,
-        website: row.website || null,
-        level: row.level || null,
-        school_type: row.school_type || null,
-        operational_status: row.operational_status || null,
-        district_id: districtIdMap.get(row.district_nces_id) || null,
-        county: row.county || null,
-        latitude: row.latitude || null,
-        longitude: row.longitude || null,
-        // New CCD fields
-        school_year: row.school_year || null,
-        sy_status: row.sy_status || null,
-        charter_status: row.charter_status || null,
-        magnet_status: row.magnet_status || null,
-        virtual_status: row.virtual_status || null,
-        title1_status: row.title1_status || null,
-        lea_id: row.district_nces_id || null,
-      }))
-      
-      // Use INSERT instead of UPSERT - every row creates a new record
-      const { error: schoolError } = await supabase
-        .from('schools')
-        .insert(schoolData)
-      
-      if (schoolError) {
-        console.error(`School batch ${Math.floor(i / SCHOOL_BATCH_SIZE) + 1} error:`, schoolError)
-        errors += batch.length
-      } else {
-        inserted += batch.length
-      }
-      
-      if ((i + SCHOOL_BATCH_SIZE) % 10000 === 0 || i + SCHOOL_BATCH_SIZE >= schools.length) {
-        console.log(`Progress: ${Math.min(i + SCHOOL_BATCH_SIZE, schools.length)}/${schools.length} schools`)
-      }
-    }
-
-    // Sort state counts for display
-    const sortedStates = Object.entries(stateCounts)
-      .sort((a, b) => b[1] - a[1])
-
-    const result = {
-      success: true,
-      totalRows: schools.length,
-      schoolsInserted: inserted,
-      errors,
-      districtsProcessed,
-      scientificNotationFixed,
-      format: isHeaderless ? 'headerless (Part 2)' : 'with headers (Part 1)',
-      // Validation data
-      statusBreakdown: statusCounts,
-      stateBreakdown: Object.fromEntries(sortedStates),
-      expectedTotal: 101333,
-      matchesExpected: schools.length === 101333,
-    }
-
-    console.log(`Import complete:`, result)
-    console.log(`Status breakdown:`, statusCounts)
-    console.log(`Total by state (top 10):`, sortedStates.slice(0, 10))
-
-    return new Response(JSON.stringify(result), {
+    // Return immediately
+    return new Response(JSON.stringify({ 
+      success: true, 
+      historyId,
+      message: 'Import started. Processing in background...',
+      format: isHeaderless ? 'headerless (Part 2)' : 'with headers (Part 1)'
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
