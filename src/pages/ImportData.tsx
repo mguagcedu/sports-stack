@@ -28,6 +28,11 @@ export default function ImportData() {
     skipped?: number;
     districtsCreated?: number;
     errors?: string[];
+    // Auto-correction fields
+    uniqueSchools?: number;
+    duplicatesRemoved?: number;
+    scientificNotationFixed?: number;
+    format?: string;
   } | null>(null);
 
   const handleDistrictImport = async () => {
@@ -134,7 +139,11 @@ export default function ImportData() {
         success: response.data.success,
         total: response.data.totalRows,
         inserted: response.data.schoolsInserted,
-        districtsCreated: response.data.districtsProcessed
+        districtsCreated: response.data.districtsProcessed,
+        uniqueSchools: response.data.uniqueSchools,
+        duplicatesRemoved: response.data.duplicatesRemoved,
+        scientificNotationFixed: response.data.scientificNotationFixed,
+        format: response.data.format,
       });
       
       if (response.data.success) {
@@ -334,17 +343,55 @@ export default function ImportData() {
             </CardHeader>
             <CardContent>
               {result.success ? (
-                <div className="space-y-2">
-                  <p className="text-sm">
-                    <span className="font-medium">Total records processed:</span> {result.total?.toLocaleString()}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Records imported:</span> {result.inserted?.toLocaleString()}
-                  </p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Rows</p>
+                      <p className="text-2xl font-bold">{result.total?.toLocaleString()}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Imported</p>
+                      <p className="text-2xl font-bold text-success">{result.inserted?.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  
                   {result.districtsCreated !== undefined && result.districtsCreated > 0 && (
                     <p className="text-sm">
                       <span className="font-medium">Districts processed:</span> {result.districtsCreated?.toLocaleString()}
                     </p>
+                  )}
+
+                  {/* Auto-correction summary */}
+                  {(result.duplicatesRemoved || result.scientificNotationFixed || result.format) && (
+                    <div className="border-t pt-4 mt-4">
+                      <p className="text-sm font-medium mb-2">Auto-Corrections Applied</p>
+                      <div className="space-y-1.5">
+                        {result.format && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                            Format detected: <span className="font-medium">{result.format}</span>
+                          </p>
+                        )}
+                        {result.duplicatesRemoved !== undefined && result.duplicatesRemoved > 0 && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                            Duplicates removed: <span className="font-medium">{result.duplicatesRemoved.toLocaleString()}</span>
+                          </p>
+                        )}
+                        {result.scientificNotationFixed !== undefined && result.scientificNotationFixed > 0 && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                            NCES IDs fixed (scientific notation): <span className="font-medium">{result.scientificNotationFixed.toLocaleString()}</span>
+                          </p>
+                        )}
+                        {result.uniqueSchools !== undefined && (
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                            Unique schools: <span className="font-medium">{result.uniqueSchools.toLocaleString()}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               ) : (
