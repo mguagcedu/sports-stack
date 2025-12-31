@@ -33,6 +33,8 @@ export default function ImportData() {
   const [stageMessage, setStageMessage] = useState('');
   const [uploadedBytes, setUploadedBytes] = useState(0);
   const [totalBytes, setTotalBytes] = useState(0);
+  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
+  const [activeXhr, setActiveXhr] = useState<XMLHttpRequest | null>(null);
   const [result, setResult] = useState<{
     type?: 'district' | 'school';
     success?: boolean;
@@ -63,17 +65,32 @@ export default function ImportData() {
     file: File,
     url: string,
     accessToken: string,
-    onProgress: (loaded: number, total: number) => void
-  ): Promise<{ data: any; error: any }> => {
+    onProgress: (loaded: number, total: number, estimatedSeconds: number | null) => void,
+    onXhrCreated: (xhr: XMLHttpRequest) => void
+  ): Promise<{ data: any; error: any; cancelled?: boolean }> => {
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
       const formData = new FormData();
       formData.append('file', file);
+      const startTime = Date.now();
+
+      // Expose XHR for cancellation
+      onXhrCreated(xhr);
 
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
-          onProgress(e.loaded, e.total);
+          const elapsedSeconds = (Date.now() - startTime) / 1000;
+          const bytesPerSecond = elapsedSeconds > 0 ? e.loaded / elapsedSeconds : 0;
+          const remainingBytes = e.total - e.loaded;
+          const estimatedSeconds = bytesPerSecond > 0 
+            ? Math.ceil(remainingBytes / bytesPerSecond) 
+            : null;
+          onProgress(e.loaded, e.total, estimatedSeconds);
         }
+      });
+
+      xhr.addEventListener('abort', () => {
+        resolve({ data: null, error: { message: 'Import cancelled by user' }, cancelled: true });
       });
 
       xhr.addEventListener('load', () => {
@@ -98,6 +115,19 @@ export default function ImportData() {
       xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
       xhr.send(formData);
     });
+  };
+
+  const handleCancelImport = () => {
+    if (activeXhr) {
+      activeXhr.abort();
+      setActiveXhr(null);
+    }
+    setImporting(false);
+    setStage('idle');
+    setProgress(0);
+    setStageMessage('');
+    setEstimatedTimeRemaining(null);
+    toast.info('Import cancelled');
   };
 
   // Fetch school count
@@ -140,6 +170,7 @@ export default function ImportData() {
     setProgress(0);
     setUploadedBytes(0);
     setTotalBytes(0);
+    setEstimatedTimeRemaining(null);
     setStageMessage('Starting upload...');
     setResult(null);
 
@@ -170,13 +201,23 @@ export default function ImportData() {
           file,
           url,
           session.access_token,
-          (loaded, total) => {
+          (loaded, total, estimatedSeconds) => {
             setUploadedBytes(loaded);
+            setEstimatedTimeRemaining(estimatedSeconds);
             // Upload is 0-40% of each file's share
             const uploadPercent = (loaded / total) * 40;
             setProgress(Math.round(fileProgressBase + (uploadPercent / 100) * fileProgressShare));
-          }
+          },
+          (xhr) => setActiveXhr(xhr)
         );
+
+        // Check if cancelled
+        if (response.cancelled) {
+          return;
+        }
+
+        setActiveXhr(null);
+        setEstimatedTimeRemaining(null);
 
         // Move to parsing stage (40-60% of file's share)
         setStage('parsing');
@@ -333,16 +374,19 @@ export default function ImportData() {
               disabled={importing}
             />
 
-            {importing && (
-              <ImportProgress 
-                progress={progress} 
-                stage={stage}
-                fileName={schoolFiles[0]?.name}
-                message={stageMessage}
-                uploadedBytes={uploadedBytes}
-                totalBytes={totalBytes}
-              />
-            )}
+              {importing && (
+                <ImportProgress 
+                  progress={progress} 
+                  stage={stage}
+                  fileName={schoolFiles[0]?.name}
+                  message={stageMessage}
+                  uploadedBytes={uploadedBytes}
+                  totalBytes={totalBytes}
+                  estimatedTimeRemaining={estimatedTimeRemaining}
+                  onCancel={handleCancelImport}
+                  canCancel={stage === 'uploading'}
+                />
+              )}
 
             <Button 
               onClick={handleSchoolImport} 
