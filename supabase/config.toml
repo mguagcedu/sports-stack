@@ -1,1 +1,4 @@
 project_id = "ffnpobdcqcagjmlddvga"
+
+[functions.import-districts]
+verify_jwt = false

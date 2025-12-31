@@ -53,6 +53,81 @@ export type Database = {
         }
         Relationships: []
       }
+      districts: {
+        Row: {
+          address: string | null
+          charter_lea: string | null
+          city: string | null
+          created_at: string
+          highest_grade: string | null
+          id: string
+          lea_type: string | null
+          lea_type_text: string | null
+          lowest_grade: string | null
+          name: string
+          nces_id: string
+          operational_schools: number | null
+          operational_status: string | null
+          operational_status_text: string | null
+          phone: string | null
+          state: string
+          state_lea_id: string | null
+          state_name: string | null
+          updated_at: string
+          website: string | null
+          zip: string | null
+          zip4: string | null
+        }
+        Insert: {
+          address?: string | null
+          charter_lea?: string | null
+          city?: string | null
+          created_at?: string
+          highest_grade?: string | null
+          id?: string
+          lea_type?: string | null
+          lea_type_text?: string | null
+          lowest_grade?: string | null
+          name: string
+          nces_id: string
+          operational_schools?: number | null
+          operational_status?: string | null
+          operational_status_text?: string | null
+          phone?: string | null
+          state: string
+          state_lea_id?: string | null
+          state_name?: string | null
+          updated_at?: string
+          website?: string | null
+          zip?: string | null
+          zip4?: string | null
+        }
+        Update: {
+          address?: string | null
+          charter_lea?: string | null
+          city?: string | null
+          created_at?: string
+          highest_grade?: string | null
+          id?: string
+          lea_type?: string | null
+          lea_type_text?: string | null
+          lowest_grade?: string | null
+          name?: string
+          nces_id?: string
+          operational_schools?: number | null
+          operational_status?: string | null
+          operational_status_text?: string | null
+          phone?: string | null
+          state?: string
+          state_lea_id?: string | null
+          state_name?: string | null
+          updated_at?: string
+          website?: string | null
+          zip?: string | null
+          zip4?: string | null
+        }
+        Relationships: []
+      }
       family_accounts: {
         Row: {
           child_id: string
@@ -178,6 +253,7 @@ export type Database = {
           city: string | null
           county: string | null
           created_at: string
+          district_id: string | null
           id: string
           latitude: number | null
           level: string | null
@@ -197,6 +273,7 @@ export type Database = {
           city?: string | null
           county?: string | null
           created_at?: string
+          district_id?: string | null
           id?: string
           latitude?: number | null
           level?: string | null
@@ -216,6 +293,7 @@ export type Database = {
           city?: string | null
           county?: string | null
           created_at?: string
+          district_id?: string | null
           id?: string
           latitude?: number | null
           level?: string | null
@@ -230,7 +308,15 @@ export type Database = {
           website?: string | null
           zip?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "schools_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
