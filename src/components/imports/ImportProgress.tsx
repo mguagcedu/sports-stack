@@ -17,6 +17,9 @@ interface ImportProgressProps {
   // Background processing stats
   rowsInserted?: number;
   totalRows?: number;
+  // Batch progress
+  currentBatch?: number;
+  totalBatches?: number;
 }
 
 function formatTimeRemaining(seconds: number | null): string | null {
@@ -62,7 +65,9 @@ export function ImportProgress({
   onCancel,
   canCancel,
   rowsInserted,
-  totalRows
+  totalRows,
+  currentBatch,
+  totalBatches
 }: ImportProgressProps) {
   const [displayProgress, setDisplayProgress] = useState(0);
 
@@ -206,11 +211,31 @@ export function ImportProgress({
       )}
 
       {/* Background processing stats */}
-      {stage === 'processing' && rowsInserted !== undefined && totalRows !== undefined && totalRows > 0 && (
-        <div className="text-center space-y-1">
-          <p className="text-lg font-bold text-primary">
-            {rowsInserted.toLocaleString()} / {totalRows.toLocaleString()} records
-          </p>
+      {stage === 'processing' && (
+        <div className="text-center space-y-2">
+          {/* Batch progress */}
+          {currentBatch !== undefined && totalBatches !== undefined && totalBatches > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                Batch {currentBatch} of {totalBatches}
+                <span className="ml-2 text-primary font-bold">
+                  ({Math.round((currentBatch / totalBatches) * 100)}%)
+                </span>
+              </p>
+              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary/60 transition-all duration-300"
+                  style={{ width: `${(currentBatch / totalBatches) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+          {/* Records count */}
+          {rowsInserted !== undefined && totalRows !== undefined && totalRows > 0 && (
+            <p className="text-lg font-bold text-primary">
+              {rowsInserted.toLocaleString()} / {totalRows.toLocaleString()} records
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">
             Processing in background... Please wait.
           </p>
