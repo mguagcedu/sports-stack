@@ -11,7 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { formatDistrictName } from '@/lib/formatters';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -33,6 +35,13 @@ const US_STATES = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
 ];
 
+interface FormErrors {
+  name?: string;
+  phone?: string;
+  website?: string;
+  zip?: string;
+}
+
 export default function SchoolDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -40,7 +49,9 @@ export default function SchoolDetail() {
   const queryClient = useQueryClient();
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [editForm, setEditForm] = useState({
     name: '',
     level: '',
@@ -100,20 +111,42 @@ export default function SchoolDetail() {
         phone: school.phone || '',
         website: school.website || ''
       });
+      setFormErrors({});
       setIsEditDialogOpen(true);
     }
   };
 
-  const handleSaveEdit = async () => {
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    
     if (!editForm.name.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'School name is required',
-        variant: 'destructive'
-      });
-      return;
+      errors.name = 'School name is required';
     }
+    
+    if (editForm.phone && !/^[\d\s\-\(\)\+\.]+$/.test(editForm.phone)) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+    
+    if (editForm.website && !editForm.website.match(/^(https?:\/\/)?[\w\-]+(\.[\w\-]+)+/)) {
+      errors.website = 'Please enter a valid website URL';
+    }
+    
+    if (editForm.zip && !/^\d{5}(-\d{4})?$/.test(editForm.zip)) {
+      errors.zip = 'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
+  const handleSaveClick = () => {
+    if (validateForm()) {
+      setIsConfirmDialogOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    setIsConfirmDialogOpen(false);
     setIsSubmitting(true);
     
     const { error } = await supabase
@@ -289,7 +322,7 @@ export default function SchoolDetail() {
                       className="p-0 h-auto text-base font-medium"
                       onClick={() => navigate(`/districts/${school.districts.id}`)}
                     >
-                      {school.districts.name}
+                      {formatDistrictName(school.districts.name)}
                     </Button>
                   </div>
                   {school.districts.city && school.districts.state && (
@@ -409,9 +442,13 @@ export default function SchoolDetail() {
                 <Label htmlFor="edit-name">School Name *</Label>
                 <Input
                   id="edit-name"
+                  className={formErrors.name ? 'border-destructive' : ''}
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 />
+                {formErrors.name && (
+                  <p className="text-sm text-destructive">{formErrors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-level">Level</Label>
@@ -462,47 +499,57 @@ export default function SchoolDetail() {
                   onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-state">State</Label>
-                  <Select
-                    value={editForm.state}
-                    onValueChange={(value) => setEditForm({ ...editForm, state: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="State" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {US_STATES.map((state) => (
-                        <SelectItem key={state} value={state}>{state}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-zip">ZIP</Label>
-                  <Input
-                    id="edit-zip"
-                    value={editForm.zip}
-                    onChange={(e) => setEditForm({ ...editForm, zip: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-state">State</Label>
+                <Select
+                  value={editForm.state}
+                  onValueChange={(value) => setEditForm({ ...editForm, state: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {US_STATES.map(state => (
+                      <SelectItem key={state} value={state}>{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-zip">ZIP Code</Label>
+                <Input
+                  id="edit-zip"
+                  className={formErrors.zip ? 'border-destructive' : ''}
+                  value={editForm.zip}
+                  onChange={(e) => setEditForm({ ...editForm, zip: e.target.value })}
+                />
+                {formErrors.zip && (
+                  <p className="text-sm text-destructive">{formErrors.zip}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-phone">Phone</Label>
                 <Input
                   id="edit-phone"
+                  className={formErrors.phone ? 'border-destructive' : ''}
                   value={editForm.phone}
                   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                 />
+                {formErrors.phone && (
+                  <p className="text-sm text-destructive">{formErrors.phone}</p>
+                )}
               </div>
-              <div className="space-y-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="edit-website">Website</Label>
                 <Input
                   id="edit-website"
+                  className={formErrors.website ? 'border-destructive' : ''}
                   value={editForm.website}
                   onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
                 />
+                {formErrors.website && (
+                  <p className="text-sm text-destructive">{formErrors.website}</p>
+                )}
               </div>
             </div>
           </div>
@@ -510,13 +557,29 @@ export default function SchoolDetail() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={isSubmitting}>
+            <Button onClick={handleSaveClick} disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to save these changes to {editForm.name}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSaveEdit}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

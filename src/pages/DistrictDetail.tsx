@@ -1,12 +1,20 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { formatDistrictName } from '@/lib/formatters';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -16,12 +24,45 @@ import {
   GraduationCap,
   Info,
   ExternalLink,
-  Eye
+  Eye,
+  Pencil,
+  Loader2
 } from 'lucide-react';
+
+const US_STATES = [
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+];
+
+interface FormErrors {
+  name?: string;
+  phone?: string;
+  website?: string;
+  zip?: string;
+}
 
 export default function DistrictDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [editForm, setEditForm] = useState({
+    name: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
+    website: ''
+  });
 
   const { data: district, isLoading, error } = useQuery({
     queryKey: ['district-detail', id],
@@ -76,6 +117,86 @@ export default function DistrictDetail() {
     ? `https://maps.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`
     : null;
 
+  const openEditDialog = () => {
+    if (district) {
+      setEditForm({
+        name: district.name || '',
+        address: district.address || '',
+        city: district.city || '',
+        state: district.state || '',
+        zip: district.zip || '',
+        phone: district.phone || '',
+        website: district.website || ''
+      });
+      setFormErrors({});
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    
+    if (!editForm.name.trim()) {
+      errors.name = 'District name is required';
+    }
+    
+    if (editForm.phone && !/^[\d\s\-\(\)\+\.]+$/.test(editForm.phone)) {
+      errors.phone = 'Please enter a valid phone number';
+    }
+    
+    if (editForm.website && !editForm.website.match(/^(https?:\/\/)?[\w\-]+(\.[\w\-]+)+/)) {
+      errors.website = 'Please enter a valid website URL';
+    }
+    
+    if (editForm.zip && !/^\d{5}(-\d{4})?$/.test(editForm.zip)) {
+      errors.zip = 'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveClick = () => {
+    if (validateForm()) {
+      setIsConfirmDialogOpen(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    setIsConfirmDialogOpen(false);
+    setIsSubmitting(true);
+    
+    const { error } = await supabase
+      .from('districts')
+      .update({
+        name: editForm.name.trim(),
+        address: editForm.address || null,
+        city: editForm.city || null,
+        state: editForm.state || null,
+        zip: editForm.zip || null,
+        phone: editForm.phone || null,
+        website: editForm.website || null
+      })
+      .eq('id', id);
+
+    setIsSubmitting(false);
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'District Updated',
+        description: 'District information has been updated successfully.'
+      });
+      setIsEditDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['district-detail', id] });
+    }
+  };
+
   if (error) {
     return (
       <DashboardLayout>
@@ -106,7 +227,13 @@ export default function DistrictDetail() {
               </>
             ) : (
               <>
-                <h1 className="text-2xl font-bold">{district?.name}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold">{formatDistrictName(district?.name)}</h1>
+                  <Button variant="outline" size="sm" onClick={openEditDialog}>
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary">
                     {district?.charter_lea === 'CHRTRDIST' ? 'Charter District' : 'Public District'}
@@ -343,6 +470,127 @@ export default function DistrictDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit District</DialogTitle>
+            <DialogDescription>
+              Update district information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="edit-name">District Name *</Label>
+                <Input
+                  id="edit-name"
+                  className={formErrors.name ? 'border-destructive' : ''}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+                {formErrors.name && (
+                  <p className="text-sm text-destructive">{formErrors.name}</p>
+                )}
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="edit-address">Address</Label>
+                <Input
+                  id="edit-address"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-city">City</Label>
+                <Input
+                  id="edit-city"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-state">State</Label>
+                <Select
+                  value={editForm.state}
+                  onValueChange={(value) => setEditForm({ ...editForm, state: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {US_STATES.map(state => (
+                      <SelectItem key={state} value={state}>{state}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-zip">ZIP Code</Label>
+                <Input
+                  id="edit-zip"
+                  className={formErrors.zip ? 'border-destructive' : ''}
+                  value={editForm.zip}
+                  onChange={(e) => setEditForm({ ...editForm, zip: e.target.value })}
+                />
+                {formErrors.zip && (
+                  <p className="text-sm text-destructive">{formErrors.zip}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input
+                  id="edit-phone"
+                  className={formErrors.phone ? 'border-destructive' : ''}
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                />
+                {formErrors.phone && (
+                  <p className="text-sm text-destructive">{formErrors.phone}</p>
+                )}
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label htmlFor="edit-website">Website</Label>
+                <Input
+                  id="edit-website"
+                  className={formErrors.website ? 'border-destructive' : ''}
+                  value={editForm.website}
+                  onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
+                />
+                {formErrors.website && (
+                  <p className="text-sm text-destructive">{formErrors.website}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveClick} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to save these changes to {editForm.name}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSaveEdit}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
