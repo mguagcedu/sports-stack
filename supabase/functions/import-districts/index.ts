@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,30 +7,151 @@ const corsHeaders = {
 };
 
 interface DistrictRow {
-  LEAID: string;
-  ST_LEAID: string;
-  LEA_NAME: string;
-  ST: string;
-  STATENAME: string;
-  LSTREET1: string;
-  LCITY: string;
-  LZIP: string;
-  LZIP4: string;
-  PHONE: string;
-  WEBSITE: string;
-  LEA_TYPE: string;
-  LEA_TYPE_TEXT: string;
-  CHARTER_LEA: string;
-  SY_STATUS: string;
-  SY_STATUS_TEXT: string;
-  GSLO: string;
-  GSHI: string;
-  OPERATIONAL_SCHOOLS: string;
+  nces_id: string;
+  state_lea_id: string;
+  name: string;
+  state: string;
+  state_name: string;
+  address: string;
+  city: string;
+  zip: string;
+  zip4: string;
+  phone: string;
+  website: string;
+  lea_type: string;
+  lea_type_text: string;
+  charter_lea: string;
+  operational_status: string;
+  operational_status_text: string;
+  lowest_grade: string;
+  highest_grade: string;
+  operational_schools: number;
+}
+
+// Column mapping for flexible header names
+const columnMappings: Record<string, keyof DistrictRow> = {
+  // NCES ID variations
+  'LEAID': 'nces_id',
+  'LEA_ID': 'nces_id',
+  'NCES_ID': 'nces_id',
+  'NCES ID': 'nces_id',
+  'DISTRICT_ID': 'nces_id',
+  'DISTRICT ID': 'nces_id',
+  
+  // State LEA ID variations
+  'ST_LEAID': 'state_lea_id',
+  'STATE_LEA_ID': 'state_lea_id',
+  'STATE LEA ID': 'state_lea_id',
+  
+  // Name variations
+  'LEA_NAME': 'name',
+  'LEA NAME': 'name',
+  'DISTRICT_NAME': 'name',
+  'DISTRICT NAME': 'name',
+  'NAME': 'name',
+  
+  // State variations
+  'ST': 'state',
+  'STATE': 'state',
+  'STATE_CODE': 'state',
+  
+  // State name variations
+  'STATENAME': 'state_name',
+  'STATE_NAME': 'state_name',
+  'STATE NAME': 'state_name',
+  
+  // Address variations
+  'LSTREET1': 'address',
+  'STREET': 'address',
+  'ADDRESS': 'address',
+  'STREET_ADDRESS': 'address',
+  
+  // City variations
+  'LCITY': 'city',
+  'CITY': 'city',
+  
+  // ZIP variations
+  'LZIP': 'zip',
+  'ZIP': 'zip',
+  'ZIPCODE': 'zip',
+  'ZIP_CODE': 'zip',
+  
+  // ZIP4 variations
+  'LZIP4': 'zip4',
+  'ZIP4': 'zip4',
+  
+  // Phone variations
+  'PHONE': 'phone',
+  'TELEPHONE': 'phone',
+  
+  // Website variations
+  'WEBSITE': 'website',
+  'URL': 'website',
+  'WEB': 'website',
+  
+  // LEA Type variations
+  'LEA_TYPE': 'lea_type',
+  'LEA TYPE': 'lea_type',
+  'TYPE': 'lea_type',
+  
+  // LEA Type Text variations
+  'LEA_TYPE_TEXT': 'lea_type_text',
+  'LEA TYPE TEXT': 'lea_type_text',
+  'TYPE_TEXT': 'lea_type_text',
+  
+  // Charter LEA variations
+  'CHARTER_LEA': 'charter_lea',
+  'CHARTER LEA': 'charter_lea',
+  'CHARTER': 'charter_lea',
+  
+  // Status variations
+  'SY_STATUS': 'operational_status',
+  'STATUS': 'operational_status',
+  'OPERATIONAL_STATUS': 'operational_status',
+  
+  // Status Text variations
+  'SY_STATUS_TEXT': 'operational_status_text',
+  'STATUS_TEXT': 'operational_status_text',
+  
+  // Grade variations
+  'GSLO': 'lowest_grade',
+  'LOWEST_GRADE': 'lowest_grade',
+  'LOW_GRADE': 'lowest_grade',
+  
+  'GSHI': 'highest_grade',
+  'HIGHEST_GRADE': 'highest_grade',
+  'HIGH_GRADE': 'highest_grade',
+  
+  // Operational schools variations
+  'OPERATIONAL_SCHOOLS': 'operational_schools',
+  'OPERATIONAL SCHOOLS': 'operational_schools',
+  'NUM_SCHOOLS': 'operational_schools',
+};
+
+function mapHeaders(headers: string[]): Record<number, keyof DistrictRow> {
+  const mapping: Record<number, keyof DistrictRow> = {};
+  
+  headers.forEach((header, index) => {
+    const normalizedHeader = header.trim().toUpperCase().replace(/\s+/g, '_');
+    
+    // Try exact match first
+    if (columnMappings[header.trim().toUpperCase()]) {
+      mapping[index] = columnMappings[header.trim().toUpperCase()];
+    } else if (columnMappings[normalizedHeader]) {
+      mapping[index] = columnMappings[normalizedHeader];
+    }
+  });
+  
+  return mapping;
 }
 
 function parseCSV(csvText: string): DistrictRow[] {
   const lines = csvText.split('\n');
-  const headers = lines[0].split(',').map(h => h.trim());
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const headerMapping = mapHeaders(headers);
+  
+  console.log('CSV Headers found:', headers);
+  console.log('Header mapping:', headerMapping);
   
   const rows: DistrictRow[] = [];
   for (let i = 1; i < lines.length; i++) {
@@ -46,23 +168,83 @@ function parseCSV(csvText: string): DistrictRow[] {
       if (char === '"') {
         inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
-        values.push(current.trim());
+        values.push(current.trim().replace(/^"|"$/g, ''));
         current = '';
       } else {
         current += char;
       }
     }
-    values.push(current.trim());
+    values.push(current.trim().replace(/^"|"$/g, ''));
     
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index] || '';
+    const row: Partial<DistrictRow> = {};
+    Object.entries(headerMapping).forEach(([index, field]) => {
+      const value = values[parseInt(index)] || '';
+      if (field === 'operational_schools') {
+        row[field] = parseInt(value) || 0;
+      } else {
+        (row as Record<string, string | number>)[field] = value;
+      }
     });
     
-    rows.push(row as unknown as DistrictRow);
+    // Only add rows that have at least an NCES ID
+    if (row.nces_id) {
+      rows.push(row as DistrictRow);
+    }
   }
   
   return rows;
+}
+
+function parseExcel(arrayBuffer: ArrayBuffer): DistrictRow[] {
+  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  const firstSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheetName];
+  
+  // Convert to JSON with header row
+  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+  
+  if (jsonData.length < 2) {
+    console.log('Excel file has insufficient data');
+    return [];
+  }
+  
+  const headers = (jsonData[0] as unknown[]).map(h => String(h || '').trim());
+  const headerMapping = mapHeaders(headers);
+  
+  console.log('Excel Headers found:', headers);
+  console.log('Header mapping:', headerMapping);
+  
+  const rows: DistrictRow[] = [];
+  
+  for (let i = 1; i < jsonData.length; i++) {
+    const rowData = jsonData[i];
+    if (!rowData || rowData.length === 0) continue;
+    
+    const row: Partial<DistrictRow> = {};
+    Object.entries(headerMapping).forEach(([index, field]) => {
+      const value = rowData[parseInt(index)];
+      if (field === 'operational_schools') {
+        row[field] = typeof value === 'number' ? value : parseInt(String(value)) || 0;
+      } else {
+        (row as Record<string, string | number>)[field] = String(value || '');
+      }
+    });
+    
+    // Only add rows that have at least an NCES ID
+    if (row.nces_id) {
+      rows.push(row as DistrictRow);
+    }
+  }
+  
+  return rows;
+}
+
+function detectFileType(filename: string): 'csv' | 'excel' {
+  const ext = filename.toLowerCase().split('.').pop();
+  if (ext === 'xlsx' || ext === 'xls') {
+    return 'excel';
+  }
+  return 'csv';
 }
 
 Deno.serve(async (req) => {
@@ -119,41 +301,60 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Processing file: ${file.name}, size: ${file.size}`);
+    console.log(`Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
 
-    const csvText = await file.text();
-    const rows = parseCSV(csvText);
+    const fileType = detectFileType(file.name);
+    let rows: DistrictRow[];
+
+    if (fileType === 'excel') {
+      console.log('Parsing as Excel file...');
+      const arrayBuffer = await file.arrayBuffer();
+      rows = parseExcel(arrayBuffer);
+    } else {
+      console.log('Parsing as CSV file...');
+      const csvText = await file.text();
+      rows = parseCSV(csvText);
+    }
     
-    console.log(`Parsed ${rows.length} districts from CSV`);
+    console.log(`Parsed ${rows.length} districts from ${fileType.toUpperCase()}`);
+
+    if (rows.length === 0) {
+      return new Response(JSON.stringify({ 
+        error: 'No valid district data found. Please ensure the file has columns for NCES ID (LEAID), Name (LEA_NAME), and State (ST).' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     let inserted = 0;
     let updated = 0;
-    let errors: string[] = [];
+    const errors: string[] = [];
     const batchSize = 500;
 
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
       
       const districts = batch.map(row => ({
-        nces_id: row.LEAID,
-        state_lea_id: row.ST_LEAID,
-        name: row.LEA_NAME,
-        state: row.ST,
-        state_name: row.STATENAME,
-        address: row.LSTREET1,
-        city: row.LCITY,
-        zip: row.LZIP,
-        zip4: row.LZIP4,
-        phone: row.PHONE,
-        website: row.WEBSITE,
-        lea_type: row.LEA_TYPE,
-        lea_type_text: row.LEA_TYPE_TEXT,
-        charter_lea: row.CHARTER_LEA,
-        operational_status: row.SY_STATUS,
-        operational_status_text: row.SY_STATUS_TEXT,
-        lowest_grade: row.GSLO,
-        highest_grade: row.GSHI,
-        operational_schools: parseInt(row.OPERATIONAL_SCHOOLS) || 0,
+        nces_id: row.nces_id,
+        state_lea_id: row.state_lea_id || null,
+        name: row.name,
+        state: row.state,
+        state_name: row.state_name || null,
+        address: row.address || null,
+        city: row.city || null,
+        zip: row.zip || null,
+        zip4: row.zip4 || null,
+        phone: row.phone || null,
+        website: row.website || null,
+        lea_type: row.lea_type || null,
+        lea_type_text: row.lea_type_text || null,
+        charter_lea: row.charter_lea || null,
+        operational_status: row.operational_status || null,
+        operational_status_text: row.operational_status_text || null,
+        lowest_grade: row.lowest_grade || null,
+        highest_grade: row.highest_grade || null,
+        operational_schools: row.operational_schools || 0,
       }));
 
       const { data, error } = await supabase
@@ -179,6 +380,7 @@ Deno.serve(async (req) => {
       total: rows.length,
       inserted,
       updated,
+      fileType: fileType.toUpperCase(),
       errors: errors.length > 0 ? errors : undefined
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
