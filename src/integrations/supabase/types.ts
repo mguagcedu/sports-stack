@@ -179,6 +179,135 @@ export type Database = {
         }
         Relationships: []
       }
+      event_tickets: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          payment_id: string | null
+          payment_status: string | null
+          purchased_at: string | null
+          purchaser_email: string
+          purchaser_name: string | null
+          purchaser_user_id: string | null
+          quantity: number
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          payment_id?: string | null
+          payment_status?: string | null
+          purchased_at?: string | null
+          purchaser_email: string
+          purchaser_name?: string | null
+          purchaser_user_id?: string | null
+          quantity?: number
+          total_amount: number
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          payment_id?: string | null
+          payment_status?: string | null
+          purchased_at?: string | null
+          purchaser_email?: string
+          purchaser_name?: string | null
+          purchaser_user_id?: string | null
+          quantity?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          away_team_id: string | null
+          created_at: string | null
+          end_time: string | null
+          event_type: string
+          home_team_id: string | null
+          id: string
+          is_cancelled: boolean | null
+          max_capacity: number | null
+          name: string
+          organization_id: string
+          start_time: string
+          ticket_price: number | null
+          tickets_sold: number | null
+          updated_at: string | null
+          venue_address: string | null
+          venue_name: string | null
+        }
+        Insert: {
+          away_team_id?: string | null
+          created_at?: string | null
+          end_time?: string | null
+          event_type: string
+          home_team_id?: string | null
+          id?: string
+          is_cancelled?: boolean | null
+          max_capacity?: number | null
+          name: string
+          organization_id: string
+          start_time: string
+          ticket_price?: number | null
+          tickets_sold?: number | null
+          updated_at?: string | null
+          venue_address?: string | null
+          venue_name?: string | null
+        }
+        Update: {
+          away_team_id?: string | null
+          created_at?: string | null
+          end_time?: string | null
+          event_type?: string
+          home_team_id?: string | null
+          id?: string
+          is_cancelled?: boolean | null
+          max_capacity?: number | null
+          name?: string
+          organization_id?: string
+          start_time?: string
+          ticket_price?: number | null
+          tickets_sold?: number | null
+          updated_at?: string | null
+          venue_address?: string | null
+          venue_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_away_team_id_fkey"
+            columns: ["away_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_home_team_id_fkey"
+            columns: ["home_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_accounts: {
         Row: {
           child_id: string
@@ -415,6 +544,65 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          organization_id: string
+          payment_type: string
+          reference_id: string | null
+          reference_type: string | null
+          status: string
+          stripe_payment_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id: string
+          payment_type: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string
+          stripe_payment_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          organization_id?: string
+          payment_type?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string
+          stripe_payment_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -495,6 +683,65 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      registrations: {
+        Row: {
+          athlete_user_id: string
+          created_at: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          id: string
+          medical_notes: string | null
+          notes: string | null
+          parent_user_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          athlete_user_id: string
+          created_at?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          id?: string
+          medical_notes?: string | null
+          notes?: string | null
+          parent_user_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          athlete_user_id?: string
+          created_at?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          id?: string
+          medical_notes?: string | null
+          notes?: string | null
+          parent_user_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registrations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schools: {
         Row: {
@@ -653,6 +900,53 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      team_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_captain: boolean | null
+          jersey_number: string | null
+          joined_at: string | null
+          position: string | null
+          role: string
+          team_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_captain?: boolean | null
+          jersey_number?: string | null
+          joined_at?: string | null
+          position?: string | null
+          role: string
+          team_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_captain?: boolean | null
+          jersey_number?: string | null
+          joined_at?: string | null
+          position?: string | null
+          role?: string
+          team_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teams: {
         Row: {
