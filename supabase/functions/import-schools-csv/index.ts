@@ -298,6 +298,18 @@ async function processImportInBackground(
     console.log(`[Background] Inserting ${schools.length} schools...`)
 
     for (let i = 0; i < schools.length; i += SCHOOL_BATCH_SIZE) {
+      // Check if cancelled before each batch
+      const { data: currentHistory } = await supabase
+        .from('import_history')
+        .select('status')
+        .eq('id', historyId)
+        .maybeSingle()
+      
+      if (currentHistory?.status === 'cancelled') {
+        console.log('[Background] Import cancelled by user')
+        return
+      }
+
       const batch = schools.slice(i, i + SCHOOL_BATCH_SIZE)
       
       // Track status and state counts
