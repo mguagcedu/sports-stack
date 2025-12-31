@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { ImportProgress } from "@/components/imports/ImportProgress";
 import { DropZone, FileList } from "@/components/imports/DropZone";
 import { ImportHistoryTable } from "@/components/imports/ImportHistoryTable";
+import { parseCSV, extractDistricts, SchoolRow, DistrictData } from "@/lib/csvParser";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,7 @@ export default function ImportData() {
   const [pollingTotalRows, setPollingTotalRows] = useState<number>(0);
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(0);
   const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
+  const [isCancelled, setIsCancelled] = useState(false);
   const [result, setResult] = useState<{
     type?: 'district' | 'school';
     success?: boolean;
@@ -130,6 +132,9 @@ export default function ImportData() {
   };
 
   const handleCancelImport = async () => {
+    // Set cancelled flag
+    setIsCancelled(true);
+    
     // Stop polling
     if (pollingIntervalId) {
       clearInterval(pollingIntervalId);
@@ -142,7 +147,7 @@ export default function ImportData() {
       setActiveXhr(null);
     }
     
-    // Update history record as cancelled (this will also signal background process to stop)
+    // Update history record as cancelled
     if (importHistoryId) {
       await supabase
         .from('import_history')
@@ -193,7 +198,6 @@ export default function ImportData() {
       return;
     }
 
-    // Get session for auth token
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       toast.error("Please sign in to import data");
@@ -201,236 +205,193 @@ export default function ImportData() {
     }
 
     setImporting(true);
-    setStage('uploading');
+    setIsCancelled(false);
+    setStage('parsing');
     setProgress(0);
-    setUploadedBytes(0);
-    setTotalBytes(0);
-    setEstimatedTimeRemaining(null);
-    setUploadSpeed(null);
-    setStageMessage('Starting upload...');
+    setStageMessage('Reading and parsing CSV files...');
     setResult(null);
     setPollingRowsInserted(0);
     setPollingTotalRows(0);
     setCurrentFileIndex(0);
 
+    const BATCH_SIZE = 2000; // Schools per batch
     let cumulativeInserted = 0;
     let cumulativeTotal = 0;
     let cumulativeDistricts = 0;
     let lastFormat = '';
-    let allStatusBreakdown: Record<string, number> = {};
-    let allStateBreakdown: Record<string, number> = {};
+    const allStatusBreakdown: Record<string, number> = {};
+    const allStateBreakdown: Record<string, number> = {};
 
-    // Process each file sequentially
-    for (let fileIndex = 0; fileIndex < schoolFiles.length; fileIndex++) {
-      setCurrentFileIndex(fileIndex);
-      const file = schoolFiles[fileIndex];
-      const isCSV = file.name.toLowerCase().endsWith('.csv');
-      const endpoint = isCSV ? 'import-schools-csv' : 'import-schools';
+    try {
+      // Process each file
+      for (let fileIndex = 0; fileIndex < schoolFiles.length; fileIndex++) {
+        if (isCancelled) break;
+        
+        setCurrentFileIndex(fileIndex);
+        const file = schoolFiles[fileIndex];
+        
+        setStageMessage(`Parsing file ${fileIndex + 1} of ${schoolFiles.length}: ${file.name}...`);
+        setProgress(Math.round((fileIndex / schoolFiles.length) * 10));
 
-      // Create history record for this file
-      const { data: historyRecord } = await supabase
-        .from('import_history')
-        .insert({
-          user_id: session.user.id,
-          file_name: file.name,
-          file_size_bytes: file.size,
-          import_type: 'schools',
-          status: 'uploading',
-        })
-        .select('id')
-        .single();
+        // Read file content on client
+        const csvText = await file.text();
+        const { schools, format } = parseCSV(csvText);
+        lastFormat = format;
 
-      if (!historyRecord) {
-        toast.error(`Failed to create import history record for ${file.name}`);
-        continue;
+        if (schools.length === 0) {
+          toast.error(`No valid data found in ${file.name}`);
+          continue;
+        }
+
+        // Extract unique districts (only from first batch)
+        const districts = extractDistricts(schools);
+        cumulativeTotal += schools.length;
+
+        // Create history record
+        const { data: historyRecord } = await supabase
+          .from('import_history')
+          .insert({
+            user_id: session.user.id,
+            file_name: file.name,
+            file_size_bytes: file.size,
+            import_type: 'schools',
+            status: 'processing',
+            total_rows: schools.length,
+            format: format,
+          })
+          .select('id')
+          .single();
+
+        if (!historyRecord) {
+          toast.error(`Failed to create history record for ${file.name}`);
+          continue;
+        }
+
+        const currentHistoryId = historyRecord.id;
+        setImportHistoryId(currentHistoryId);
+
+        // Split schools into batches
+        const totalBatches = Math.ceil(schools.length / BATCH_SIZE);
+        setStage('processing');
+        setPollingTotalRows(cumulativeTotal);
+
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+          if (isCancelled) {
+            await supabase
+              .from('import_history')
+              .update({ status: 'cancelled', completed_at: new Date().toISOString() })
+              .eq('id', currentHistoryId);
+            break;
+          }
+
+          const start = batchIndex * BATCH_SIZE;
+          const end = Math.min(start + BATCH_SIZE, schools.length);
+          const batchSchools = schools.slice(start, end);
+          
+          // Only send districts on first batch
+          const batchDistricts = batchIndex === 0 ? districts : [];
+
+          const overallProgress = 10 + (
+            (fileIndex / schoolFiles.length) * 85 +
+            ((batchIndex + 1) / totalBatches) * (85 / schoolFiles.length)
+          );
+          setProgress(Math.round(overallProgress));
+          setStageMessage(`File ${fileIndex + 1}/${schoolFiles.length}: Batch ${batchIndex + 1}/${totalBatches} (${(cumulativeInserted + end).toLocaleString()} records)...`);
+
+          // Send batch to edge function
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-schools-batch`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+                'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+              body: JSON.stringify({
+                historyId: currentHistoryId,
+                schools: batchSchools,
+                districts: batchDistricts,
+                batchIndex,
+                totalBatches,
+                isLastBatch: batchIndex === totalBatches - 1,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Batch ${batchIndex + 1} failed`);
+          }
+
+          const batchResult = await response.json();
+          
+          if (batchResult.cancelled) {
+            toast.info('Import cancelled');
+            break;
+          }
+
+          cumulativeInserted += batchResult.inserted || 0;
+          if (batchIndex === 0) {
+            cumulativeDistricts += batchDistricts.length;
+          }
+
+          setPollingRowsInserted(cumulativeInserted);
+        }
+
+        if (isCancelled) break;
+
+        // Get final status breakdown from history
+        const { data: finalHistory } = await supabase
+          .from('import_history')
+          .select('status_breakdown, state_breakdown')
+          .eq('id', currentHistoryId)
+          .maybeSingle();
+
+        if (finalHistory?.status_breakdown) {
+          for (const [k, v] of Object.entries(finalHistory.status_breakdown as Record<string, number>)) {
+            allStatusBreakdown[k] = (allStatusBreakdown[k] || 0) + v;
+          }
+        }
+        if (finalHistory?.state_breakdown) {
+          for (const [k, v] of Object.entries(finalHistory.state_breakdown as Record<string, number>)) {
+            allStateBreakdown[k] = (allStateBreakdown[k] || 0) + v;
+          }
+        }
+
+        toast.success(`Completed ${file.name}: ${schools.length.toLocaleString()} records`);
       }
 
-      const currentHistoryId = historyRecord.id;
-      setImportHistoryId(currentHistoryId);
+      if (!isCancelled) {
+        setStage('complete');
+        setProgress(100);
+        setStageMessage('Import complete!');
+        setHistoryRefreshTrigger(prev => prev + 1);
 
-      try {
-        // Calculate progress ranges for this file
-        const fileProgressStart = (fileIndex / schoolFiles.length) * 100;
-        const fileProgressRange = 100 / schoolFiles.length;
-
-        setStage('uploading');
-        setTotalBytes(file.size);
-        setUploadedBytes(0);
-        setStageMessage(`Uploading file ${fileIndex + 1} of ${schoolFiles.length}: ${file.name}`);
-
-        // Upload with progress
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`;
-        const response = await uploadWithProgress(
-          file,
-          url,
-          session.access_token,
-          (loaded, total, estimatedSeconds, speedBytesPerSec) => {
-            setUploadedBytes(loaded);
-            setEstimatedTimeRemaining(estimatedSeconds);
-            setUploadSpeed(speedBytesPerSec);
-            // Upload is 0-30% of this file's range
-            const uploadProgress = fileProgressStart + (loaded / total) * (fileProgressRange * 0.3);
-            setProgress(Math.round(uploadProgress));
-          },
-          (xhr) => setActiveXhr(xhr),
-          currentHistoryId
-        );
-
-        if (response.cancelled) {
-          return;
-        }
-
-        setActiveXhr(null);
-        setUploadSpeed(null);
-        setEstimatedTimeRemaining(null);
-
-        if (response.error) {
-          throw new Error(response.error.message);
-        }
-
-        // Switch to processing stage and poll for this file
-        setStage('processing');
-        setProgress(Math.round(fileProgressStart + fileProgressRange * 0.35));
-        setStageMessage(`Processing file ${fileIndex + 1} of ${schoolFiles.length}: ${file.name}...`);
-
-        // Wait for this file to complete via polling
-        const fileResult = await new Promise<{
-          success: boolean;
-          inserted: number;
-          total: number;
-          districts: number;
-          format: string;
-          statusBreakdown: Record<string, number>;
-          stateBreakdown: Record<string, number>;
-          error?: string;
-        }>((resolve) => {
-          const pollInterval = setInterval(async () => {
-            const { data: history } = await supabase
-              .from('import_history')
-              .select('*')
-              .eq('id', currentHistoryId)
-              .maybeSingle();
-
-            if (!history) return;
-
-            const inserted = history.rows_inserted || 0;
-            const total = history.total_rows || 0;
-
-            setPollingRowsInserted(cumulativeInserted + inserted);
-            setPollingTotalRows(cumulativeTotal + total);
-
-            if (total > 0) {
-              const processingProgress = fileProgressStart + fileProgressRange * 0.35 + 
-                (inserted / total) * (fileProgressRange * 0.6);
-              setProgress(Math.min(Math.round(processingProgress), Math.round(fileProgressStart + fileProgressRange * 0.95)));
-            }
-
-            setStageMessage(`File ${fileIndex + 1}/${schoolFiles.length}: ${inserted.toLocaleString()} / ${total.toLocaleString()} records...`);
-
-            if (history.status === 'completed') {
-              clearInterval(pollInterval);
-              setPollingIntervalId(null);
-              resolve({
-                success: true,
-                inserted: history.rows_inserted || 0,
-                total: history.total_rows || 0,
-                districts: history.districts_processed || 0,
-                format: history.format || '',
-                statusBreakdown: (history.status_breakdown as Record<string, number>) || {},
-                stateBreakdown: (history.state_breakdown as Record<string, number>) || {},
-              });
-            } else if (history.status === 'failed') {
-              clearInterval(pollInterval);
-              setPollingIntervalId(null);
-              resolve({
-                success: false,
-                inserted: 0,
-                total: 0,
-                districts: 0,
-                format: '',
-                statusBreakdown: {},
-                stateBreakdown: {},
-                error: history.error_message || 'Import failed',
-              });
-            } else if (history.status === 'cancelled') {
-              clearInterval(pollInterval);
-              setPollingIntervalId(null);
-              resolve({
-                success: false,
-                inserted: 0,
-                total: 0,
-                districts: 0,
-                format: '',
-                statusBreakdown: {},
-                stateBreakdown: {},
-                error: 'cancelled',
-              });
-            }
-          }, 2000);
-
-          setPollingIntervalId(pollInterval);
+        setResult({
+          type: 'school',
+          success: true,
+          total: cumulativeTotal,
+          inserted: cumulativeInserted,
+          districtsCreated: cumulativeDistricts,
+          format: lastFormat,
+          statusBreakdown: allStatusBreakdown,
+          stateBreakdown: allStateBreakdown,
         });
 
-        if (fileResult.error === 'cancelled') {
-          return; // User cancelled, exit completely
-        }
-
-        if (!fileResult.success) {
-          toast.error(`File ${file.name} failed: ${fileResult.error}`);
-          continue; // Skip to next file
-        }
-
-        // Accumulate results
-        cumulativeInserted += fileResult.inserted;
-        cumulativeTotal += fileResult.total;
-        cumulativeDistricts += fileResult.districts;
-        lastFormat = fileResult.format || lastFormat;
-
-        // Merge breakdowns
-        for (const [key, value] of Object.entries(fileResult.statusBreakdown)) {
-          allStatusBreakdown[key] = (allStatusBreakdown[key] || 0) + value;
-        }
-        for (const [key, value] of Object.entries(fileResult.stateBreakdown)) {
-          allStateBreakdown[key] = (allStateBreakdown[key] || 0) + value;
-        }
-
-        setProgress(Math.round(fileProgressStart + fileProgressRange));
-        toast.success(`Completed file ${fileIndex + 1}/${schoolFiles.length}: ${fileResult.inserted.toLocaleString()} schools`);
-
-      } catch (error: any) {
-        console.error(`Import error for ${file.name}:`, error);
-        toast.error(`Error in ${file.name}: ${error.message}`);
-        
-        await supabase
-          .from('import_history')
-          .update({
-            status: 'failed',
-            error_message: error.message,
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', currentHistoryId);
+        toast.success(`Successfully imported ${cumulativeInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
       }
+    } catch (error: any) {
+      console.error('Import error:', error);
+      setStage('error');
+      setStageMessage(error.message || 'Import failed');
+      toast.error(error.message || 'Import failed');
+      setResult({ type: 'school', success: false, errors: [error.message] });
+      setHistoryRefreshTrigger(prev => prev + 1);
+    } finally {
+      setImporting(false);
+      setIsCancelled(false);
     }
-
-    // All files processed
-    setStage('complete');
-    setProgress(100);
-    setStageMessage('All files imported!');
-    setHistoryRefreshTrigger(prev => prev + 1);
-
-    setResult({
-      type: 'school',
-      success: true,
-      total: cumulativeTotal,
-      inserted: cumulativeInserted,
-      districtsCreated: cumulativeDistricts,
-      format: lastFormat,
-      statusBreakdown: allStatusBreakdown,
-      stateBreakdown: allStateBreakdown,
-    });
-
-    toast.success(`Successfully imported ${cumulativeInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
-    setImporting(false);
   };
 
   const handleClearSchools = async () => {
