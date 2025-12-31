@@ -3,12 +3,14 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
+import { ImportProgress } from "@/components/imports/ImportProgress";
+
+type ImportStage = 'idle' | 'uploading' | 'parsing' | 'importing' | 'complete' | 'error';
 
 export default function ImportData() {
   const { isAdmin, loading: rolesLoading } = useUserRoles();
@@ -16,6 +18,8 @@ export default function ImportData() {
   const [schoolFile, setSchoolFile] = useState<File | null>(null);
   const [importing, setImporting] = useState<'district' | 'school' | null>(null);
   const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState<ImportStage>('idle');
+  const [stageMessage, setStageMessage] = useState('');
   const [result, setResult] = useState<{
     type?: 'district' | 'school';
     success?: boolean;
@@ -33,24 +37,37 @@ export default function ImportData() {
     }
 
     setImporting('district');
+    setStage('uploading');
     setProgress(10);
+    setStageMessage('Uploading file...');
     setResult(null);
 
     try {
       const formData = new FormData();
       formData.append('file', districtFile);
 
+      setStage('parsing');
       setProgress(30);
+      setStageMessage('Parsing district data...');
       
       const response = await supabase.functions.invoke('import-districts', {
         body: formData,
       });
 
-      setProgress(100);
-
       if (response.error) {
         throw new Error(response.error.message);
       }
+
+      setStage('importing');
+      setProgress(70);
+      setStageMessage('Importing to database...');
+
+      // Simulate a brief delay for visual feedback
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setStage('complete');
+      setProgress(100);
+      setStageMessage('Import complete!');
 
       setResult({ ...response.data, type: 'district' });
       
@@ -59,6 +76,8 @@ export default function ImportData() {
       }
     } catch (error: any) {
       console.error('Import error:', error);
+      setStage('error');
+      setStageMessage(error.message || 'Import failed');
       toast.error(error.message || "Import failed");
       setResult({ type: 'district', success: false, errors: [error.message] });
     } finally {
@@ -72,38 +91,71 @@ export default function ImportData() {
       return;
     }
 
+    // Determine which endpoint to use based on file type
+    const isCSV = schoolFile.name.toLowerCase().endsWith('.csv');
+    const endpoint = isCSV ? 'import-schools-csv' : 'import-schools';
+
     setImporting('school');
-    setProgress(10);
+    setStage('uploading');
+    setProgress(5);
+    setStageMessage('Uploading file...');
     setResult(null);
 
     try {
       const formData = new FormData();
       formData.append('file', schoolFile);
 
-      setProgress(30);
+      // Simulate upload progress
+      setProgress(15);
+      setStage('parsing');
+      setStageMessage(`Parsing ${isCSV ? 'CSV' : 'Excel'} file...`);
       
-      const response = await supabase.functions.invoke('import-schools', {
+      const response = await supabase.functions.invoke(endpoint, {
         body: formData,
       });
-
-      setProgress(100);
 
       if (response.error) {
         throw new Error(response.error.message);
       }
 
-      setResult({ ...response.data, type: 'school' });
+      setStage('importing');
+      setProgress(80);
+      setStageMessage('Writing to database...');
+
+      // Brief delay for visual feedback
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      setStage('complete');
+      setProgress(100);
+      setStageMessage('Import complete!');
+
+      setResult({ 
+        type: 'school',
+        success: response.data.success,
+        total: response.data.totalRows,
+        inserted: response.data.schoolsInserted,
+        districtsCreated: response.data.districtsProcessed
+      });
       
       if (response.data.success) {
-        toast.success(`Successfully imported ${response.data.inserted} schools`);
+        toast.success(`Successfully imported ${response.data.schoolsInserted?.toLocaleString()} schools`);
       }
     } catch (error: any) {
       console.error('Import error:', error);
+      setStage('error');
+      setStageMessage(error.message || 'Import failed');
       toast.error(error.message || "Import failed");
       setResult({ type: 'school', success: false, errors: [error.message] });
     } finally {
       setImporting(null);
     }
+  };
+
+  const resetImport = () => {
+    setStage('idle');
+    setProgress(0);
+    setStageMessage('');
+    setResult(null);
   };
 
   if (rolesLoading) {
@@ -136,7 +188,7 @@ export default function ImportData() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Import Data</h1>
           <p className="text-muted-foreground">
-            Import NCES school and district data from CSV or Excel files
+            Import NCES school and district data from CSV files
           </p>
         </div>
 
@@ -149,32 +201,35 @@ export default function ImportData() {
                 Import Districts (LEA)
               </CardTitle>
               <CardDescription>
-                Upload NCES LEA directory (CSV or Excel). Supports flexible column mapping.
+                Upload NCES LEA directory CSV file
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
                 <Input
                   type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={(e) => setDistrictFile(e.target.files?.[0] || null)}
+                  accept=".csv"
+                  onChange={(e) => {
+                    setDistrictFile(e.target.files?.[0] || null);
+                    resetImport();
+                  }}
                   disabled={!!importing}
                 />
               </div>
               
-              {districtFile && (
+              {districtFile && stage === 'idle' && (
                 <p className="text-sm text-muted-foreground">
                   Selected: {districtFile.name} ({(districtFile.size / 1024 / 1024).toFixed(2)} MB)
                 </p>
               )}
 
               {importing === 'district' && (
-                <div className="space-y-2">
-                  <Progress value={progress} className="h-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Importing districts... This may take a minute.
-                  </p>
-                </div>
+                <ImportProgress 
+                  progress={progress} 
+                  stage={stage}
+                  fileName={districtFile?.name}
+                  message={stageMessage}
+                />
               )}
 
               <Button 
@@ -205,38 +260,41 @@ export default function ImportData() {
                 Import Schools
               </CardTitle>
               <CardDescription>
-                Upload school data (CSV or Excel). Districts will be auto-created from school data.
+                Upload school data CSV file. Districts will be auto-created.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
                 <Input
                   type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={(e) => setSchoolFile(e.target.files?.[0] || null)}
+                  accept=".csv"
+                  onChange={(e) => {
+                    setSchoolFile(e.target.files?.[0] || null);
+                    resetImport();
+                  }}
                   disabled={!!importing}
                 />
               </div>
               
-              {schoolFile && (
+              {schoolFile && stage === 'idle' && (
                 <p className="text-sm text-muted-foreground">
                   Selected: {schoolFile.name} ({(schoolFile.size / 1024 / 1024).toFixed(2)} MB)
                 </p>
               )}
 
               {importing === 'school' && (
-                <div className="space-y-2">
-                  <Progress value={progress} className="h-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Importing schools and auto-creating districts... This may take a few minutes.
-                  </p>
-                </div>
+                <ImportProgress 
+                  progress={progress} 
+                  stage={stage}
+                  fileName={schoolFile?.name}
+                  message={stageMessage}
+                />
               )}
 
               <Alert>
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>
-                  Districts are automatically extracted and created from school data.
+                  Use CSV format for large files. Districts are automatically created.
                 </AlertDescription>
               </Alert>
 
@@ -263,11 +321,11 @@ export default function ImportData() {
 
         {/* Import Results */}
         {result && (
-          <Card>
+          <Card className="animate-fade-in">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 {result.success ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <CheckCircle2 className="h-5 w-5 text-success" />
                 ) : (
                   <AlertCircle className="h-5 w-5 text-destructive" />
                 )}
@@ -285,7 +343,7 @@ export default function ImportData() {
                   </p>
                   {result.districtsCreated !== undefined && result.districtsCreated > 0 && (
                     <p className="text-sm">
-                      <span className="font-medium">Districts auto-created:</span> {result.districtsCreated?.toLocaleString()}
+                      <span className="font-medium">Districts processed:</span> {result.districtsCreated?.toLocaleString()}
                     </p>
                   )}
                 </div>
@@ -310,6 +368,12 @@ export default function ImportData() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Important:</strong> Convert Excel files to CSV format before uploading for best performance with large datasets.
+              </AlertDescription>
+            </Alert>
             <div className="space-y-2">
               <h4 className="font-medium">LEA (District) Directory</h4>
               <p className="text-sm text-muted-foreground">
