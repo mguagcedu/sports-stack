@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.import-schools-csv]
 verify_jwt = false
+
+[functions.clear-schools]
+verify_jwt = false

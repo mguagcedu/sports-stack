@@ -1,21 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { toast } from "sonner";
 import { ImportProgress } from "@/components/imports/ImportProgress";
+import { DropZone, FileList } from "@/components/imports/DropZone";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
 type ImportStage = 'idle' | 'uploading' | 'parsing' | 'importing' | 'complete' | 'error';
 
 export default function ImportData() {
   const { isAdmin, loading: rolesLoading } = useUserRoles();
-  const [districtFile, setDistrictFile] = useState<File | null>(null);
-  const [schoolFile, setSchoolFile] = useState<File | null>(null);
+  const [districtFiles, setDistrictFiles] = useState<File[]>([]);
+  const [schoolFiles, setSchoolFiles] = useState<File[]>([]);
   const [importing, setImporting] = useState<'district' | 'school' | null>(null);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState<ImportStage>('idle');
@@ -28,19 +40,48 @@ export default function ImportData() {
     skipped?: number;
     districtsCreated?: number;
     errors?: string[];
-    // Auto-correction fields
     uniqueSchools?: number;
     duplicatesRemoved?: number;
     scientificNotationFixed?: number;
     format?: string;
   } | null>(null);
 
+  // Clear schools state
+  const [schoolCount, setSchoolCount] = useState<number | null>(null);
+  const [loadingCount, setLoadingCount] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Fetch school count
+  useEffect(() => {
+    const fetchSchoolCount = async () => {
+      setLoadingCount(true);
+      try {
+        const { count, error } = await supabase
+          .from('schools')
+          .select('*', { count: 'exact', head: true });
+        
+        if (!error) {
+          setSchoolCount(count);
+        }
+      } catch (e) {
+        console.error('Failed to fetch school count:', e);
+      } finally {
+        setLoadingCount(false);
+      }
+    };
+
+    fetchSchoolCount();
+  }, [result]); // Refresh after import
+
   const handleDistrictImport = async () => {
-    if (!districtFile) {
+    if (districtFiles.length === 0) {
       toast.error("Please select a district CSV file");
       return;
     }
 
+    const districtFile = districtFiles[0];
     setImporting('district');
     setStage('uploading');
     setProgress(10);
@@ -67,7 +108,6 @@ export default function ImportData() {
       setProgress(70);
       setStageMessage('Importing to database...');
 
-      // Simulate a brief delay for visual feedback
       await new Promise(resolve => setTimeout(resolve, 500));
 
       setStage('complete');
@@ -91,44 +131,51 @@ export default function ImportData() {
   };
 
   const handleSchoolImport = async () => {
-    if (!schoolFile) {
-      toast.error("Please select a school file");
+    if (schoolFiles.length === 0) {
+      toast.error("Please select school files");
       return;
     }
-
-    // Determine which endpoint to use based on file type
-    const isCSV = schoolFile.name.toLowerCase().endsWith('.csv');
-    const endpoint = isCSV ? 'import-schools-csv' : 'import-schools';
 
     setImporting('school');
     setStage('uploading');
     setProgress(5);
-    setStageMessage('Uploading file...');
+    setStageMessage('Starting import...');
     setResult(null);
 
+    let totalInserted = 0;
+    let totalRows = 0;
+    let totalDistricts = 0;
+    let lastFormat = '';
+
     try {
-      const formData = new FormData();
-      formData.append('file', schoolFile);
+      for (let i = 0; i < schoolFiles.length; i++) {
+        const file = schoolFiles[i];
+        const isCSV = file.name.toLowerCase().endsWith('.csv');
+        const endpoint = isCSV ? 'import-schools-csv' : 'import-schools';
 
-      // Simulate upload progress
-      setProgress(15);
-      setStage('parsing');
-      setStageMessage(`Parsing ${isCSV ? 'CSV' : 'Excel'} file...`);
-      
-      const response = await supabase.functions.invoke(endpoint, {
-        body: formData,
-      });
+        setStageMessage(`Processing file ${i + 1} of ${schoolFiles.length}: ${file.name}`);
+        setProgress(Math.round(((i) / schoolFiles.length) * 100));
 
-      if (response.error) {
-        throw new Error(response.error.message);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setStage('parsing');
+        
+        const response = await supabase.functions.invoke(endpoint, {
+          body: formData,
+        });
+
+        if (response.error) {
+          throw new Error(`Error in ${file.name}: ${response.error.message}`);
+        }
+
+        totalInserted += response.data.schoolsInserted || 0;
+        totalRows += response.data.totalRows || 0;
+        totalDistricts += response.data.districtsProcessed || 0;
+        lastFormat = response.data.format || lastFormat;
+
+        setProgress(Math.round(((i + 1) / schoolFiles.length) * 100));
       }
-
-      setStage('importing');
-      setProgress(80);
-      setStageMessage('Writing to database...');
-
-      // Brief delay for visual feedback
-      await new Promise(resolve => setTimeout(resolve, 300));
 
       setStage('complete');
       setProgress(100);
@@ -136,19 +183,14 @@ export default function ImportData() {
 
       setResult({ 
         type: 'school',
-        success: response.data.success,
-        total: response.data.totalRows,
-        inserted: response.data.schoolsInserted,
-        districtsCreated: response.data.districtsProcessed,
-        uniqueSchools: response.data.uniqueSchools,
-        duplicatesRemoved: response.data.duplicatesRemoved,
-        scientificNotationFixed: response.data.scientificNotationFixed,
-        format: response.data.format,
+        success: true,
+        total: totalRows,
+        inserted: totalInserted,
+        districtsCreated: totalDistricts,
+        format: lastFormat,
       });
       
-      if (response.data.success) {
-        toast.success(`Successfully imported ${response.data.schoolsInserted?.toLocaleString()} schools`);
-      }
+      toast.success(`Successfully imported ${totalInserted.toLocaleString()} schools from ${schoolFiles.length} file(s)`);
     } catch (error: any) {
       console.error('Import error:', error);
       setStage('error');
@@ -160,11 +202,48 @@ export default function ImportData() {
     }
   };
 
+  const handleClearSchools = async () => {
+    if (confirmText !== 'DELETE') return;
+
+    setClearing(true);
+    try {
+      const response = await supabase.functions.invoke('clear-schools');
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setSchoolCount(0);
+        setDialogOpen(false);
+        setConfirmText('');
+      } else {
+        throw new Error(response.data.error || 'Failed to clear schools');
+      }
+    } catch (error: any) {
+      console.error('Clear schools error:', error);
+      toast.error(error.message || 'Failed to clear schools');
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const resetImport = () => {
     setStage('idle');
     setProgress(0);
     setStageMessage('');
     setResult(null);
+  };
+
+  const removeDistrictFile = (index: number) => {
+    setDistrictFiles(prev => prev.filter((_, i) => i !== index));
+    resetImport();
+  };
+
+  const removeSchoolFile = (index: number) => {
+    setSchoolFiles(prev => prev.filter((_, i) => i !== index));
+    resetImport();
   };
 
   if (rolesLoading) {
@@ -214,36 +293,34 @@ export default function ImportData() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => {
-                    setDistrictFile(e.target.files?.[0] || null);
-                    resetImport();
-                  }}
-                  disabled={!!importing}
-                />
-              </div>
+              <DropZone
+                onFilesSelected={(files) => {
+                  setDistrictFiles(files.slice(0, 1)); // Only 1 file for districts
+                  resetImport();
+                }}
+                accept=".csv"
+                maxFiles={1}
+                disabled={!!importing}
+              />
               
-              {districtFile && stage === 'idle' && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {districtFile.name} ({(districtFile.size / 1024 / 1024).toFixed(2)} MB)
-                </p>
-              )}
+              <FileList 
+                files={districtFiles} 
+                onRemove={removeDistrictFile}
+                disabled={!!importing}
+              />
 
               {importing === 'district' && (
                 <ImportProgress 
                   progress={progress} 
                   stage={stage}
-                  fileName={districtFile?.name}
+                  fileName={districtFiles[0]?.name}
                   message={stageMessage}
                 />
               )}
 
               <Button 
                 onClick={handleDistrictImport} 
-                disabled={!districtFile || !!importing}
+                disabled={districtFiles.length === 0 || !!importing}
                 className="w-full"
               >
                 {importing === 'district' ? (
@@ -269,33 +346,31 @@ export default function ImportData() {
                 Import Schools
               </CardTitle>
               <CardDescription>
-                Upload school data CSV file. Districts will be auto-created.
+                Upload school data CSV files. Districts will be auto-created.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => {
-                    setSchoolFile(e.target.files?.[0] || null);
-                    resetImport();
-                  }}
-                  disabled={!!importing}
-                />
-              </div>
+              <DropZone
+                onFilesSelected={(files) => {
+                  setSchoolFiles(files);
+                  resetImport();
+                }}
+                accept=".csv"
+                maxFiles={300}
+                disabled={!!importing}
+              />
               
-              {schoolFile && stage === 'idle' && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {schoolFile.name} ({(schoolFile.size / 1024 / 1024).toFixed(2)} MB)
-                </p>
-              )}
+              <FileList 
+                files={schoolFiles} 
+                onRemove={removeSchoolFile}
+                disabled={!!importing}
+              />
 
               {importing === 'school' && (
                 <ImportProgress 
                   progress={progress} 
                   stage={stage}
-                  fileName={schoolFile?.name}
+                  fileName={schoolFiles[0]?.name}
                   message={stageMessage}
                 />
               )}
@@ -309,7 +384,7 @@ export default function ImportData() {
 
               <Button 
                 onClick={handleSchoolImport} 
-                disabled={!schoolFile || !!importing}
+                disabled={schoolFiles.length === 0 || !!importing}
                 className="w-full"
               >
                 {importing === 'school' ? (
@@ -320,7 +395,7 @@ export default function ImportData() {
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    Import Schools
+                    Import Schools ({schoolFiles.length} file{schoolFiles.length !== 1 ? 's' : ''})
                   </>
                 )}
               </Button>
@@ -361,7 +436,6 @@ export default function ImportData() {
                     </p>
                   )}
 
-                  {/* Auto-correction summary */}
                   {(result.duplicatesRemoved || result.scientificNotationFixed || result.format) && (
                     <div className="border-t pt-4 mt-4">
                       <p className="text-sm font-medium mb-2">Auto-Corrections Applied</p>
@@ -405,6 +479,84 @@ export default function ImportData() {
             </CardContent>
           </Card>
         )}
+
+        {/* Data Management */}
+        <Card className="border-destructive/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Data Management
+            </CardTitle>
+            <CardDescription>
+              Manage imported school and district data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+              <div>
+                <p className="font-medium">Schools in database</p>
+                <p className="text-2xl font-bold">
+                  {loadingCount ? (
+                    <Loader2 className="h-5 w-5 animate-spin inline" />
+                  ) : (
+                    schoolCount?.toLocaleString() ?? '—'
+                  )}
+                </p>
+              </div>
+              
+              <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    disabled={schoolCount === 0 || loadingCount}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear All Schools
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-3">
+                      <span className="block">
+                        This action cannot be undone. This will permanently delete all{' '}
+                        <strong>{schoolCount?.toLocaleString()}</strong> schools from the database.
+                      </span>
+                      <span className="block">
+                        Type <strong>DELETE</strong> to confirm:
+                      </span>
+                      <Input
+                        value={confirmText}
+                        onChange={(e) => setConfirmText(e.target.value)}
+                        placeholder="Type DELETE to confirm"
+                        className="mt-2"
+                      />
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setConfirmText('')}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleClearSchools}
+                      disabled={confirmText !== 'DELETE' || clearing}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {clearing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        'Delete All Schools'
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Instructions */}
         <Card>
