@@ -43,7 +43,7 @@ export default function Districts() {
     queryFn: async () => {
       let query = supabase
         .from('districts')
-        .select('*', { count: 'exact' });
+        .select('*, schools(count)', { count: 'exact' });
 
       if (searchQuery) {
         query = query.or(`name.ilike.%${searchQuery}%,city.ilike.%${searchQuery}%,nces_id.ilike.%${searchQuery}%`);
@@ -59,7 +59,14 @@ export default function Districts() {
 
       const { data, error, count } = await query;
       if (error) throw error;
-      return { districts: data, total: count || 0 };
+      
+      // Transform to include school count
+      const districtsWithCount = data?.map((d: any) => ({
+        ...d,
+        school_count: d.schools?.[0]?.count || 0
+      })) || [];
+      
+      return { districts: districtsWithCount, total: count || 0 };
     }
   });
 
@@ -141,17 +148,17 @@ export default function Districts() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data?.districts?.map((district) => (
+                      {data?.districts?.map((district: any) => (
                         <TableRow 
                           key={district.id} 
-                          className="cursor-pointer hover:bg-muted/50"
+                          className="cursor-pointer hover:bg-primary/5 transition-colors group"
                           onClick={() => navigate(`/schools?district=${district.id}`)}
                         >
                           <TableCell>
                             <div className="space-y-1">
-                              <div className="font-medium flex items-center gap-2">
+                              <div className="font-medium flex items-center gap-2 group-hover:text-primary transition-colors">
                                 {district.name}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 NCES: {district.nces_id}
@@ -175,7 +182,9 @@ export default function Districts() {
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            {district.operational_schools}
+                            <Badge variant={district.school_count > 0 ? "default" : "outline"} className="font-mono">
+                              {district.school_count}
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))}
