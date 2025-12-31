@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
         level: row.level || null,
         school_type: row.school_type || null,
         operational_status: row.operational_status || null,
-        district_id: districtIdMap.get(row.district_nces_id) || null,
+        district_id: districtIdMap.get(row.district_nces_id) || districtIdMap.get(row.nces_id?.substring(0, 7)) || null,
         county: row.county || null,
         latitude: row.latitude || null,
         longitude: row.longitude || null,
