@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink } from 'lucide-react';
+import { Search, Upload, Plus, MapPin, Phone, Globe, Loader2, GraduationCap, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -20,6 +21,8 @@ const US_STATES = [
   'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
 ];
+
+const PAGE_SIZE = 50;
 
 interface School {
   id: string;
@@ -40,11 +43,13 @@ interface School {
 
 export default function Schools() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [stateFilter, setStateFilter] = useState<string>('');
   const [levelFilter, setLevelFilter] = useState<string>('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [page, setPage] = useState(0);
 
   // Form state for adding a school
   const [newSchool, setNewSchool] = useState({
@@ -60,14 +65,38 @@ export default function Schools() {
     nces_id: ''
   });
 
+  // Get total count
+  const { data: totalCount } = useQuery({
+    queryKey: ['schools-count', searchQuery, stateFilter, levelFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from('schools')
+        .select('*', { count: 'exact', head: true });
+
+      if (searchQuery) {
+        query = query.ilike('name', `%${searchQuery}%`);
+      }
+      if (stateFilter) {
+        query = query.eq('state', stateFilter);
+      }
+      if (levelFilter) {
+        query = query.eq('level', levelFilter);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    }
+  });
+
   const { data: schools, isLoading, refetch } = useQuery({
-    queryKey: ['schools', searchQuery, stateFilter, levelFilter],
+    queryKey: ['schools', searchQuery, stateFilter, levelFilter, page],
     queryFn: async () => {
       let query = supabase
         .from('schools')
         .select('*')
         .order('name')
-        .limit(100);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) {
         query = query.ilike('name', `%${searchQuery}%`);
@@ -163,7 +192,7 @@ export default function Schools() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => navigate('/import')}>
               <Upload className="mr-2 h-4 w-4" />
               Import CSV
             </Button>
@@ -361,15 +390,27 @@ export default function Schools() {
               Schools
             </CardTitle>
             <CardDescription>
-              {schools?.length || 0} schools found
+              {totalCount !== undefined ? (
+                <>
+                  {totalCount.toLocaleString()} total schools
+                  {totalCount > PAGE_SIZE && (
+                    <span className="ml-1">
+                      (showing {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, totalCount)})
+                    </span>
+                  )}
+                </>
+              ) : (
+                `${schools?.length || 0} schools found`
+              )}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : schools && schools.length > 0 ? (
+              <>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -450,6 +491,36 @@ export default function Schools() {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Pagination */}
+              {totalCount !== undefined && totalCount > PAGE_SIZE && (
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Page {page + 1} of {Math.ceil(totalCount / PAGE_SIZE)}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(p => Math.max(0, p - 1))}
+                      disabled={page === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(p => p + 1)}
+                      disabled={(page + 1) * PAGE_SIZE >= totalCount}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <GraduationCap className="h-12 w-12 text-muted-foreground/50 mb-4" />
