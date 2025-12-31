@@ -44,6 +44,25 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, Building, Calendar, Trophy, Edit } from "lucide-react";
 
+interface Profile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
+interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: string;
+  jersey_number: string | null;
+  position: string | null;
+  is_captain: boolean | null;
+  joined_at: string | null;
+  profile?: Profile;
+}
+
 export default function TeamDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -81,17 +100,29 @@ export default function TeamDetail() {
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["team-members", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: membersData, error } = await supabase
         .from("team_members")
-        .select(`
-          *,
-          profiles:user_id(first_name, last_name, email)
-        `)
+        .select("*")
         .eq("team_id", id)
         .order("role")
         .order("jersey_number");
       if (error) throw error;
-      return data;
+      
+      // Fetch profiles separately
+      if (membersData && membersData.length > 0) {
+        const userIds = membersData.map(m => m.user_id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, email")
+          .in("id", userIds);
+        
+        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        return membersData.map(m => ({
+          ...m,
+          profile: profileMap.get(m.user_id)
+        })) as TeamMember[];
+      }
+      return membersData as TeamMember[];
     },
   });
 
@@ -398,9 +429,9 @@ export default function TeamDetail() {
                         {staff.map((member) => (
                           <TableRow key={member.id}>
                             <TableCell className="font-medium">
-                              {member.profiles?.first_name} {member.profiles?.last_name}
+                              {member.profile?.first_name} {member.profile?.last_name}
                             </TableCell>
-                            <TableCell>{member.profiles?.email}</TableCell>
+                            <TableCell>{member.profile?.email}</TableCell>
                             <TableCell>
                               <Badge variant={getRoleBadgeVariant(member.role)} className="capitalize">
                                 {member.role.replace("_", " ")}
@@ -439,11 +470,11 @@ export default function TeamDetail() {
                           <TableRow key={member.id}>
                             <TableCell className="font-bold">{member.jersey_number || "-"}</TableCell>
                             <TableCell className="font-medium">
-                              {member.profiles?.first_name} {member.profiles?.last_name}
+                              {member.profile?.first_name} {member.profile?.last_name}
                               {member.is_captain && <Badge variant="outline" className="ml-2">C</Badge>}
                             </TableCell>
                             <TableCell>{member.position || "-"}</TableCell>
-                            <TableCell>{member.profiles?.email}</TableCell>
+                            <TableCell>{member.profile?.email}</TableCell>
                             <TableCell>
                               <Button
                                 variant="ghost"
