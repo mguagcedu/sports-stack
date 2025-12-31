@@ -14,12 +14,14 @@ export default function ImportData() {
   const { isAdmin, loading: rolesLoading } = useUserRoles();
   const [districtFile, setDistrictFile] = useState<File | null>(null);
   const [schoolFile, setSchoolFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
+  const [importing, setImporting] = useState<'district' | 'school' | null>(null);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<{
+    type?: 'district' | 'school';
     success?: boolean;
     total?: number;
     inserted?: number;
+    skipped?: number;
     errors?: string[];
   } | null>(null);
 
@@ -29,7 +31,7 @@ export default function ImportData() {
       return;
     }
 
-    setImporting(true);
+    setImporting('district');
     setProgress(10);
     setResult(null);
 
@@ -38,8 +40,6 @@ export default function ImportData() {
       formData.append('file', districtFile);
 
       setProgress(30);
-
-      const { data: { session } } = await supabase.auth.getSession();
       
       const response = await supabase.functions.invoke('import-districts', {
         body: formData,
@@ -51,7 +51,7 @@ export default function ImportData() {
         throw new Error(response.error.message);
       }
 
-      setResult(response.data);
+      setResult({ ...response.data, type: 'district' });
       
       if (response.data.success) {
         toast.success(`Successfully imported ${response.data.inserted} districts`);
@@ -59,9 +59,49 @@ export default function ImportData() {
     } catch (error: any) {
       console.error('Import error:', error);
       toast.error(error.message || "Import failed");
-      setResult({ success: false, errors: [error.message] });
+      setResult({ type: 'district', success: false, errors: [error.message] });
     } finally {
-      setImporting(false);
+      setImporting(null);
+    }
+  };
+
+  const handleSchoolImport = async () => {
+    if (!schoolFile) {
+      toast.error("Please select a school CSV file");
+      return;
+    }
+
+    setImporting('school');
+    setProgress(10);
+    setResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', schoolFile);
+
+      setProgress(30);
+      
+      const response = await supabase.functions.invoke('import-schools', {
+        body: formData,
+      });
+
+      setProgress(100);
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      setResult({ ...response.data, type: 'school' });
+      
+      if (response.data.success) {
+        toast.success(`Successfully imported ${response.data.inserted} schools`);
+      }
+    } catch (error: any) {
+      console.error('Import error:', error);
+      toast.error(error.message || "Import failed");
+      setResult({ type: 'school', success: false, errors: [error.message] });
+    } finally {
+      setImporting(null);
     }
   };
 
@@ -117,7 +157,7 @@ export default function ImportData() {
                   type="file"
                   accept=".csv"
                   onChange={(e) => setDistrictFile(e.target.files?.[0] || null)}
-                  disabled={importing}
+                  disabled={!!importing}
                 />
               </div>
               
@@ -127,7 +167,7 @@ export default function ImportData() {
                 </p>
               )}
 
-              {importing && (
+              {importing === 'district' && (
                 <div className="space-y-2">
                   <Progress value={progress} className="h-2" />
                   <p className="text-sm text-muted-foreground">
@@ -138,10 +178,10 @@ export default function ImportData() {
 
               <Button 
                 onClick={handleDistrictImport} 
-                disabled={!districtFile || importing}
+                disabled={!districtFile || !!importing}
                 className="w-full"
               >
-                {importing ? (
+                {importing === 'district' ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Importing...
@@ -173,20 +213,48 @@ export default function ImportData() {
                   type="file"
                   accept=".csv"
                   onChange={(e) => setSchoolFile(e.target.files?.[0] || null)}
-                  disabled={true}
+                  disabled={!!importing}
                 />
               </div>
               
+              {schoolFile && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {schoolFile.name} ({(schoolFile.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
+
+              {importing === 'school' && (
+                <div className="space-y-2">
+                  <Progress value={progress} className="h-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Importing schools... This may take a few minutes.
+                  </p>
+                </div>
+              )}
+
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  School import coming soon. Please import districts first.
+                  Import districts first to link schools to their districts.
                 </AlertDescription>
               </Alert>
 
-              <Button disabled className="w-full">
-                <Upload className="mr-2 h-4 w-4" />
-                Import Schools
+              <Button 
+                onClick={handleSchoolImport} 
+                disabled={!schoolFile || !!importing}
+                className="w-full"
+              >
+                {importing === 'school' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import Schools
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -202,7 +270,7 @@ export default function ImportData() {
                 ) : (
                   <AlertCircle className="h-5 w-5 text-destructive" />
                 )}
-                Import Results
+                {result.type === 'school' ? 'School' : 'District'} Import Results
               </CardTitle>
             </CardHeader>
             <CardContent>
