@@ -15,6 +15,9 @@ import Districts from "./pages/Districts";
 import DistrictDetail from "./pages/DistrictDetail";
 import ImportData from "./pages/ImportData";
 import CoachDashboard from "./pages/CoachDashboard";
+import Sports from "./pages/Sports";
+import Seasons from "./pages/Seasons";
+import Users from "./pages/Users";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,13 +40,16 @@ const App = () => (
             <Route path="/organizations" element={<Organizations />} />
             <Route path="/import" element={<ImportData />} />
             <Route path="/coach" element={<CoachDashboard />} />
+            {/* Priority 1: Core Setup */}
+            <Route path="/sports" element={<Sports />} />
+            <Route path="/seasons" element={<Seasons />} />
+            <Route path="/users" element={<Users />} />
             {/* Placeholder routes */}
             <Route path="/teams" element={<Dashboard />} />
             <Route path="/registrations" element={<Dashboard />} />
             <Route path="/payments" element={<Dashboard />} />
             <Route path="/events" element={<Dashboard />} />
             <Route path="/messages" element={<Dashboard />} />
-            <Route path="/users" element={<Dashboard />} />
             <Route path="/reports" element={<Dashboard />} />
             <Route path="/audit-logs" element={<Dashboard />} />
             <Route path="/settings" element={<Dashboard />} />
