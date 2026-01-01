@@ -26,12 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Search, CheckCircle, XCircle, Clock, FileText } from "lucide-react";
+import { Search, CheckCircle, XCircle, Clock, FileText, ClipboardList, Settings } from "lucide-react";
 import { format } from "date-fns";
+import { SportRegistrationForms, IntegrationStatusCard } from "@/components/registrations";
 
 interface Profile {
   id: string;
@@ -159,9 +161,26 @@ export default function Registrations() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Registrations</h1>
-          <p className="text-muted-foreground">Manage athlete registration requests</p>
+          <p className="text-muted-foreground">Manage athlete registration requests and required forms</p>
         </div>
 
+        <Tabs defaultValue="requests" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="requests" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Requests
+            </TabsTrigger>
+            <TabsTrigger value="forms" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Forms & Documents
+            </TabsTrigger>
+            <TabsTrigger value="integrations" className="gap-2">
+              <Settings className="h-4 w-4" />
+              Integrations
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="requests" className="space-y-6">
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -381,6 +400,56 @@ export default function Registrations() {
             )}
           </DialogContent>
         </Dialog>
+          </TabsContent>
+
+          <TabsContent value="forms" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sport-Specific Forms</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Select a registration above to view and manage its required forms, or use the forms management below.
+                </p>
+                <SportRegistrationForms
+                  athleteUserId=""
+                  sportCode={undefined}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="integrations" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <IntegrationStatusCard showConfigLink />
+              <Card>
+                <CardHeader>
+                  <CardTitle>Form Providers</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Health and eligibility forms are managed through FinalForms when configured.
+                    All other forms can be completed and signed digitally within this system.
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Digital signatures supported
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Sport-specific form templates
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Parent/guardian signature workflows
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
