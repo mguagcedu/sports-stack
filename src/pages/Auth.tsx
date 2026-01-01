@@ -19,7 +19,7 @@ const nameSchema = z.string().max(100).optional();
 export default function Auth() {
   const navigate = useNavigate();
   const { user, signIn, signUp, signInWithGoogle, loading: authLoading } = useAuth();
-  const { activeRole, loading: rolesLoading } = useUserRoles();
+  const { activeRole, roles, loading: rolesLoading } = useUserRoles();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -30,10 +30,14 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !rolesLoading) {
-      const destination = getDefaultDashboard(activeRole);
-      navigate(destination);
+      if (roles.length === 0) {
+        navigate('/onboarding');
+      } else {
+        const destination = getDefaultDashboard(activeRole);
+        navigate(destination);
+      }
     }
-  }, [user, activeRole, rolesLoading, navigate]);
+  }, [user, activeRole, roles, rolesLoading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

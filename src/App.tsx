@@ -5,10 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SchoolBrandingProvider } from "@/contexts/SchoolBrandingContext";
+import { ProtectedRoute, PublicOnlyRoute } from "@/components/guards/ProtectedRoute";
 import { AIChatbot } from "@/components/chat/AIChatbot";
 import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 import Schools from "./pages/Schools";
 import SchoolDetail from "./pages/SchoolDetail";
 import Organizations from "./pages/Organizations";
@@ -47,49 +49,143 @@ const App = () => (
           <ImpersonationBanner />
         <BrowserRouter>
           <Routes>
-            {/* Role-specific dashboards */}
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/coach" element={<CoachDashboard />} />
-            <Route path="/parent" element={<ParentDashboard />} />
-            <Route path="/athlete" element={<AthleteDashboard />} />
-            
-            {/* Auth */}
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* Organizations & Schools */}
-            <Route path="/schools" element={<Schools />} />
-            <Route path="/schools/:id" element={<SchoolDetail />} />
-            <Route path="/districts" element={<Districts />} />
-            <Route path="/districts/:id" element={<DistrictDetail />} />
-            <Route path="/organizations" element={<Organizations />} />
-            
-            {/* Core Setup */}
-            <Route path="/sports" element={<Sports />} />
-            <Route path="/seasons" element={<Seasons />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/permissions" element={<PermissionsMatrix />} />
-            
-            {/* Teams */}
-            <Route path="/teams" element={<Teams />} />
-            <Route path="/teams/:id" element={<TeamDetail />} />
+            {/* Public routes */}
+            <Route path="/auth" element={<PublicOnlyRoute><Auth /></PublicOnlyRoute>} />
+            <Route path="/onboarding" element={<ProtectedRoute requireAuth={true}><Onboarding /></ProtectedRoute>} />
             <Route path="/join/:code" element={<JoinTeam />} />
             <Route path="/join" element={<JoinTeam />} />
             
+            {/* Role-specific dashboards */}
+            <Route path="/" element={
+              <ProtectedRoute pageKey="dashboard">
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/coach" element={
+              <ProtectedRoute pageKey="coach_dashboard">
+                <CoachDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/parent" element={
+              <ProtectedRoute pageKey="parent_dashboard">
+                <ParentDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/athlete" element={
+              <ProtectedRoute pageKey="athlete_dashboard">
+                <AthleteDashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Organizations & Schools */}
+            <Route path="/schools" element={
+              <ProtectedRoute pageKey="schools">
+                <Schools />
+              </ProtectedRoute>
+            } />
+            <Route path="/schools/:id" element={
+              <ProtectedRoute pageKey="schools">
+                <SchoolDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/districts" element={
+              <ProtectedRoute pageKey="districts">
+                <Districts />
+              </ProtectedRoute>
+            } />
+            <Route path="/districts/:id" element={
+              <ProtectedRoute pageKey="districts">
+                <DistrictDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/organizations" element={
+              <ProtectedRoute pageKey="organizations">
+                <Organizations />
+              </ProtectedRoute>
+            } />
+            
+            {/* Core Setup */}
+            <Route path="/sports" element={
+              <ProtectedRoute pageKey="sports">
+                <Sports />
+              </ProtectedRoute>
+            } />
+            <Route path="/seasons" element={
+              <ProtectedRoute pageKey="seasons">
+                <Seasons />
+              </ProtectedRoute>
+            } />
+            <Route path="/users" element={
+              <ProtectedRoute pageKey="users">
+                <Users />
+              </ProtectedRoute>
+            } />
+            <Route path="/permissions" element={
+              <ProtectedRoute pageKey="settings">
+                <PermissionsMatrix />
+              </ProtectedRoute>
+            } />
+            
+            {/* Teams */}
+            <Route path="/teams" element={
+              <ProtectedRoute pageKey="teams">
+                <Teams />
+              </ProtectedRoute>
+            } />
+            <Route path="/teams/:id" element={
+              <ProtectedRoute pageKey="teams">
+                <TeamDetail />
+              </ProtectedRoute>
+            } />
+            
             {/* Operations */}
-            <Route path="/registrations" element={<Registrations />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/payments" element={<Payments />} />
+            <Route path="/registrations" element={
+              <ProtectedRoute pageKey="registrations">
+                <Registrations />
+              </ProtectedRoute>
+            } />
+            <Route path="/events" element={
+              <ProtectedRoute pageKey="events">
+                <Events />
+              </ProtectedRoute>
+            } />
+            <Route path="/payments" element={
+              <ProtectedRoute pageKey="payments">
+                <Payments />
+              </ProtectedRoute>
+            } />
             
             {/* Admin */}
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/audit-logs" element={<AuditLogs />} />
-            <Route path="/governance" element={<Governance />} />
-            <Route path="/validation" element={<SystemValidation />} />
-            <Route path="/import" element={<ImportData />} />
-            
-            {/* Placeholder routes */}
-            <Route path="/messages" element={<Dashboard />} />
+            <Route path="/settings" element={
+              <ProtectedRoute pageKey="settings">
+                <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute pageKey="reports">
+                <Reports />
+              </ProtectedRoute>
+            } />
+            <Route path="/audit-logs" element={
+              <ProtectedRoute pageKey="audit_logs">
+                <AuditLogs />
+              </ProtectedRoute>
+            } />
+            <Route path="/governance" element={
+              <ProtectedRoute pageKey="governance">
+                <Governance />
+              </ProtectedRoute>
+            } />
+            <Route path="/validation" element={
+              <ProtectedRoute pageKey="validation">
+                <SystemValidation />
+              </ProtectedRoute>
+            } />
+            <Route path="/import" element={
+              <ProtectedRoute pageKey="import">
+                <ImportData />
+              </ProtectedRoute>
+            } />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
