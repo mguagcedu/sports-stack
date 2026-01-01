@@ -31,24 +31,18 @@ export function DepthChartEditor({ teamId, sportCode }: DepthChartEditorProps) {
   // Fetch team members with positions
   const { data: teamMembers = [], isLoading: loadingMembers } = useQuery({
     queryKey: ['team-members-depth', teamId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any[]> => {
       const { data, error } = await supabase
         .from('team_members')
-        .select(`
-          id,
-          user_id,
-          jersey_number,
-          position,
-          depth_order,
-          role
-        `)
+        .select('id, user_id, jersey_number, position, depth_order, is_starter, role')
         .eq('team_id', teamId)
         .eq('role', 'athlete')
         .order('depth_order', { ascending: true });
       if (error) throw error;
       
-      // Get profiles separately
-      const memberIds = data?.map(m => m.user_id).filter(Boolean) || [];
+      const memberIds = (data || []).map(m => m.user_id).filter(Boolean) as string[];
+      if (memberIds.length === 0) return data || [];
+      
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
@@ -59,7 +53,6 @@ export function DepthChartEditor({ teamId, sportCode }: DepthChartEditorProps) {
       return (data || []).map(m => ({
         ...m,
         profiles: m.user_id ? profileMap.get(m.user_id) : null,
-        is_starter: (m.depth_order || 99) === 1, // First in depth is starter
       }));
     },
   });
@@ -67,15 +60,15 @@ export function DepthChartEditor({ teamId, sportCode }: DepthChartEditorProps) {
   // Fetch positions for sport
   const { data: sportPositions = [] } = useQuery({
     queryKey: ['sport-positions', sportCode],
-    queryFn: async () => {
+    queryFn: async (): Promise<any[]> => {
       if (!sportCode) return [];
-      const { data, error } = await supabase
+      const result = await (supabase as any)
         .from('sport_positions')
-        .select('*')
+        .select('id, position_name, display_order')
         .eq('sport_code', sportCode.toLowerCase())
         .order('display_order');
-      if (error) throw error;
-      return data || [];
+      if (result.error) throw result.error;
+      return result.data || [];
     },
     enabled: !!sportCode,
   });

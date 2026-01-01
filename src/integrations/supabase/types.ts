@@ -3983,6 +3983,7 @@ export type Database = {
       team_members: {
         Row: {
           created_at: string | null
+          depth_order: number | null
           eligibility_last_verified_at: string | null
           eligibility_notes: string | null
           eligibility_status:
@@ -3991,6 +3992,7 @@ export type Database = {
           eligibility_verified_by_user_id: string | null
           id: string
           is_captain: boolean | null
+          is_starter: boolean | null
           jersey_number: string | null
           joined_at: string | null
           position: string | null
@@ -4001,6 +4003,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          depth_order?: number | null
           eligibility_last_verified_at?: string | null
           eligibility_notes?: string | null
           eligibility_status?:
@@ -4009,6 +4012,7 @@ export type Database = {
           eligibility_verified_by_user_id?: string | null
           id?: string
           is_captain?: boolean | null
+          is_starter?: boolean | null
           jersey_number?: string | null
           joined_at?: string | null
           position?: string | null
@@ -4019,6 +4023,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          depth_order?: number | null
           eligibility_last_verified_at?: string | null
           eligibility_notes?: string | null
           eligibility_status?:
@@ -4027,6 +4032,7 @@ export type Database = {
           eligibility_verified_by_user_id?: string | null
           id?: string
           is_captain?: boolean | null
+          is_starter?: boolean | null
           jersey_number?: string | null
           joined_at?: string | null
           position?: string | null

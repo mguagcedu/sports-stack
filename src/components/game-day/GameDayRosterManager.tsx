@@ -19,10 +19,10 @@ export function GameDayRosterManager({ teamId, sportCode }: GameDayRosterManager
   // Fetch roster summary
   const { data: rosterSummary } = useQuery({
     queryKey: ['roster-summary', teamId],
-    queryFn: async () => {
+    queryFn: async (): Promise<{ totalPlayers: number; starters: number; injured: number; disciplined: number; available: number }> => {
       const { data: members, error } = await supabase
         .from('team_members')
-        .select('id, depth_order, role')
+        .select('id, is_starter, role')
         .eq('team_id', teamId)
         .eq('role', 'athlete');
       if (error) throw error;
@@ -39,8 +39,7 @@ export function GameDayRosterManager({ teamId, sportCode }: GameDayRosterManager
         .eq('team_id', teamId)
         .eq('status', 'active');
       
-      // Count starters as depth_order = 1 players
-      const starters = members?.filter((m: any) => m.depth_order === 1).length || 0;
+      const starters = (members || []).filter((m: any) => m.is_starter).length;
       
       return {
         totalPlayers: members?.length || 0,
@@ -169,18 +168,19 @@ export function GameDayRosterManager({ teamId, sportCode }: GameDayRosterManager
 function StartersDisplay({ teamId }: { teamId: string }) {
   const { data: starters = [], isLoading } = useQuery({
     queryKey: ['starters', teamId],
-    queryFn: async () => {
+    queryFn: async (): Promise<any[]> => {
       const { data, error } = await supabase
         .from('team_members')
         .select('id, user_id, jersey_number, position')
         .eq('team_id', teamId)
-        .eq('depth_order', 1) // depth_order 1 = starter
+        .eq('is_starter', true)
         .eq('role', 'athlete')
         .order('position');
       if (error) throw error;
       
-      // Get profiles
-      const userIds = data?.map(m => m.user_id).filter(Boolean) || [];
+      const userIds = (data || []).map(m => m.user_id).filter(Boolean) as string[];
+      if (userIds.length === 0) return data || [];
+      
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
