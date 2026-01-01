@@ -45,6 +45,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, Building, Calendar, Trophy, Edit, UserPlus } from "lucide-react";
 import { CoachDelegationDialog } from "@/components/teams/CoachDelegationDialog";
 import { SanctionBadge } from "@/components/governance/SanctionBadge";
+import { SchoolLogo } from "@/components/branding/SchoolLogo";
+import { SportIcon } from "@/components/branding/SportIcon";
 
 
 interface Profile {
@@ -92,7 +94,7 @@ export default function TeamDetail() {
           organizations(name, state, district_id),
           sports(name, icon, code),
           seasons(name, academic_year),
-          schools(name, state, district_id)
+          schools(id, name, state, district_id, logo_url, primary_color, secondary_color, text_on_primary)
         `)
         .eq("id", id)
         .maybeSingle();
@@ -105,6 +107,11 @@ export default function TeamDetail() {
   const teamState = team?.organizations?.state || team?.schools?.state;
   const teamDistrictId = team?.organizations?.district_id || team?.schools?.district_id;
   const sportCode = team?.sports?.code;
+  
+  // School branding
+  const schoolBranding = team?.schools;
+  const primaryColor = schoolBranding?.primary_color || undefined;
+  const textOnPrimary = schoolBranding?.text_on_primary || 'white';
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["team-members", id],
@@ -247,9 +254,17 @@ export default function TeamDetail() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/teams")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
+          {schoolBranding?.logo_url && (
+            <img 
+              src={schoolBranding.logo_url} 
+              alt={schoolBranding.name || 'School logo'}
+              className="h-12 w-12 object-contain"
+            />
+          )}
           <div className="flex-1">
             <h1 className="text-3xl font-bold tracking-tight">{team.name}</h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground flex items-center gap-2">
+              <SportIcon sportName={team.sports?.name} size="sm" useSchoolColors={false} />
               {team.sports?.name} • {team.seasons?.name}
             </p>
           </div>
@@ -307,7 +322,7 @@ export default function TeamDetail() {
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{team.organizations?.name || "N/A"}</div>
+              <div className="text-2xl font-bold">{schoolBranding?.name || team.organizations?.name || "N/A"}</div>
             </CardContent>
           </Card>
           <Card>

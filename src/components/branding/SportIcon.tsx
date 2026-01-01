@@ -11,6 +11,10 @@ import {
   Swords,
   Dumbbell,
   Volleyball,
+  Snowflake,
+  Gamepad2,
+  Music,
+  Crosshair,
   type LucideIcon
 } from 'lucide-react';
 import { useSchoolBranding } from '@/contexts/SchoolBrandingContext';
@@ -35,6 +39,13 @@ const iconMap: Record<string, LucideIcon> = {
   cheerleading: Trophy,
   gymnastics: Dumbbell,
   cycling: Bike,
+  skiing: Snowflake,
+  bowling: Circle,
+  dance: Music,
+  archery: Crosshair,
+  rugby: Activity,
+  weightlifting: Dumbbell,
+  esports: Gamepad2,
   default: Activity
 };
 

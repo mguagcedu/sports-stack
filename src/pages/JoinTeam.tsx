@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Users, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { SchoolLogo } from "@/components/branding/SchoolLogo";
+import { SportIcon } from "@/components/branding/SportIcon";
 
 export default function JoinTeam() {
   const { code } = useParams<{ code: string }>();
@@ -32,7 +34,13 @@ export default function JoinTeam() {
         .from("team_invitations")
         .select(`
           *,
-          teams(id, name, organizations(name))
+          teams(
+            id, 
+            name, 
+            organizations(name),
+            schools(id, name, logo_url, primary_color, secondary_color, text_on_primary),
+            sports(name, code, icon)
+          )
         `)
         .eq("invite_code", lookupCode.toUpperCase())
         .eq("is_active", true)
@@ -43,6 +51,12 @@ export default function JoinTeam() {
     },
     enabled: !!(code || manualCode.length >= 8),
   });
+
+  // Get school branding from invitation
+  const schoolBranding = invitation?.teams?.schools;
+  const primaryColor = schoolBranding?.primary_color || undefined;
+  const secondaryColor = schoolBranding?.secondary_color || undefined;
+  const textOnPrimary = schoolBranding?.text_on_primary || 'white';
 
   // Submit join request
   const joinMutation = useMutation({
@@ -207,13 +221,46 @@ export default function JoinTeam() {
 
             {invitation && (
               <div className="space-y-4">
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <div className="text-center">
-                    <h3 className="font-semibold text-lg">{invitation.teams?.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {invitation.teams?.organizations?.name}
-                    </p>
-                    <Badge className="mt-2 capitalize">
+                <div 
+                  className="p-4 rounded-lg border"
+                  style={{
+                    backgroundColor: primaryColor ? `${primaryColor}10` : undefined,
+                    borderColor: primaryColor || undefined
+                  }}
+                >
+                  <div className="text-center space-y-3">
+                    {schoolBranding?.logo_url && (
+                      <div className="flex justify-center">
+                        <img 
+                          src={schoolBranding.logo_url} 
+                          alt={schoolBranding.name || 'School logo'}
+                          className="h-16 w-16 object-contain"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-lg">{invitation.teams?.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {schoolBranding?.name || invitation.teams?.organizations?.name}
+                      </p>
+                    </div>
+                    {invitation.teams?.sports && (
+                      <div className="flex items-center justify-center gap-2">
+                        <SportIcon 
+                          sportName={invitation.teams.sports.name}
+                          size="sm"
+                          useSchoolColors={false}
+                        />
+                        <span className="text-sm">{invitation.teams.sports.name}</span>
+                      </div>
+                    )}
+                    <Badge 
+                      className="capitalize"
+                      style={{
+                        backgroundColor: primaryColor || undefined,
+                        color: primaryColor ? textOnPrimary : undefined
+                      }}
+                    >
                       {invitation.target_role.replace("_", " ")}
                     </Badge>
                   </div>
@@ -227,6 +274,10 @@ export default function JoinTeam() {
                   className="w-full"
                   onClick={() => joinMutation.mutate()}
                   disabled={joinMutation.isPending}
+                  style={{
+                    backgroundColor: primaryColor || undefined,
+                    color: primaryColor ? textOnPrimary : undefined
+                  }}
                 >
                   {joinMutation.isPending ? "Submitting..." : "Request to Join"}
                 </Button>
