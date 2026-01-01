@@ -22,7 +22,8 @@ export type PageKey =
   | 'governance'
   | 'import'
   | 'validation'
-  | 'approvals';
+  | 'approvals'
+  | 'integrations';
 
 // Feature access permissions
 export type FeatureKey = 
@@ -84,6 +85,7 @@ const PAGE_PERMISSIONS: Record<PageKey, AppRole[]> = {
   import: ['superadmin', 'system_admin'],
   validation: ['superadmin', 'system_admin'],
   approvals: ['superadmin', 'system_admin', 'org_admin'],
+  integrations: ['superadmin', 'system_admin', 'district_owner', 'district_admin', 'school_owner', 'school_admin'],
 };
 
 // Feature permissions matrix

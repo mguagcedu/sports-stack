@@ -148,6 +148,10 @@ export type Database = {
           charter_lea: string | null
           city: string | null
           created_at: string
+          finalforms_enabled: boolean | null
+          finalforms_portal_url: string | null
+          gofan_enabled: boolean | null
+          gofan_school_url: string | null
           highest_grade: string | null
           id: string
           lea_type: string | null
@@ -173,6 +177,10 @@ export type Database = {
           charter_lea?: string | null
           city?: string | null
           created_at?: string
+          finalforms_enabled?: boolean | null
+          finalforms_portal_url?: string | null
+          gofan_enabled?: boolean | null
+          gofan_school_url?: string | null
           highest_grade?: string | null
           id?: string
           lea_type?: string | null
@@ -198,6 +206,10 @@ export type Database = {
           charter_lea?: string | null
           city?: string | null
           created_at?: string
+          finalforms_enabled?: boolean | null
+          finalforms_portal_url?: string | null
+          gofan_enabled?: boolean | null
+          gofan_school_url?: string | null
           highest_grade?: string | null
           id?: string
           lea_type?: string | null
@@ -219,6 +231,50 @@ export type Database = {
           zip4?: string | null
         }
         Relationships: []
+      }
+      eligibility_updates: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_status: Database["public"]["Enums"]["eligibility_status_type"]
+          old_status:
+            | Database["public"]["Enums"]["eligibility_status_type"]
+            | null
+          reason: string | null
+          team_member_id: string
+          updated_by_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_status: Database["public"]["Enums"]["eligibility_status_type"]
+          old_status?:
+            | Database["public"]["Enums"]["eligibility_status_type"]
+            | null
+          reason?: string | null
+          team_member_id: string
+          updated_by_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["eligibility_status_type"]
+          old_status?:
+            | Database["public"]["Enums"]["eligibility_status_type"]
+            | null
+          reason?: string | null
+          team_member_id?: string
+          updated_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eligibility_updates_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_tickets: {
         Row: {
@@ -276,6 +332,10 @@ export type Database = {
           created_at: string | null
           end_time: string | null
           event_type: string
+          forms_provider:
+            | Database["public"]["Enums"]["forms_provider_type"]
+            | null
+          gofan_event_url: string | null
           home_team_id: string | null
           id: string
           is_cancelled: boolean | null
@@ -284,6 +344,9 @@ export type Database = {
           organization_id: string
           start_time: string
           ticket_price: number | null
+          ticketing_provider:
+            | Database["public"]["Enums"]["ticketing_provider_type"]
+            | null
           tickets_sold: number | null
           updated_at: string | null
           venue_address: string | null
@@ -294,6 +357,10 @@ export type Database = {
           created_at?: string | null
           end_time?: string | null
           event_type: string
+          forms_provider?:
+            | Database["public"]["Enums"]["forms_provider_type"]
+            | null
+          gofan_event_url?: string | null
           home_team_id?: string | null
           id?: string
           is_cancelled?: boolean | null
@@ -302,6 +369,9 @@ export type Database = {
           organization_id: string
           start_time: string
           ticket_price?: number | null
+          ticketing_provider?:
+            | Database["public"]["Enums"]["ticketing_provider_type"]
+            | null
           tickets_sold?: number | null
           updated_at?: string | null
           venue_address?: string | null
@@ -312,6 +382,10 @@ export type Database = {
           created_at?: string | null
           end_time?: string | null
           event_type?: string
+          forms_provider?:
+            | Database["public"]["Enums"]["forms_provider_type"]
+            | null
+          gofan_event_url?: string | null
           home_team_id?: string | null
           id?: string
           is_cancelled?: boolean | null
@@ -320,6 +394,9 @@ export type Database = {
           organization_id?: string
           start_time?: string
           ticket_price?: number | null
+          ticketing_provider?:
+            | Database["public"]["Enums"]["ticketing_provider_type"]
+            | null
           tickets_sold?: number | null
           updated_at?: string | null
           venue_address?: string | null
@@ -866,6 +943,10 @@ export type Database = {
           county: string | null
           created_at: string
           district_id: string | null
+          finalforms_enabled: boolean | null
+          finalforms_portal_url: string | null
+          gofan_enabled: boolean | null
+          gofan_school_url: string | null
           id: string
           latitude: number | null
           lea_id: string | null
@@ -899,6 +980,10 @@ export type Database = {
           county?: string | null
           created_at?: string
           district_id?: string | null
+          finalforms_enabled?: boolean | null
+          finalforms_portal_url?: string | null
+          gofan_enabled?: boolean | null
+          gofan_school_url?: string | null
           id?: string
           latitude?: number | null
           lea_id?: string | null
@@ -932,6 +1017,10 @@ export type Database = {
           county?: string | null
           created_at?: string
           district_id?: string | null
+          finalforms_enabled?: boolean | null
+          finalforms_portal_url?: string | null
+          gofan_enabled?: boolean | null
+          gofan_school_url?: string | null
           id?: string
           latitude?: number | null
           lea_id?: string | null
@@ -1243,6 +1332,12 @@ export type Database = {
       team_members: {
         Row: {
           created_at: string | null
+          eligibility_last_verified_at: string | null
+          eligibility_notes: string | null
+          eligibility_status:
+            | Database["public"]["Enums"]["eligibility_status_type"]
+            | null
+          eligibility_verified_by_user_id: string | null
           id: string
           is_captain: boolean | null
           jersey_number: string | null
@@ -1255,6 +1350,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          eligibility_last_verified_at?: string | null
+          eligibility_notes?: string | null
+          eligibility_status?:
+            | Database["public"]["Enums"]["eligibility_status_type"]
+            | null
+          eligibility_verified_by_user_id?: string | null
           id?: string
           is_captain?: boolean | null
           jersey_number?: string | null
@@ -1267,6 +1368,12 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          eligibility_last_verified_at?: string | null
+          eligibility_notes?: string | null
+          eligibility_status?:
+            | Database["public"]["Enums"]["eligibility_status_type"]
+            | null
+          eligibility_verified_by_user_id?: string | null
           id?: string
           is_captain?: boolean | null
           jersey_number?: string | null
@@ -1712,6 +1819,8 @@ export type Database = {
         | "trainer"
         | "scorekeeper"
         | "finance_clerk"
+      eligibility_status_type: "unknown" | "pending" | "cleared" | "not_cleared"
+      forms_provider_type: "none" | "finalforms" | "other"
       organization_type:
         | "school"
         | "district"
@@ -1724,6 +1833,7 @@ export type Database = {
         | "school"
         | "district"
         | "enterprise"
+      ticketing_provider_type: "none" | "gofan" | "internal" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1876,6 +1986,8 @@ export const Constants = {
         "scorekeeper",
         "finance_clerk",
       ],
+      eligibility_status_type: ["unknown", "pending", "cleared", "not_cleared"],
+      forms_provider_type: ["none", "finalforms", "other"],
       organization_type: [
         "school",
         "district",
@@ -1890,6 +2002,7 @@ export const Constants = {
         "district",
         "enterprise",
       ],
+      ticketing_provider_type: ["none", "gofan", "internal", "other"],
     },
   },
 } as const
