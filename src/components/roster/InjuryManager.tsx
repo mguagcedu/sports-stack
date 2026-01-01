@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { createNotification, createBulkNotifications } from '@/hooks/useNotifications';
 import { 
   HeartPulse, 
   AlertTriangle, 
@@ -119,15 +120,28 @@ export function InjuryManager({ teamId, teamMemberId, onClose }: InjuryManagerPr
         });
       if (error) throw error;
 
-      // Create notification
-      await supabase.from('team_notifications').insert({
-        team_id: teamId,
-        notification_type: 'injury',
-        title: 'Player Injury Reported',
-        message: `A player has been reported ${isOnIR ? 'to IR' : 'injured'}`,
-        reference_type: 'injury',
-        priority: injuryType === 'severe' || injuryType === 'season_ending' ? 'high' : 'normal',
-      });
+      // Get the injured player's info
+      const member = teamMembers.find((m: any) => m.id === selectedMemberId) as any;
+      const playerName = member?.profiles ? `${member.profiles.first_name} ${member.profiles.last_name}` : 'A player';
+      
+      // Notify all coaches on the team
+      const { data: coaches } = await supabase
+        .from('team_members')
+        .select('user_id')
+        .eq('team_id', teamId)
+        .in('role', ['head_coach', 'coach', 'assistant_coach'])
+        .not('user_id', 'is', null);
+      
+      if (coaches && coaches.length > 0) {
+        const coachUserIds = coaches.map(c => c.user_id).filter(Boolean) as string[];
+        await createBulkNotifications(coachUserIds, {
+          title: isOnIR ? '🏥 Player Added to IR' : '⚠️ New Injury Reported',
+          message: `${playerName} has been ${isOnIR ? 'placed on Injured Reserve' : 'reported injured'} (${bodyPart})`,
+          type: injuryType === 'severe' || injuryType === 'season_ending' ? 'error' : 'warning',
+          category: 'injury',
+          reference_type: 'injury',
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-injuries'] });

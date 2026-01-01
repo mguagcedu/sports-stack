@@ -222,153 +222,153 @@ export default function Events() {
                   Create Event
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create New Event</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-                <div className="space-y-2">
-                  <Label>Event Name</Label>
-                  <Input
-                    value={newEvent.name}
-                    onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
-                    placeholder="e.g., Varsity Basketball vs. Rival High"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Create New Event</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto">
                   <div className="space-y-2">
-                    <Label>Organization</Label>
-                    <Select
-                      value={newEvent.organization_id}
-                      onValueChange={(value) => setNewEvent({ ...newEvent, organization_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {organizations?.map((org) => (
-                          <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Event Type</Label>
-                    <Select
-                      value={newEvent.event_type}
-                      onValueChange={(value) => setNewEvent({ ...newEvent, event_type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="game">Game</SelectItem>
-                        <SelectItem value="tournament">Tournament</SelectItem>
-                        <SelectItem value="practice">Practice</SelectItem>
-                        <SelectItem value="meeting">Meeting</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Start Time</Label>
+                    <Label>Event Name</Label>
                     <Input
-                      type="datetime-local"
-                      value={newEvent.start_time}
-                      onChange={(e) => setNewEvent({ ...newEvent, start_time: e.target.value })}
+                      value={newEvent.name}
+                      onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
+                      placeholder="e.g., Varsity Basketball vs. Rival High"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>End Time</Label>
-                    <Input
-                      type="datetime-local"
-                      value={newEvent.end_time}
-                      onChange={(e) => setNewEvent({ ...newEvent, end_time: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Venue Name</Label>
-                  <Input
-                    value={newEvent.venue_name}
-                    onChange={(e) => setNewEvent({ ...newEvent, venue_name: e.target.value })}
-                    placeholder="e.g., Main Gymnasium"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Venue Address</Label>
-                  <Input
-                    value={newEvent.venue_address}
-                    onChange={(e) => setNewEvent({ ...newEvent, venue_address: e.target.value })}
-                    placeholder="123 School St, City, State"
-                  />
-                </div>
-                {newEvent.event_type === "game" && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Home Team</Label>
+                      <Label>Organization</Label>
                       <Select
-                        value={newEvent.home_team_id}
-                        onValueChange={(value) => setNewEvent({ ...newEvent, home_team_id: value })}
+                        value={newEvent.organization_id}
+                        onValueChange={(value) => setNewEvent({ ...newEvent, organization_id: value })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          {teams?.map((team) => (
-                            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                          {organizations?.map((org) => (
+                            <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Away Team</Label>
+                      <Label>Event Type</Label>
                       <Select
-                        value={newEvent.away_team_id}
-                        onValueChange={(value) => setNewEvent({ ...newEvent, away_team_id: value })}
+                        value={newEvent.event_type}
+                        onValueChange={(value) => setNewEvent({ ...newEvent, event_type: value })}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select" />
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {teams?.map((team) => (
-                            <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
-                          ))}
+                          <SelectItem value="game">Game</SelectItem>
+                          <SelectItem value="tournament">Tournament</SelectItem>
+                          <SelectItem value="practice">Practice</SelectItem>
+                          <SelectItem value="meeting">Meeting</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-                )}
-                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Start Time</Label>
+                      <Input
+                        type="datetime-local"
+                        value={newEvent.start_time}
+                        onChange={(e) => setNewEvent({ ...newEvent, start_time: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>End Time</Label>
+                      <Input
+                        type="datetime-local"
+                        value={newEvent.end_time}
+                        onChange={(e) => setNewEvent({ ...newEvent, end_time: e.target.value })}
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label>Ticket Price ($)</Label>
+                    <Label>Venue Name</Label>
                     <Input
-                      type="number"
-                      value={newEvent.ticket_price}
-                      onChange={(e) => setNewEvent({ ...newEvent, ticket_price: parseFloat(e.target.value) || 0 })}
+                      value={newEvent.venue_name}
+                      onChange={(e) => setNewEvent({ ...newEvent, venue_name: e.target.value })}
+                      placeholder="e.g., Main Gymnasium"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Max Capacity</Label>
+                    <Label>Venue Address</Label>
                     <Input
-                      type="number"
-                      value={newEvent.max_capacity}
-                      onChange={(e) => setNewEvent({ ...newEvent, max_capacity: parseInt(e.target.value) || 0 })}
+                      value={newEvent.venue_address}
+                      onChange={(e) => setNewEvent({ ...newEvent, venue_address: e.target.value })}
+                      placeholder="123 School St, City, State"
                     />
                   </div>
+                  {newEvent.event_type === "game" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Home Team</Label>
+                        <Select
+                          value={newEvent.home_team_id}
+                          onValueChange={(value) => setNewEvent({ ...newEvent, home_team_id: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {teams?.map((team) => (
+                              <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Away Team</Label>
+                        <Select
+                          value={newEvent.away_team_id}
+                          onValueChange={(value) => setNewEvent({ ...newEvent, away_team_id: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {teams?.map((team) => (
+                              <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Ticket Price ($)</Label>
+                      <Input
+                        type="number"
+                        value={newEvent.ticket_price}
+                        onChange={(e) => setNewEvent({ ...newEvent, ticket_price: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Max Capacity</Label>
+                      <Input
+                        type="number"
+                        value={newEvent.max_capacity}
+                        onChange={(e) => setNewEvent({ ...newEvent, max_capacity: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={() => createEventMutation.mutate(newEvent)}
+                    disabled={!newEvent.name || !newEvent.organization_id || !newEvent.start_time || createEventMutation.isPending}
+                  >
+                    {createEventMutation.isPending ? "Creating..." : "Create Event"}
+                  </Button>
                 </div>
-                <Button
-                  className="w-full"
-                  onClick={() => createEventMutation.mutate(newEvent)}
-                  disabled={!newEvent.name || !newEvent.organization_id || !newEvent.start_time || createEventMutation.isPending}
-                >
-                  {createEventMutation.isPending ? "Creating..." : "Create Event"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
