@@ -199,11 +199,45 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
     mutationFn: async () => {
       const finalName = teamData.useCustomName ? teamData.name : defaultTeamName;
       
+      // First, find or create a sport record for this sport_code
+      let sportId: string | null = null;
+      if (teamData.sport_code) {
+        // Check if sport exists in sports table
+        const { data: existingSport } = await supabase
+          .from("sports")
+          .select("id")
+          .eq("code", teamData.sport_code)
+          .maybeSingle();
+        
+        if (existingSport) {
+          sportId = existingSport.id;
+        } else {
+          // Create the sport record from sport_types
+          const { data: newSport, error: sportError } = await supabase
+            .from("sports")
+            .insert({
+              name: teamData.sport_name,
+              code: teamData.sport_code,
+              gender: mapGenderToTeam(teamData.sport_gender),
+              is_active: true,
+            })
+            .select("id")
+            .single();
+          
+          if (sportError) {
+            console.error("Error creating sport:", sportError);
+          } else {
+            sportId = newSport.id;
+          }
+        }
+      }
+      
       const { data, error } = await supabase
         .from("teams")
         .insert({
           name: finalName,
           organization_id: teamData.organization_id || null,
+          sport_id: sportId,
           season_id: teamData.season_id || null,
           level: teamData.level,
           gender: mapGenderToTeam(teamData.sport_gender),

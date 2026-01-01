@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { RoleSwitcher } from './RoleSwitcher';
+import { NotificationBell } from './NotificationBell';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -53,6 +54,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               </BreadcrumbList>
             </Breadcrumb>
             <div className="flex-1" />
+            <NotificationBell />
             <RoleSwitcher />
           </header>
           <main className="flex-1 overflow-auto p-6 bg-background">
