@@ -27,6 +27,8 @@ import Settings from "./pages/Settings";
 import Reports from "./pages/Reports";
 import AuditLogs from "./pages/AuditLogs";
 import JoinTeam from "./pages/JoinTeam";
+import Governance from "./pages/Governance";
+import SystemValidation from "./pages/SystemValidation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +68,8 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/audit-logs" element={<AuditLogs />} />
+            <Route path="/governance" element={<Governance />} />
+            <Route path="/validation" element={<SystemValidation />} />
             {/* Placeholder routes */}
             <Route path="/messages" element={<Dashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

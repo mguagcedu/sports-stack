@@ -13,7 +13,8 @@ import {
   Shield,
   LogOut,
   ChevronDown,
-  ClipboardList
+  ClipboardList,
+  Trophy,
 } from 'lucide-react';
 import { NavLink as RouterNavLink, useNavigate } from 'react-router-dom';
 import {
@@ -58,6 +59,7 @@ const managementNavItems = [
 const adminNavItems = [
   { title: 'School Database', url: '/schools', icon: GraduationCap },
   { title: 'Districts', url: '/districts', icon: Building2 },
+  { title: 'Governance', url: '/governance', icon: Trophy },
   { title: 'Import Data', url: '/import', icon: Database },
   { title: 'User Management', url: '/users', icon: Users },
   { title: 'Reports', url: '/reports', icon: BarChart3 },
