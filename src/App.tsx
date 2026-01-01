@@ -199,6 +199,11 @@ const App = () => (
                 <Integrations />
               </ProtectedRoute>
             } />
+            <Route path="/equipment" element={
+              <ProtectedRoute pageKey="equipment">
+                <Equipment />
+              </ProtectedRoute>
+            } />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
