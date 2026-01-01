@@ -36,6 +36,7 @@ import AuditLogs from "./pages/AuditLogs";
 import JoinTeam from "./pages/JoinTeam";
 import Governance from "./pages/Governance";
 import SystemValidation from "./pages/SystemValidation";
+import Integrations from "./pages/Integrations";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -190,6 +191,11 @@ const App = () => (
             <Route path="/approvals" element={
               <ProtectedRoute pageKey="users">
                 <PendingApprovals />
+              </ProtectedRoute>
+            } />
+            <Route path="/integrations" element={
+              <ProtectedRoute pageKey="integrations">
+                <Integrations />
               </ProtectedRoute>
             } />
             

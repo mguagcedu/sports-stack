@@ -39,6 +39,8 @@ const PAGE_LABELS: Record<PageKey, string> = {
   import: 'Import Data',
   validation: 'Validation',
   approvals: 'Role Approvals',
+  integrations: 'Integrations',
+};
 };
 
 const FEATURE_LABELS: Record<FeatureKey, string> = {
