@@ -11,6 +11,7 @@ import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
+import PendingApprovals from "./pages/PendingApprovals";
 import Schools from "./pages/Schools";
 import SchoolDetail from "./pages/SchoolDetail";
 import Organizations from "./pages/Organizations";
@@ -184,6 +185,11 @@ const App = () => (
             <Route path="/import" element={
               <ProtectedRoute pageKey="import">
                 <ImportData />
+              </ProtectedRoute>
+            } />
+            <Route path="/approvals" element={
+              <ProtectedRoute pageKey="users">
+                <PendingApprovals />
               </ProtectedRoute>
             } />
             
