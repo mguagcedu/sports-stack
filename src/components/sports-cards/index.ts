@@ -7,6 +7,7 @@ export { PositionPill } from './PositionPill';
 export { LineGroupPill } from './LineGroupPill';
 export { RoleRibbon } from './RoleRibbon';
 export { PlayerSilhouette } from './PlayerSilhouette';
+export { CardEditDialog } from './CardEditDialog';
 
 // Reveal exports
 export * from './reveal';
