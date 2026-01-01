@@ -39,6 +39,7 @@ import SystemValidation from "./pages/SystemValidation";
 import Equipment from "./pages/Equipment";
 import Integrations from "./pages/Integrations";
 import Volunteering from "./pages/Volunteering";
+import FinancialLedger from "./pages/FinancialLedger";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -208,6 +209,11 @@ const App = () => (
             <Route path="/volunteering" element={
               <ProtectedRoute pageKey="events">
                 <Volunteering />
+              </ProtectedRoute>
+            } />
+            <Route path="/finances" element={
+              <ProtectedRoute pageKey="payments">
+                <FinancialLedger />
               </ProtectedRoute>
             } />
             
