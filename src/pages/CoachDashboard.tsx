@@ -26,8 +26,11 @@ import {
   Loader2,
   Activity,
   Info,
-  Star
+  Star,
+  AlertTriangle,
+  Heart
 } from 'lucide-react';
+import { InjuryManager, DisciplineManager } from '@/components/roster';
 
 interface Sport {
   id: string;
@@ -368,6 +371,14 @@ export default function CoachDashboard() {
                 <ClipboardList className="h-4 w-4" />
                 Attendance
               </TabsTrigger>
+              <TabsTrigger value="injuries" className="gap-2">
+                <Heart className="h-4 w-4" />
+                Injuries
+              </TabsTrigger>
+              <TabsTrigger value="discipline" className="gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Discipline
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="roster">
@@ -498,6 +509,14 @@ export default function CoachDashboard() {
                 teamId={selectedTeamId} 
                 teamName={selectedTeam.name}
               />
+            </TabsContent>
+
+            <TabsContent value="injuries">
+              <InjuryManager teamId={selectedTeamId} />
+            </TabsContent>
+
+            <TabsContent value="discipline">
+              <DisciplineManager teamId={selectedTeamId} sportCode="general" />
             </TabsContent>
           </Tabs>
         ) : (
