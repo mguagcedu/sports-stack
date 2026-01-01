@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistrictName } from '@/lib/formatters';
+import { StateAssociationLookup } from '@/components/governance/StateAssociationLookup';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -343,6 +344,11 @@ export default function SchoolDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* State Athletic Association */}
+          {school?.state && (
+            <StateAssociationLookup stateCode={school.state} />
+          )}
 
           {/* School Details */}
           <Card>
