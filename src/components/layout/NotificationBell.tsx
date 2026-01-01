@@ -1,153 +1,182 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Bell, Check, Clock, User } from 'lucide-react';
-import { useUserRoles } from '@/hooks/useUserRoles';
+import { Bell, Check, Clock, AlertTriangle, Info, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useNotifications, Notification } from '@/hooks/useNotifications';
+import { cn } from '@/lib/utils';
+
+const typeIcons = {
+  info: Info,
+  success: CheckCircle,
+  warning: AlertTriangle,
+  error: XCircle,
+};
+
+const typeColors = {
+  info: 'text-blue-500 bg-blue-100',
+  success: 'text-green-500 bg-green-100',
+  warning: 'text-amber-500 bg-amber-100',
+  error: 'text-red-500 bg-red-100',
+};
 
 export function NotificationBell() {
   const navigate = useNavigate();
-  const { hasAnyRole } = useUserRoles();
   const [open, setOpen] = useState(false);
-  
-  const isAdmin = hasAnyRole(['system_admin', 'org_admin', 'superadmin']);
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotifications();
 
-  const { data: pendingApprovals } = useQuery({
-    queryKey: ['pending-approvals-count'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pending_approvals')
-        .select(`
-          id,
-          user_id,
-          requested_role,
-          created_at
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-
-      // Fetch profiles for these approvals
-      if (data && data.length > 0) {
-        const userIds = data.map(a => a.user_id);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, email')
-          .in('id', userIds);
-
-        const profileMap = new Map(profiles?.map(p => [p.id, p]));
-        return data.map(approval => ({
-          ...approval,
-          profile: profileMap.get(approval.user_id)
-        }));
-      }
-      
-      return data || [];
-    },
-    enabled: isAdmin,
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
-  const { data: totalCount } = useQuery({
-    queryKey: ['pending-approvals-total'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('pending_approvals')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending');
-
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: isAdmin,
-    refetchInterval: 30000,
-  });
-
-  if (!isAdmin) {
-    return null;
-  }
-
-  const count = totalCount || 0;
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
+    
+    // Navigate based on reference type
+    if (notification.reference_type === 'injury' || notification.reference_type === 'discipline') {
+      navigate('/coach');
+    } else if (notification.reference_type === 'depth_chart' || notification.reference_type === 'game_day') {
+      navigate('/coach');
+    } else if (notification.reference_type === 'equipment') {
+      navigate('/equipment');
+    } else if (notification.reference_type === 'team') {
+      navigate('/teams');
+    }
+    
+    setOpen(false);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          {count > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center">
-              {count > 9 ? '9+' : count}
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-[10px] font-medium text-white flex items-center justify-center animate-pulse">
+              {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="p-3 border-b">
-          <h4 className="font-semibold">Notifications</h4>
-          <p className="text-xs text-muted-foreground">
-            {count === 0 ? 'No pending items' : `${count} pending approval${count === 1 ? '' : 's'}`}
-          </p>
+        <div className="p-3 border-b flex items-center justify-between">
+          <div>
+            <h4 className="font-semibold">Notifications</h4>
+            <p className="text-xs text-muted-foreground">
+              {unreadCount === 0 ? 'All caught up!' : `${unreadCount} unread`}
+            </p>
+          </div>
+          {unreadCount > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-7"
+              onClick={() => markAllAsRead()}
+            >
+              Mark all read
+            </Button>
+          )}
         </div>
-        <div className="max-h-80 overflow-auto">
-          {pendingApprovals?.length === 0 ? (
+        <ScrollArea className="max-h-80">
+          {isLoading ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              <Check className="h-8 w-8 mx-auto mb-2 text-green-500" />
-              All caught up!
+              Loading...
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              No notifications yet
             </div>
           ) : (
             <div className="divide-y">
-              {pendingApprovals?.map((approval: any) => (
-                <div
-                  key={approval.id}
-                  className="p-3 hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => {
-                    setOpen(false);
-                    navigate('/pending-approvals');
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                      <User className="h-4 w-4 text-amber-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {approval.profile?.first_name || approval.profile?.email || 'New user'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Requests <Badge variant="secondary" className="text-[10px] px-1 py-0">{approval.requested_role}</Badge>
-                      </p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                        <Clock className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(approval.created_at), { addSuffix: true })}
-                      </p>
+              {notifications.slice(0, 10).map((notification) => {
+                const Icon = typeIcons[notification.type] || Info;
+                const colorClass = typeColors[notification.type] || typeColors.info;
+                
+                return (
+                  <div
+                    key={notification.id}
+                    className={cn(
+                      'p-3 hover:bg-muted/50 cursor-pointer transition-colors relative group',
+                      !notification.is_read && 'bg-primary/5'
+                    )}
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={cn(
+                        'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0',
+                        colorClass
+                      )}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={cn(
+                            'text-sm truncate',
+                            !notification.is_read && 'font-medium'
+                          )}>
+                            {notification.title}
+                          </p>
+                          {!notification.is_read && (
+                            <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                          {notification.message}
+                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                          </p>
+                          {notification.category && (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                              {notification.category}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notification.id);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 text-muted-foreground" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-        </div>
-        {count > 0 && (
+        </ScrollArea>
+        {notifications.length > 10 && (
           <div className="p-2 border-t">
             <Button
               variant="ghost"
               className="w-full text-sm"
               onClick={() => {
                 setOpen(false);
-                navigate('/pending-approvals');
+                // Could navigate to a full notifications page
               }}
             >
-              View all approvals
+              View all ({notifications.length})
             </Button>
           </div>
         )}

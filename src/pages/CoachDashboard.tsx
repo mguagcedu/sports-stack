@@ -28,9 +28,12 @@ import {
   Info,
   Star,
   AlertTriangle,
-  Heart
+  Heart,
+  Cake
 } from 'lucide-react';
 import { InjuryManager, DisciplineManager } from '@/components/roster';
+import { GameDayRosterManager } from '@/components/game-day';
+import { format, isSameDay, addDays } from 'date-fns';
 
 interface Sport {
   id: string;
@@ -137,7 +140,7 @@ export default function CoachDashboard() {
     },
   });
 
-  // Fetch profiles for roster members
+  // Fetch profiles for roster members (including date_of_birth)
   const rosterUserIds = rosterData.map(m => m.user_id);
   const { data: rosterProfiles = [] } = useQuery({
     queryKey: ['roster-profiles', rosterUserIds],
@@ -145,12 +148,36 @@ export default function CoachDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, date_of_birth')
         .in('id', rosterUserIds);
       if (error) throw error;
       return data || [];
     },
   });
+
+  // Calculate upcoming birthdays
+  const upcomingBirthdays = useMemo(() => {
+    const today = new Date();
+    const nextWeek = addDays(today, 7);
+    
+    return rosterProfiles
+      .filter(p => p.date_of_birth)
+      .map(p => {
+        const dob = new Date(p.date_of_birth!);
+        const birthdayThisYear = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+        if (birthdayThisYear < today) {
+          birthdayThisYear.setFullYear(birthdayThisYear.getFullYear() + 1);
+        }
+        return {
+          ...p,
+          nextBirthday: birthdayThisYear,
+          isToday: isSameDay(birthdayThisYear, today),
+          isThisWeek: birthdayThisYear >= today && birthdayThisYear <= nextWeek,
+        };
+      })
+      .filter(p => p.isThisWeek)
+      .sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
+  }, [rosterProfiles]);
 
   // Build roster with profile data
   const roster = useMemo(() => {
@@ -371,6 +398,10 @@ export default function CoachDashboard() {
                 <ClipboardList className="h-4 w-4" />
                 Attendance
               </TabsTrigger>
+              <TabsTrigger value="game-day" className="gap-2">
+                <Trophy className="h-4 w-4" />
+                Game Day
+              </TabsTrigger>
               <TabsTrigger value="injuries" className="gap-2">
                 <Heart className="h-4 w-4" />
                 Injuries
@@ -378,6 +409,15 @@ export default function CoachDashboard() {
               <TabsTrigger value="discipline" className="gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Discipline
+              </TabsTrigger>
+              <TabsTrigger value="birthdays" className="gap-2">
+                <Cake className="h-4 w-4" />
+                Birthdays
+                {upcomingBirthdays.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                    {upcomingBirthdays.length}
+                  </Badge>
+                )}
               </TabsTrigger>
             </TabsList>
 
@@ -511,12 +551,69 @@ export default function CoachDashboard() {
               />
             </TabsContent>
 
+            <TabsContent value="game-day">
+              <GameDayRosterManager 
+                teamId={selectedTeamId} 
+                sportCode={sports?.find(s => s.id === selectedSportId)?.code || undefined}
+              />
+            </TabsContent>
+
             <TabsContent value="injuries">
               <InjuryManager teamId={selectedTeamId} />
             </TabsContent>
 
             <TabsContent value="discipline">
               <DisciplineManager teamId={selectedTeamId} sportCode="general" />
+            </TabsContent>
+
+            <TabsContent value="birthdays">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Cake className="h-5 w-5 text-pink-500" />
+                    Team Birthdays
+                  </CardTitle>
+                  <CardDescription>Upcoming birthdays this week</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {upcomingBirthdays.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Cake className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No upcoming birthdays this week</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {upcomingBirthdays.map((person) => (
+                        <div 
+                          key={person.id} 
+                          className={`flex items-center justify-between p-4 rounded-lg border ${
+                            person.isToday ? 'bg-gradient-to-r from-pink-500/10 to-purple-500/10 border-pink-500/30' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${person.isToday ? 'bg-pink-500/20' : 'bg-muted'}`}>
+                              <Cake className={`h-5 w-5 ${person.isToday ? 'text-pink-500' : 'text-muted-foreground'}`} />
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {person.first_name} {person.last_name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(person.nextBirthday, 'EEEE, MMMM d')}
+                              </p>
+                            </div>
+                          </div>
+                          {person.isToday && (
+                            <Badge className="bg-gradient-to-r from-pink-500 to-purple-500">
+                              🎂 Today!
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         ) : (
