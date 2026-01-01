@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Users, Filter } from "lucide-react";
 import { TeamCreationWizard } from "@/components/teams/TeamCreationWizard";
+import { SanctionBadge } from "@/components/governance/SanctionBadge";
 
 export default function Teams() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,10 +40,10 @@ export default function Teams() {
         .from("teams")
         .select(`
           *,
-          organizations(name),
-          sports(name, icon),
+          organizations(name, state, district_id),
+          sports(name, icon, code),
           seasons(name),
-          schools(name)
+          schools(name, state, district_id)
         `)
         .order("name");
       if (error) throw error;
@@ -89,6 +90,13 @@ export default function Teams() {
       case "freshman": return "outline";
       default: return "outline";
     }
+  };
+
+  // Helper to get state and district for a team
+  const getTeamLocation = (team: any) => {
+    const state = team.organizations?.state || team.schools?.state;
+    const districtId = team.organizations?.district_id || team.schools?.district_id;
+    return { state, districtId };
   };
 
   return (
@@ -148,9 +156,9 @@ export default function Teams() {
                 <TableHead>Name</TableHead>
                 <TableHead>Organization</TableHead>
                 <TableHead>Sport</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Season</TableHead>
                 <TableHead>Level</TableHead>
-                <TableHead>Gender</TableHead>
                 <TableHead className="text-center">Roster</TableHead>
               </TableRow>
             </TableHeader>
@@ -166,30 +174,43 @@ export default function Teams() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTeams?.map((team) => (
-                  <TableRow
-                    key={team.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/teams/${team.id}`)}
-                  >
-                    <TableCell className="font-medium">{team.name}</TableCell>
-                    <TableCell>{team.organizations?.name || "-"}</TableCell>
-                    <TableCell>{team.sports?.name || "-"}</TableCell>
-                    <TableCell>{team.seasons?.name || "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={getLevelBadgeVariant(team.level)}>
-                        {team.level || "N/A"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="capitalize">{team.gender || "-"}</TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>0/{team.max_roster_size || "∞"}</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredTeams?.map((team) => {
+                  const { state, districtId } = getTeamLocation(team);
+                  const sportCode = team.sports?.code;
+                  
+                  return (
+                    <TableRow
+                      key={team.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/teams/${team.id}`)}
+                    >
+                      <TableCell className="font-medium">{team.name}</TableCell>
+                      <TableCell>{team.organizations?.name || "-"}</TableCell>
+                      <TableCell>{team.sports?.name || "-"}</TableCell>
+                      <TableCell>
+                        <SanctionBadge
+                          stateCode={state}
+                          sportCode={sportCode}
+                          sportName={team.sports?.name}
+                          districtId={districtId}
+                          compact
+                        />
+                      </TableCell>
+                      <TableCell>{team.seasons?.name || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={getLevelBadgeVariant(team.level)}>
+                          {team.level || "N/A"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span>0/{team.max_roster_size || "∞"}</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

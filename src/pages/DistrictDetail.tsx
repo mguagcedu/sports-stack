@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistrictName } from '@/lib/formatters';
+import { StateAssociationLookup } from '@/components/governance/StateAssociationLookup';
+import { DistrictSportOverrides } from '@/components/governance/DistrictSportOverrides';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -355,6 +357,11 @@ export default function DistrictDetail() {
             </CardContent>
           </Card>
 
+          {/* State Athletic Association */}
+          {district?.state && (
+            <StateAssociationLookup stateCode={district.state} />
+          )}
+
           {/* Map Embed */}
           <Card className="md:col-span-2">
             <CardHeader>
@@ -468,6 +475,15 @@ export default function DistrictDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* District Sport Overrides */}
+          {district && district.state && (
+            <DistrictSportOverrides
+              districtId={district.id}
+              stateCode={district.state}
+              className="md:col-span-2"
+            />
+          )}
         </div>
       </div>
 

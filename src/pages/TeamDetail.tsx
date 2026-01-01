@@ -44,6 +44,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Trash2, Users, Building, Calendar, Trophy, Edit, UserPlus } from "lucide-react";
 import { CoachDelegationDialog } from "@/components/teams/CoachDelegationDialog";
+import { SanctionBadge } from "@/components/governance/SanctionBadge";
+
 
 interface Profile {
   id: string;
@@ -87,10 +89,10 @@ export default function TeamDetail() {
         .from("teams")
         .select(`
           *,
-          organizations(name),
-          sports(name, icon),
+          organizations(name, state, district_id),
+          sports(name, icon, code),
           seasons(name, academic_year),
-          schools(name)
+          schools(name, state, district_id)
         `)
         .eq("id", id)
         .maybeSingle();
@@ -98,6 +100,11 @@ export default function TeamDetail() {
       return data;
     },
   });
+
+  // Get state and district for sanctioning
+  const teamState = team?.organizations?.state || team?.schools?.state;
+  const teamDistrictId = team?.organizations?.district_id || team?.schools?.district_id;
+  const sportCode = team?.sports?.code;
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["team-members", id],
@@ -309,7 +316,16 @@ export default function TeamDetail() {
               <Trophy className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{team.sports?.name || "N/A"}</div>
+              <div className="text-2xl font-bold flex items-center gap-2">
+                {team.sports?.name || "N/A"}
+                <SanctionBadge
+                  stateCode={teamState}
+                  sportCode={sportCode}
+                  sportName={team.sports?.name}
+                  districtId={teamDistrictId}
+                  compact
+                />
+              </div>
               <p className="text-xs text-muted-foreground capitalize">{team.level} • {team.gender}</p>
             </CardContent>
           </Card>
