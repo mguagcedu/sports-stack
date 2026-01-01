@@ -33,6 +33,8 @@ import {
 } from 'lucide-react';
 import { InjuryManager, DisciplineManager, PraiseManager } from '@/components/roster';
 import { GameDayRosterManager } from '@/components/game-day';
+import { IntegrationStatusCard } from '@/components/registrations';
+import { ComplianceTicketingCard } from '@/components/integrations/ComplianceTicketingCard';
 import { format, isSameDay, addDays } from 'date-fns';
 
 interface Sport {
@@ -380,6 +382,12 @@ export default function CoachDashboard() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Quick Access: Compliance & Integrations */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <ComplianceTicketingCard />
+          <IntegrationStatusCard showConfigLink />
         </div>
 
         {/* Main Content Tabs */}

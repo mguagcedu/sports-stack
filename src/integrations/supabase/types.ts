@@ -500,6 +500,56 @@ export type Database = {
           },
         ]
       }
+      digital_signatures: {
+        Row: {
+          created_at: string | null
+          form_submission_id: string | null
+          id: string
+          ip_address: string | null
+          signature_data: string | null
+          signature_type: string | null
+          signed_at: string | null
+          signer_name: string
+          signer_role: string
+          signer_user_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          form_submission_id?: string | null
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          signature_type?: string | null
+          signed_at?: string | null
+          signer_name: string
+          signer_role: string
+          signer_user_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          form_submission_id?: string | null
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          signature_type?: string | null
+          signed_at?: string | null
+          signer_name?: string
+          signer_role?: string
+          signer_user_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_signatures_form_submission_id_fkey"
+            columns: ["form_submission_id"]
+            isOneToOne: false
+            referencedRelation: "form_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       district_sport_override: {
         Row: {
           created_at: string | null
@@ -1992,6 +2042,67 @@ export type Database = {
           },
         ]
       }
+      form_submissions: {
+        Row: {
+          athlete_user_id: string
+          created_at: string | null
+          form_id: string | null
+          id: string
+          registration_id: string | null
+          responses: Json | null
+          status: string | null
+          submitted_at: string | null
+          team_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          athlete_user_id: string
+          created_at?: string | null
+          form_id?: string | null
+          id?: string
+          registration_id?: string | null
+          responses?: Json | null
+          status?: string | null
+          submitted_at?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          athlete_user_id?: string
+          created_at?: string | null
+          form_id?: string | null
+          id?: string
+          registration_id?: string | null
+          responses?: Json | null
+          status?: string | null
+          submitted_at?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_submissions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "registration_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_day_roster_entries: {
         Row: {
           created_at: string | null
@@ -3203,6 +3314,78 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      registration_forms: {
+        Row: {
+          content: Json | null
+          created_at: string | null
+          description: string | null
+          district_id: string | null
+          external_provider: string | null
+          external_url: string | null
+          form_type: string
+          id: string
+          is_required: boolean | null
+          requires_admin_signature: boolean | null
+          requires_coach_signature: boolean | null
+          requires_parent_signature: boolean | null
+          school_id: string | null
+          sport_code: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string | null
+          description?: string | null
+          district_id?: string | null
+          external_provider?: string | null
+          external_url?: string | null
+          form_type: string
+          id?: string
+          is_required?: boolean | null
+          requires_admin_signature?: boolean | null
+          requires_coach_signature?: boolean | null
+          requires_parent_signature?: boolean | null
+          school_id?: string | null
+          sport_code?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string | null
+          description?: string | null
+          district_id?: string | null
+          external_provider?: string | null
+          external_url?: string | null
+          form_type?: string
+          id?: string
+          is_required?: boolean | null
+          requires_admin_signature?: boolean | null
+          requires_coach_signature?: boolean | null
+          requires_parent_signature?: boolean | null
+          school_id?: string | null
+          sport_code?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_forms_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_forms_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       registrations: {
         Row: {
