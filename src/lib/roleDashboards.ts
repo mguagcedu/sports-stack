@@ -150,10 +150,10 @@ export const ROLE_DASHBOARD_CONFIGS: Record<string, RoleDashboardConfig> = {
   trainer: {
     title: 'Trainer Dashboard',
     description: 'Athletic training and health',
-    primaryPath: '/',
+    primaryPath: '/coach',
     sections: [
-      { title: 'Athletes', description: 'Athlete health records', path: '/teams', icon: 'Users' },
-      { title: 'Injuries', description: 'Injury tracking', path: '/', icon: 'Heart' },
+      { title: 'Athletes', description: 'Athlete health records', path: '/coach', icon: 'Users' },
+      { title: 'Injuries', description: 'Injury tracking', path: '/coach', icon: 'Heart' },
       { title: 'Clearances', description: 'Medical clearances', path: '/pending-approvals', icon: 'CheckCircle' },
       { title: 'Equipment', description: 'Training equipment', path: '/equipment', requiredRole: 'equipment_manager', icon: 'Package' },
     ],
@@ -163,8 +163,9 @@ export const ROLE_DASHBOARD_CONFIGS: Record<string, RoleDashboardConfig> = {
   scorekeeper: {
     title: 'Scorekeeper Dashboard',
     description: 'Game statistics and scoring',
-    primaryPath: '/',
+    primaryPath: '/coach',
     sections: [
+      { title: 'Team Roster', description: 'View players', path: '/coach', icon: 'Users' },
       { title: 'Live Games', description: 'Active games', path: '/events', icon: 'Play' },
       { title: 'Schedule', description: 'Game schedule', path: '/events', icon: 'Calendar' },
       { title: 'Stats', description: 'Game statistics', path: '/reports', icon: 'BarChart3' },

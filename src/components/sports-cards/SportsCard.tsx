@@ -7,6 +7,26 @@ import { LineGroupPill } from './LineGroupPill';
 import { RoleRibbon } from './RoleRibbon';
 import { PlayerSilhouette } from './PlayerSilhouette';
 
+// Calculate current grade from graduation year
+function calculateGrade(gradYear: number | null | undefined): string | null {
+  if (!gradYear) return null;
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth(); // 0-11
+  // If after June, use next school year
+  const schoolYear = currentMonth >= 6 ? currentYear + 1 : currentYear;
+  const yearsUntilGrad = gradYear - schoolYear;
+  
+  if (yearsUntilGrad < 0) return 'Alumni';
+  if (yearsUntilGrad === 0) return 'Senior';
+  if (yearsUntilGrad === 1) return 'Junior';
+  if (yearsUntilGrad === 2) return 'Sophomore';
+  if (yearsUntilGrad === 3) return 'Freshman';
+  if (yearsUntilGrad === 4) return '8th';
+  if (yearsUntilGrad === 5) return '7th';
+  if (yearsUntilGrad === 6) return '6th';
+  return `${12 - yearsUntilGrad}th`;
+}
+
 const sizeConfig = {
   mini: { width: 'w-16', height: 'h-24', photoHeight: 'h-14', showDetails: false },
   small: { width: 'w-28', height: 'h-40', photoHeight: 'h-20', showDetails: false },
@@ -87,6 +107,18 @@ export function SportsCard({
           </div>
         )}
 
+        {/* Grade badge - prominent display */}
+        {data.gradYear && !isMini && (
+          <div className="absolute top-2 right-2 px-2 py-1 rounded-full bg-black/70 backdrop-blur-sm border border-white/20">
+            <span className={cn(
+              'font-bold text-white',
+              isSmall ? 'text-[10px]' : 'text-xs'
+            )}>
+              {calculateGrade(data.gradYear)}
+            </span>
+          </div>
+        )}
+
         {/* Position overlay */}
         {primaryPosition && !isMini && (
           <div className="absolute bottom-2 left-2 flex flex-wrap gap-1">
@@ -138,9 +170,13 @@ export function SportsCard({
           <>
             {/* Grad year and physical stats */}
             <div className="flex items-center gap-2 mt-1 text-[10px] text-white/50">
-              {data.gradYear && <span>Class of {data.gradYear}</span>}
-              {data.height && <span>{data.height}</span>}
-              {data.weight && <span>{data.weight}</span>}
+              {data.gradYear && (
+                <span className="font-medium text-white/70">
+                  {calculateGrade(data.gradYear)} • Class of {data.gradYear}
+                </span>
+              )}
+              {data.height && <span>• {data.height}</span>}
+              {data.weight && <span>• {data.weight}</span>}
             </div>
 
             {/* Line groups */}
