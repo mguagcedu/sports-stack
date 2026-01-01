@@ -102,11 +102,14 @@ export type Database = {
         Row: {
           card_theme_preference: string | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by_user_id: string | null
           dominant_hand: string | null
           first_name: string
           grad_year: number | null
           height: string | null
           id: string
+          is_anonymized: boolean | null
           last_name: string
           organization_id: string | null
           photo_url: string | null
@@ -118,11 +121,14 @@ export type Database = {
         Insert: {
           card_theme_preference?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
           dominant_hand?: string | null
           first_name: string
           grad_year?: number | null
           height?: string | null
           id?: string
+          is_anonymized?: boolean | null
           last_name: string
           organization_id?: string | null
           photo_url?: string | null
@@ -134,11 +140,14 @@ export type Database = {
         Update: {
           card_theme_preference?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
           dominant_hand?: string | null
           first_name?: string
           grad_year?: number | null
           height?: string | null
           id?: string
+          is_anonymized?: boolean | null
           last_name?: string
           organization_id?: string | null
           photo_url?: string | null
@@ -499,6 +508,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      data_retention_policies: {
+        Row: {
+          anonymize_on_delete: boolean | null
+          created_at: string | null
+          entity_type: string
+          id: string
+          retention_days: number | null
+          soft_delete_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          anonymize_on_delete?: boolean | null
+          created_at?: string | null
+          entity_type: string
+          id?: string
+          retention_days?: number | null
+          soft_delete_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          anonymize_on_delete?: boolean | null
+          created_at?: string | null
+          entity_type?: string
+          id?: string
+          retention_days?: number | null
+          soft_delete_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       digital_signatures: {
         Row: {
@@ -1970,6 +2009,45 @@ export type Database = {
           },
         ]
       }
+      financial_adjustments: {
+        Row: {
+          adjustment_type: string
+          amount_cents: number
+          approved_at: string | null
+          approved_by_user_id: string | null
+          created_at: string | null
+          created_by_user_id: string
+          id: string
+          metadata: Json | null
+          original_entry_id: string
+          reason: string
+        }
+        Insert: {
+          adjustment_type: string
+          amount_cents: number
+          approved_at?: string | null
+          approved_by_user_id?: string | null
+          created_at?: string | null
+          created_by_user_id: string
+          id?: string
+          metadata?: Json | null
+          original_entry_id: string
+          reason: string
+        }
+        Update: {
+          adjustment_type?: string
+          amount_cents?: number
+          approved_at?: string | null
+          approved_by_user_id?: string | null
+          created_at?: string | null
+          created_by_user_id?: string
+          id?: string
+          metadata?: Json | null
+          original_entry_id?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       financial_ledger: {
         Row: {
           amount: number
@@ -2041,6 +2119,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      form_access_log: {
+        Row: {
+          access_type: string
+          accessed_by_user_id: string
+          created_at: string | null
+          form_submission_id: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          access_type: string
+          accessed_by_user_id: string
+          created_at?: string | null
+          form_submission_id: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          access_type?: string
+          accessed_by_user_id?: string
+          created_at?: string | null
+          form_submission_id?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
       }
       form_submissions: {
         Row: {
@@ -2501,6 +2609,36 @@ export type Database = {
           },
         ]
       }
+      login_attempts: {
+        Row: {
+          created_at: string | null
+          email: string
+          failure_reason: string | null
+          id: string
+          ip_address: string | null
+          success: boolean | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          success?: boolean | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          success?: boolean | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       member_line_groups: {
         Row: {
           created_at: string | null
@@ -2582,6 +2720,69 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_security_settings: {
+        Row: {
+          allow_public_cards: boolean | null
+          allow_public_rosters: boolean | null
+          created_at: string | null
+          id: string
+          max_sessions_per_user: number | null
+          mfa_required: boolean | null
+          organization_id: string
+          password_min_length: number | null
+          password_require_lowercase: boolean | null
+          password_require_number: boolean | null
+          password_require_special: boolean | null
+          password_require_uppercase: boolean | null
+          session_timeout_minutes: number | null
+          show_athlete_height_weight: boolean | null
+          show_athlete_photos: boolean | null
+          show_athlete_ratings: boolean | null
+          show_jersey_numbers: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_public_cards?: boolean | null
+          allow_public_rosters?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_sessions_per_user?: number | null
+          mfa_required?: boolean | null
+          organization_id: string
+          password_min_length?: number | null
+          password_require_lowercase?: boolean | null
+          password_require_number?: boolean | null
+          password_require_special?: boolean | null
+          password_require_uppercase?: boolean | null
+          session_timeout_minutes?: number | null
+          show_athlete_height_weight?: boolean | null
+          show_athlete_photos?: boolean | null
+          show_athlete_ratings?: boolean | null
+          show_jersey_numbers?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_public_cards?: boolean | null
+          allow_public_rosters?: boolean | null
+          created_at?: string | null
+          id?: string
+          max_sessions_per_user?: number | null
+          mfa_required?: boolean | null
+          organization_id?: string
+          password_min_length?: number | null
+          password_require_lowercase?: boolean | null
+          password_require_number?: boolean | null
+          password_require_special?: boolean | null
+          password_require_uppercase?: boolean | null
+          session_timeout_minutes?: number | null
+          show_athlete_height_weight?: boolean | null
+          show_athlete_photos?: boolean | null
+          show_athlete_ratings?: boolean | null
+          show_jersey_numbers?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           address: string | null
@@ -2656,6 +2857,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      password_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          password_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          password_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          password_hash?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       payments: {
         Row: {
@@ -3216,6 +3438,39 @@ export type Database = {
           },
         ]
       }
+      privacy_settings: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          setting_key: string
+          setting_value: boolean | null
+          updated_at: string | null
+          updated_by_user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          setting_key: string
+          setting_value?: boolean | null
+          updated_at?: string | null
+          updated_by_user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          setting_key?: string
+          setting_value?: boolean | null
+          updated_at?: string | null
+          updated_by_user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_updated_at: string | null
@@ -3225,9 +3480,11 @@ export type Database = {
           card_photo_url: string | null
           created_at: string
           date_of_birth: string | null
+          deleted_at: string | null
           email: string | null
           first_name: string | null
           id: string
+          is_anonymized: boolean | null
           last_name: string | null
           phone: string | null
           photo_url: string | null
@@ -3241,9 +3498,11 @@ export type Database = {
           card_photo_url?: string | null
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           email?: string | null
           first_name?: string | null
           id: string
+          is_anonymized?: boolean | null
           last_name?: string | null
           phone?: string | null
           photo_url?: string | null
@@ -3257,9 +3516,11 @@ export type Database = {
           card_photo_url?: string | null
           created_at?: string
           date_of_birth?: string | null
+          deleted_at?: string | null
           email?: string | null
           first_name?: string | null
           id?: string
+          is_anonymized?: boolean | null
           last_name?: string | null
           phone?: string | null
           photo_url?: string | null
@@ -3695,6 +3956,45 @@ export type Database = {
           name?: string
           start_date?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      security_events: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          severity: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -4214,6 +4514,8 @@ export type Database = {
       team_members: {
         Row: {
           created_at: string | null
+          deleted_at: string | null
+          deleted_by_user_id: string | null
           depth_order: number | null
           eligibility_last_verified_at: string | null
           eligibility_notes: string | null
@@ -4234,6 +4536,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
           depth_order?: number | null
           eligibility_last_verified_at?: string | null
           eligibility_notes?: string | null
@@ -4254,6 +4558,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by_user_id?: string | null
           depth_order?: number | null
           eligibility_last_verified_at?: string | null
           eligibility_notes?: string | null
@@ -4880,6 +5186,51 @@ export type Database = {
           },
         ]
       }
+      user_sessions: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          expires_at: string
+          forced_logout_at: string | null
+          forced_logout_reason: string | null
+          id: string
+          ip_address: string | null
+          is_active: boolean | null
+          last_activity_at: string | null
+          session_token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          expires_at: string
+          forced_logout_at?: string | null
+          forced_logout_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_activity_at?: string | null
+          session_token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          expires_at?: string
+          forced_logout_at?: string | null
+          forced_logout_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_activity_at?: string | null
+          session_token?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       volunteer_exclusions: {
         Row: {
           created_at: string | null
@@ -5338,6 +5689,15 @@ export type Database = {
         Returns: boolean
       }
       is_superadmin: { Args: { _user_id: string }; Returns: boolean }
+      log_form_access: {
+        Args: {
+          _access_type: string
+          _form_submission_id: string
+          _ip_address?: string
+          _user_agent?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
