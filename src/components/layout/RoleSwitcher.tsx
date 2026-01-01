@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, ChevronDown, Building2, GraduationCap, Users, Shield } from 'lucide-react';
+import { Check, ChevronDown, Building2, GraduationCap, Users, Shield, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,11 +10,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles, AppRole } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface RoleContext {
   role: AppRole;
@@ -52,6 +69,13 @@ const roleLabels: Record<AppRole, string> = {
   finance_clerk: 'Finance Clerk',
 };
 
+const ALL_ROLES: AppRole[] = [
+  'superadmin', 'system_admin', 'org_admin', 'district_owner', 'district_admin', 
+  'district_viewer', 'school_owner', 'school_admin', 'school_viewer', 'athletic_director',
+  'coach', 'assistant_coach', 'team_manager', 'trainer', 'scorekeeper', 'parent',
+  'guardian', 'athlete', 'registrar', 'finance_admin', 'finance_clerk', 'gate_staff', 'viewer'
+];
+
 const roleIcons: Partial<Record<AppRole, typeof Shield>> = {
   system_admin: Shield,
   superadmin: Shield,
@@ -70,9 +94,16 @@ interface RoleSwitcherProps {
 
 export function RoleSwitcher({ compact = false }: RoleSwitcherProps) {
   const { user } = useAuth();
-  const { roles, activeRole, setActiveRole } = useUserRoles();
+  const { roles, activeRole, setActiveRole, hasAnyRole } = useUserRoles();
   const [roleContexts, setRoleContexts] = useState<RoleContext[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddRoleOpen, setIsAddRoleOpen] = useState(false);
+  const [newRole, setNewRole] = useState<AppRole>('viewer');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Check if user is admin (can add roles to themselves for testing)
+  const isAdmin = hasAnyRole(['system_admin', 'superadmin']);
 
   useEffect(() => {
     if (!user || roles.length === 0) {
@@ -137,109 +168,169 @@ export function RoleSwitcher({ compact = false }: RoleSwitcherProps) {
     }
   };
 
+  const handleAddRole = async () => {
+    if (!user) return;
+    
+    const { error } = await supabase.from('user_roles').insert({
+      user_id: user.id,
+      role: newRole
+    });
+    
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Role Added', description: `${roleLabels[newRole]} role has been added.` });
+      setIsAddRoleOpen(false);
+      // Refresh the page to reload roles
+      window.location.reload();
+    }
+  };
+
   const ActiveIcon = activeRole ? (roleIcons[activeRole] || Shield) : Shield;
   const activeContext = roleContexts.find(c => c.role === activeRole);
 
-  if (roles.length <= 1) {
-    return null; // Don't show switcher if user has only one role
+  // Show for admins even with single role (to add test roles), or when multiple roles exist
+  if (roles.length === 0 && !isAdmin) {
+    return null;
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size={compact ? "sm" : "default"}
-          className={cn(
-            "gap-2",
-            compact && "h-8 px-2"
-          )}
-        >
-          <ActiveIcon className="h-4 w-4" />
-          {!compact && (
-            <>
-              <span className="max-w-[120px] truncate">
-                {activeRole ? roleLabels[activeRole] : 'Select Role'}
-              </span>
-              {activeContext?.organization_name && (
-                <Badge variant="secondary" className="ml-1 text-xs">
-                  {activeContext.organization_name}
-                </Badge>
-              )}
-            </>
-          )}
-          <ChevronDown className="h-4 w-4 opacity-50" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72 bg-popover">
-        <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        
-        {/* Global Roles */}
-        {roleContexts.filter(c => !c.organization_id).length > 0 && (
-          <DropdownMenuGroup>
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Global Roles
-            </DropdownMenuLabel>
-            {roleContexts
-              .filter(c => !c.organization_id)
-              .map((context, index) => {
-                const Icon = roleIcons[context.role] || Shield;
-                return (
-                  <DropdownMenuItem
-                    key={`global-${index}`}
-                    onClick={() => handleRoleSelect(context)}
-                    className="gap-2"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="flex-1">{roleLabels[context.role]}</span>
-                    {activeRole === context.role && !activeContext?.organization_id && (
-                      <Check className="h-4 w-4 text-primary" />
-                    )}
-                  </DropdownMenuItem>
-                );
-              })}
-          </DropdownMenuGroup>
-        )}
-
-        {/* Organization Roles */}
-        {roleContexts.filter(c => c.organization_id).length > 0 && (
-          <>
-            <DropdownMenuSeparator />
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size={compact ? "sm" : "default"}
+            className={cn(
+              "gap-2",
+              compact && "h-8 px-2"
+            )}
+          >
+            <ActiveIcon className="h-4 w-4" />
+            {!compact && (
+              <>
+                <span className="max-w-[120px] truncate">
+                  {activeRole ? roleLabels[activeRole] : 'Select Role'}
+                </span>
+                {activeContext?.organization_name && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {activeContext.organization_name}
+                  </Badge>
+                )}
+              </>
+            )}
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-72 bg-popover">
+          <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          
+          {/* Global Roles */}
+          {roleContexts.filter(c => !c.organization_id).length > 0 && (
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Organization Roles
+                Global Roles
               </DropdownMenuLabel>
               {roleContexts
-                .filter(c => c.organization_id)
+                .filter(c => !c.organization_id)
                 .map((context, index) => {
-                  const Icon = roleIcons[context.role] || Building2;
+                  const Icon = roleIcons[context.role] || Shield;
                   return (
                     <DropdownMenuItem
-                      key={`org-${index}`}
+                      key={`global-${index}`}
                       onClick={() => handleRoleSelect(context)}
                       className="gap-2"
                     >
                       <Icon className="h-4 w-4" />
-                      <div className="flex-1">
-                        <div>{roleLabels[context.role]}</div>
-                        {context.organization_name && (
-                          <div className="text-xs text-muted-foreground">
-                            {context.organization_name}
-                          </div>
-                        )}
-                      </div>
-                      {activeRole === context.role && 
-                       activeContext?.organization_id === context.organization_id && (
+                      <span className="flex-1">{roleLabels[context.role]}</span>
+                      {activeRole === context.role && !activeContext?.organization_id && (
                         <Check className="h-4 w-4 text-primary" />
                       )}
                     </DropdownMenuItem>
                   );
                 })}
             </DropdownMenuGroup>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          )}
+
+          {/* Organization Roles */}
+          {roleContexts.filter(c => c.organization_id).length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Organization Roles
+                </DropdownMenuLabel>
+                {roleContexts
+                  .filter(c => c.organization_id)
+                  .map((context, index) => {
+                    const Icon = roleIcons[context.role] || Building2;
+                    return (
+                      <DropdownMenuItem
+                        key={`org-${index}`}
+                        onClick={() => handleRoleSelect(context)}
+                        className="gap-2"
+                      >
+                        <Icon className="h-4 w-4" />
+                        <div className="flex-1">
+                          <div>{roleLabels[context.role]}</div>
+                          {context.organization_name && (
+                            <div className="text-xs text-muted-foreground">
+                              {context.organization_name}
+                            </div>
+                          )}
+                        </div>
+                        {activeRole === context.role && 
+                         activeContext?.organization_id === context.organization_id && (
+                          <Check className="h-4 w-4 text-primary" />
+                        )}
+                      </DropdownMenuItem>
+                    );
+                  })}
+              </DropdownMenuGroup>
+            </>
+          )}
+
+          {/* Admin: Add Test Role */}
+          {isAdmin && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsAddRoleOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                <span>Add Role for Testing</span>
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Add Role Dialog */}
+      <Dialog open={isAddRoleOpen} onOpenChange={setIsAddRoleOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Role</DialogTitle>
+            <DialogDescription>
+              Add a role to your account for testing different dashboard views.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_ROLES.filter(r => !roles.some(ur => ur.role === r)).map(role => (
+                  <SelectItem key={role} value={role}>{roleLabels[role]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddRoleOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddRole}>Add Role</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
