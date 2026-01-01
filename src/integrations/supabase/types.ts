@@ -14,6 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
+      athlete_positions: {
+        Row: {
+          created_at: string | null
+          depth_order: number | null
+          id: string
+          is_primary: boolean | null
+          position_id: string
+          team_membership_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          depth_order?: number | null
+          id?: string
+          is_primary?: boolean | null
+          position_id: string
+          team_membership_id: string
+        }
+        Update: {
+          created_at?: string | null
+          depth_order?: number | null
+          id?: string
+          is_primary?: boolean | null
+          position_id?: string
+          team_membership_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_positions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "sport_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_positions_team_membership_id_fkey"
+            columns: ["team_membership_id"]
+            isOneToOne: false
+            referencedRelation: "team_memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athletes: {
+        Row: {
+          card_theme_preference: string | null
+          created_at: string | null
+          dominant_hand: string | null
+          first_name: string
+          grad_year: number | null
+          height: string | null
+          id: string
+          last_name: string
+          organization_id: string | null
+          photo_url: string | null
+          school_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          weight: string | null
+        }
+        Insert: {
+          card_theme_preference?: string | null
+          created_at?: string | null
+          dominant_hand?: string | null
+          first_name: string
+          grad_year?: number | null
+          height?: string | null
+          id?: string
+          last_name: string
+          organization_id?: string | null
+          photo_url?: string | null
+          school_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          weight?: string | null
+        }
+        Update: {
+          card_theme_preference?: string | null
+          created_at?: string | null
+          dominant_hand?: string | null
+          first_name?: string
+          grad_year?: number | null
+          height?: string | null
+          id?: string
+          last_name?: string
+          organization_id?: string | null
+          photo_url?: string | null
+          school_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          weight?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athletes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athletes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -1838,6 +1946,134 @@ export type Database = {
         }
         Relationships: []
       }
+      jersey_numbers: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          jersey_number: number | null
+          team_membership_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          jersey_number?: number | null
+          team_membership_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          jersey_number?: number | null
+          team_membership_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jersey_numbers_team_membership_id_fkey"
+            columns: ["team_membership_id"]
+            isOneToOne: false
+            referencedRelation: "team_memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      line_groups: {
+        Row: {
+          created_at: string | null
+          created_by_user_id: string | null
+          display_name: string
+          id: string
+          is_default: boolean | null
+          line_key: string
+          season_id: string | null
+          sort_order: number | null
+          sport_key: string
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          display_name: string
+          id?: string
+          is_default?: boolean | null
+          line_key: string
+          season_id?: string | null
+          sort_order?: number | null
+          sport_key: string
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by_user_id?: string | null
+          display_name?: string
+          id?: string
+          is_default?: boolean | null
+          line_key?: string
+          season_id?: string | null
+          sort_order?: number | null
+          sport_key?: string
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_groups_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_groups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_line_groups: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          line_group_id: string
+          team_membership_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          line_group_id: string
+          team_membership_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          line_group_id?: string
+          team_membership_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_line_groups_line_group_id_fkey"
+            columns: ["line_group_id"]
+            isOneToOne: false
+            referencedRelation: "line_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_line_groups_team_membership_id_fkey"
+            columns: ["team_membership_id"]
+            isOneToOne: false
+            referencedRelation: "team_memberships"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           address: string | null
@@ -2185,6 +2421,54 @@ export type Database = {
           },
         ]
       }
+      roster_reveal_state: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_replayed_at: string | null
+          reveal_completed_at: string | null
+          reveal_enabled_on_dashboard: boolean | null
+          season_id: string | null
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_replayed_at?: string | null
+          reveal_completed_at?: string | null
+          reveal_enabled_on_dashboard?: boolean | null
+          season_id?: string | null
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_replayed_at?: string | null
+          reveal_completed_at?: string | null
+          reveal_enabled_on_dashboard?: boolean | null
+          season_id?: string | null
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roster_reveal_state_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_reveal_state_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_governing_bodies: {
         Row: {
           created_at: string | null
@@ -2389,6 +2673,81 @@ export type Database = {
         }
         Relationships: []
       }
+      sport_layout_templates: {
+        Row: {
+          created_at: string | null
+          default_for_sport: boolean | null
+          display_name: string
+          id: string
+          side: string | null
+          slot_map: Json
+          sport_key: string
+          template_key: string
+          template_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          default_for_sport?: boolean | null
+          display_name: string
+          id?: string
+          side?: string | null
+          slot_map?: Json
+          sport_key: string
+          template_key: string
+          template_type: string
+        }
+        Update: {
+          created_at?: string | null
+          default_for_sport?: boolean | null
+          display_name?: string
+          id?: string
+          side?: string | null
+          slot_map?: Json
+          sport_key?: string
+          template_key?: string
+          template_type?: string
+        }
+        Relationships: []
+      }
+      sport_positions: {
+        Row: {
+          created_at: string | null
+          display_name: string
+          group_key: string | null
+          id: string
+          is_active: boolean | null
+          layout_slot_key: string | null
+          position_key: string
+          sort_order: number | null
+          sport_key: string
+          unit: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name: string
+          group_key?: string | null
+          id?: string
+          is_active?: boolean | null
+          layout_slot_key?: string | null
+          position_key: string
+          sort_order?: number | null
+          sport_key: string
+          unit?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string
+          group_key?: string | null
+          id?: string
+          is_active?: boolean | null
+          layout_slot_key?: string | null
+          position_key?: string
+          sort_order?: number | null
+          sport_key?: string
+          unit?: string | null
+        }
+        Relationships: []
+      }
       sport_season_defaults: {
         Row: {
           created_at: string | null
@@ -2513,6 +2872,69 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      sports_cards: {
+        Row: {
+          accent_color: string | null
+          background_style: string | null
+          badges: Json | null
+          card_version: number | null
+          created_at: string | null
+          id: string
+          rating_overall: number | null
+          render_variant: string | null
+          season_id: string | null
+          show_height_weight: boolean | null
+          show_rating: boolean | null
+          team_membership_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          background_style?: string | null
+          badges?: Json | null
+          card_version?: number | null
+          created_at?: string | null
+          id?: string
+          rating_overall?: number | null
+          render_variant?: string | null
+          season_id?: string | null
+          show_height_weight?: boolean | null
+          show_rating?: boolean | null
+          team_membership_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          background_style?: string | null
+          badges?: Json | null
+          card_version?: number | null
+          created_at?: string | null
+          id?: string
+          rating_overall?: number | null
+          render_variant?: string | null
+          season_id?: string | null
+          show_height_weight?: boolean | null
+          show_rating?: boolean | null
+          team_membership_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sports_cards_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sports_cards_team_membership_id_fkey"
+            columns: ["team_membership_id"]
+            isOneToOne: false
+            referencedRelation: "team_memberships"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       state_athletic_associations: {
         Row: {
@@ -2679,6 +3101,64 @@ export type Database = {
           },
         ]
       }
+      team_layout_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          season_id: string | null
+          selected_line_group_id: string | null
+          selected_template_keys: Json | null
+          sport_key: string
+          team_id: string
+          updated_at: string | null
+          updated_by_user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          season_id?: string | null
+          selected_line_group_id?: string | null
+          selected_template_keys?: Json | null
+          sport_key: string
+          team_id: string
+          updated_at?: string | null
+          updated_by_user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          season_id?: string | null
+          selected_line_group_id?: string | null
+          selected_template_keys?: Json | null
+          sport_key?: string
+          team_id?: string
+          updated_at?: string | null
+          updated_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_layout_preferences_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_layout_preferences_selected_line_group_id_fkey"
+            columns: ["selected_line_group_id"]
+            isOneToOne: false
+            referencedRelation: "line_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_layout_preferences_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           created_at: string | null
@@ -2737,6 +3217,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_memberships: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          person_id: string
+          person_type: string
+          role_on_team: string
+          season_id: string | null
+          team_id: string
+          updated_at: string | null
+          visibility_scope: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          person_id: string
+          person_type: string
+          role_on_team: string
+          season_id?: string | null
+          team_id: string
+          updated_at?: string | null
+          visibility_scope?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          person_id?: string
+          person_type?: string
+          role_on_team?: string
+          season_id?: string | null
+          team_id?: string
+          updated_at?: string | null
+          visibility_scope?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_memberships_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
