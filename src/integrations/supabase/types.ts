@@ -1058,6 +1058,53 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment_refurbishment: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          equipment_item_id: string
+          id: string
+          next_due_date: string | null
+          notes: string | null
+          performed_by_user_id: string | null
+          provider: string | null
+          refurb_date: string
+          refurb_type: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          equipment_item_id: string
+          id?: string
+          next_due_date?: string | null
+          notes?: string | null
+          performed_by_user_id?: string | null
+          provider?: string | null
+          refurb_date?: string
+          refurb_type: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          equipment_item_id?: string
+          id?: string
+          next_due_date?: string | null
+          notes?: string | null
+          performed_by_user_id?: string | null
+          provider?: string | null
+          refurb_date?: string
+          refurb_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_refurbishment_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment_sizes: {
         Row: {
           available_quantity: number
@@ -2367,6 +2414,53 @@ export type Database = {
           },
         ]
       }
+      team_volunteer_settings: {
+        Row: {
+          created_at: string | null
+          cross_team_rule: string | null
+          deposit_amount: number | null
+          hours_per_event: number | null
+          id: string
+          is_active: boolean | null
+          refund_policy: string | null
+          required_volunteer_hours: number | null
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          cross_team_rule?: string | null
+          deposit_amount?: number | null
+          hours_per_event?: number | null
+          id?: string
+          is_active?: boolean | null
+          refund_policy?: string | null
+          required_volunteer_hours?: number | null
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          cross_team_rule?: string | null
+          deposit_amount?: number | null
+          hours_per_event?: number | null
+          id?: string
+          is_active?: boolean | null
+          refund_policy?: string | null
+          required_volunteer_hours?: number | null
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_volunteer_settings_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           created_at: string | null
@@ -2780,6 +2874,245 @@ export type Database = {
             columns: ["sport_id"]
             isOneToOne: false
             referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_fee_deposits: {
+        Row: {
+          amount: number
+          completed_hours: number | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          payment_id: string | null
+          refund_amount: number | null
+          refunded_at: string | null
+          required_hours: number | null
+          status: string
+          team_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          completed_hours?: number | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_id?: string | null
+          refund_amount?: number | null
+          refunded_at?: string | null
+          required_hours?: number | null
+          status?: string
+          team_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          completed_hours?: number | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          payment_id?: string | null
+          refund_amount?: number | null
+          refunded_at?: string | null
+          required_hours?: number | null
+          status?: string
+          team_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_fee_deposits_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "volunteer_fee_deposits_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_position_templates: {
+        Row: {
+          created_at: string | null
+          default_count: number | null
+          default_hours: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          position_name: string
+          position_type: string
+          sport_code: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_count?: number | null
+          default_hours?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          position_name: string
+          position_type: string
+          sport_code?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_count?: number | null
+          default_hours?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          position_name?: string
+          position_type?: string
+          sport_code?: string | null
+        }
+        Relationships: []
+      }
+      volunteer_positions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          eligible_team_levels: string[] | null
+          end_time: string | null
+          event_id: string | null
+          filled_count: number | null
+          hours_credit: number | null
+          id: string
+          location: string | null
+          position_name: string
+          position_type: string
+          required_count: number
+          start_time: string | null
+          team_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          eligible_team_levels?: string[] | null
+          end_time?: string | null
+          event_id?: string | null
+          filled_count?: number | null
+          hours_credit?: number | null
+          id?: string
+          location?: string | null
+          position_name: string
+          position_type: string
+          required_count?: number
+          start_time?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          eligible_team_levels?: string[] | null
+          end_time?: string | null
+          event_id?: string | null
+          filled_count?: number | null
+          hours_credit?: number | null
+          id?: string
+          location?: string | null
+          position_name?: string
+          position_type?: string
+          required_count?: number
+          start_time?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_positions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "volunteer_positions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_signups: {
+        Row: {
+          check_in_code: string | null
+          check_in_time: string | null
+          check_out_code: string | null
+          check_out_time: string | null
+          confirmed_by_user_id: string | null
+          created_at: string | null
+          geo_check_in_lat: number | null
+          geo_check_in_lng: number | null
+          geo_check_out_lat: number | null
+          geo_check_out_lng: number | null
+          hours_credited: number | null
+          id: string
+          manually_confirmed: boolean | null
+          notes: string | null
+          position_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          check_in_code?: string | null
+          check_in_time?: string | null
+          check_out_code?: string | null
+          check_out_time?: string | null
+          confirmed_by_user_id?: string | null
+          created_at?: string | null
+          geo_check_in_lat?: number | null
+          geo_check_in_lng?: number | null
+          geo_check_out_lat?: number | null
+          geo_check_out_lng?: number | null
+          hours_credited?: number | null
+          id?: string
+          manually_confirmed?: boolean | null
+          notes?: string | null
+          position_id: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          check_in_code?: string | null
+          check_in_time?: string | null
+          check_out_code?: string | null
+          check_out_time?: string | null
+          confirmed_by_user_id?: string | null
+          created_at?: string | null
+          geo_check_in_lat?: number | null
+          geo_check_in_lng?: number | null
+          geo_check_out_lat?: number | null
+          geo_check_out_lng?: number | null
+          hours_credited?: number | null
+          id?: string
+          manually_confirmed?: boolean | null
+          notes?: string | null
+          position_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_signups_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_positions"
             referencedColumns: ["id"]
           },
         ]
