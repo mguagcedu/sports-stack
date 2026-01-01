@@ -1,6 +1,19 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+interface ColorVariants {
+  50: string;
+  100: string;
+  200: string;
+  300: string;
+  400: string;
+  500: string; // base
+  600: string;
+  700: string;
+  800: string;
+  900: string;
+}
+
 interface SchoolBranding {
   schoolId: string | null;
   logoUrl: string | null;
@@ -9,6 +22,8 @@ interface SchoolBranding {
   accentColor: string | null;
   textOnPrimary: 'white' | 'black';
   themeSource: 'logo' | 'manual';
+  primaryVariants: ColorVariants;
+  secondaryVariants: ColorVariants;
 }
 
 interface SchoolBrandingContextType {
@@ -17,14 +32,47 @@ interface SchoolBrandingContextType {
   isLoading: boolean;
 }
 
+// Generate HSL color variants (lighter and darker shades)
+function generateColorVariants(hslColor: string): ColorVariants {
+  // Parse HSL - expected format: "H S% L%" or "hsl(H, S%, L%)"
+  let h: number, s: number, l: number;
+  
+  const hslMatch = hslColor.match(/(\d+)\s+(\d+)%\s+(\d+)%/);
+  if (hslMatch) {
+    h = parseInt(hslMatch[1]);
+    s = parseInt(hslMatch[2]);
+    l = parseInt(hslMatch[3]);
+  } else {
+    // Default fallback
+    h = 221; s = 83; l = 53;
+  }
+
+  return {
+    50: `${h} ${Math.min(s, 100)}% ${Math.min(l + 45, 98)}%`,
+    100: `${h} ${Math.min(s, 100)}% ${Math.min(l + 38, 95)}%`,
+    200: `${h} ${Math.min(s, 100)}% ${Math.min(l + 28, 88)}%`,
+    300: `${h} ${Math.min(s, 100)}% ${Math.min(l + 18, 78)}%`,
+    400: `${h} ${Math.min(s, 100)}% ${Math.min(l + 8, 68)}%`,
+    500: `${h} ${s}% ${l}%`, // base
+    600: `${h} ${Math.min(s + 5, 100)}% ${Math.max(l - 8, 20)}%`,
+    700: `${h} ${Math.min(s + 10, 100)}% ${Math.max(l - 16, 15)}%`,
+    800: `${h} ${Math.min(s + 12, 100)}% ${Math.max(l - 24, 10)}%`,
+    900: `${h} ${Math.min(s + 15, 100)}% ${Math.max(l - 32, 5)}%`,
+  };
+}
+
+const defaultVariants: ColorVariants = generateColorVariants('221 83% 53%');
+
 const defaultBranding: SchoolBranding = {
   schoolId: null,
   logoUrl: null,
-  primaryColor: 'hsl(221, 83%, 53%)', // Default primary from design system
+  primaryColor: 'hsl(221, 83%, 53%)',
   secondaryColor: 'hsl(38, 92%, 50%)',
   accentColor: null,
   textOnPrimary: 'white',
-  themeSource: 'manual'
+  themeSource: 'manual',
+  primaryVariants: defaultVariants,
+  secondaryVariants: generateColorVariants('38 92% 50%'),
 };
 
 const SchoolBrandingContext = createContext<SchoolBrandingContextType>({
@@ -94,6 +142,13 @@ export function SchoolBrandingProvider({ children }: SchoolBrandingProviderProps
         if (error) throw error;
 
         if (data) {
+          const primaryHsl = data.primary_color?.startsWith('#') 
+            ? hexToHsl(data.primary_color) 
+            : (data.primary_color || '221 83% 53%');
+          const secondaryHsl = data.secondary_color?.startsWith('#')
+            ? hexToHsl(data.secondary_color)
+            : (data.secondary_color || '38 92% 50%');
+          
           const newBranding: SchoolBranding = {
             schoolId: data.id,
             logoUrl: data.logo_url,
@@ -101,7 +156,9 @@ export function SchoolBrandingProvider({ children }: SchoolBrandingProviderProps
             secondaryColor: data.secondary_color || defaultBranding.secondaryColor,
             accentColor: data.accent_color,
             textOnPrimary: (data.text_on_primary as 'white' | 'black') || 'white',
-            themeSource: (data.theme_source as 'logo' | 'manual') || 'manual'
+            themeSource: (data.theme_source as 'logo' | 'manual') || 'manual',
+            primaryVariants: generateColorVariants(primaryHsl),
+            secondaryVariants: generateColorVariants(secondaryHsl),
           };
           setBranding(newBranding);
           applyBrandingToDOM(newBranding);
@@ -133,6 +190,14 @@ export function SchoolBrandingProvider({ children }: SchoolBrandingProviderProps
       root.style.setProperty('--school-secondary', secondaryHsl);
       root.style.setProperty('--school-text-on-primary', branding.textOnPrimary === 'white' ? '0 0% 100%' : '0 0% 0%');
       
+      // Apply color variants
+      Object.entries(branding.primaryVariants).forEach(([shade, value]) => {
+        root.style.setProperty(`--school-primary-${shade}`, value);
+      });
+      Object.entries(branding.secondaryVariants).forEach(([shade, value]) => {
+        root.style.setProperty(`--school-secondary-${shade}`, value);
+      });
+      
       if (branding.accentColor) {
         const accentHsl = branding.accentColor.startsWith('#')
           ? hexToHsl(branding.accentColor)
@@ -144,13 +209,19 @@ export function SchoolBrandingProvider({ children }: SchoolBrandingProviderProps
       root.style.setProperty('--primary', primaryHsl);
       root.style.setProperty('--primary-foreground', branding.textOnPrimary === 'white' ? '0 0% 100%' : '0 0% 0%');
     } else {
-      // Reset to default
+      // Reset to default - remove all school properties
       root.style.removeProperty('--school-primary');
       root.style.removeProperty('--school-secondary');
       root.style.removeProperty('--school-text-on-primary');
       root.style.removeProperty('--school-accent');
       root.style.removeProperty('--primary');
       root.style.removeProperty('--primary-foreground');
+      
+      // Remove variants
+      ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'].forEach(shade => {
+        root.style.removeProperty(`--school-primary-${shade}`);
+        root.style.removeProperty(`--school-secondary-${shade}`);
+      });
     }
   };
 

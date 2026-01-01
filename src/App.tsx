@@ -16,6 +16,9 @@ import Districts from "./pages/Districts";
 import DistrictDetail from "./pages/DistrictDetail";
 import ImportData from "./pages/ImportData";
 import CoachDashboard from "./pages/CoachDashboard";
+import ParentDashboard from "./pages/ParentDashboard";
+import AthleteDashboard from "./pages/AthleteDashboard";
+import PermissionsMatrix from "./pages/PermissionsMatrix";
 import Sports from "./pages/Sports";
 import Seasons from "./pages/Seasons";
 import Users from "./pages/Users";
@@ -44,36 +47,50 @@ const App = () => (
           <ImpersonationBanner />
         <BrowserRouter>
           <Routes>
+            {/* Role-specific dashboards */}
             <Route path="/" element={<Dashboard />} />
+            <Route path="/coach" element={<CoachDashboard />} />
+            <Route path="/parent" element={<ParentDashboard />} />
+            <Route path="/athlete" element={<AthleteDashboard />} />
+            
+            {/* Auth */}
             <Route path="/auth" element={<Auth />} />
+            
+            {/* Organizations & Schools */}
             <Route path="/schools" element={<Schools />} />
             <Route path="/schools/:id" element={<SchoolDetail />} />
             <Route path="/districts" element={<Districts />} />
             <Route path="/districts/:id" element={<DistrictDetail />} />
             <Route path="/organizations" element={<Organizations />} />
-            <Route path="/import" element={<ImportData />} />
-            <Route path="/coach" element={<CoachDashboard />} />
-            {/* Priority 1: Core Setup */}
+            
+            {/* Core Setup */}
             <Route path="/sports" element={<Sports />} />
             <Route path="/seasons" element={<Seasons />} />
             <Route path="/users" element={<Users />} />
-            {/* Priority 2: Teams */}
+            <Route path="/permissions" element={<PermissionsMatrix />} />
+            
+            {/* Teams */}
             <Route path="/teams" element={<Teams />} />
             <Route path="/teams/:id" element={<TeamDetail />} />
             <Route path="/join/:code" element={<JoinTeam />} />
             <Route path="/join" element={<JoinTeam />} />
-            {/* Priority 3: Operations */}
+            
+            {/* Operations */}
             <Route path="/registrations" element={<Registrations />} />
             <Route path="/events" element={<Events />} />
             <Route path="/payments" element={<Payments />} />
-            {/* Priority 4: Admin */}
+            
+            {/* Admin */}
             <Route path="/settings" element={<Settings />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/audit-logs" element={<AuditLogs />} />
             <Route path="/governance" element={<Governance />} />
             <Route path="/validation" element={<SystemValidation />} />
+            <Route path="/import" element={<ImportData />} />
+            
             {/* Placeholder routes */}
             <Route path="/messages" element={<Dashboard />} />
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
