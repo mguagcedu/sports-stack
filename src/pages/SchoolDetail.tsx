@@ -15,6 +15,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { formatDistrictName } from '@/lib/formatters';
 import { StateAssociationLookup } from '@/components/governance/StateAssociationLookup';
+import { SchoolBrandingEditor, SchoolLogo } from '@/components/branding';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -25,7 +27,8 @@ import {
   Info,
   ExternalLink,
   Pencil,
-  Loader2
+  Loader2,
+  Palette
 } from 'lucide-react';
 
 const US_STATES = [
@@ -214,6 +217,11 @@ export default function SchoolDetail() {
             ) : (
               <>
                 <div className="flex items-center gap-3">
+                  <SchoolLogo 
+                    logoUrl={school?.logo_url} 
+                    schoolName={school?.name}
+                    size="lg"
+                  />
                   <h1 className="text-2xl font-bold">{school?.name}</h1>
                   <Button variant="outline" size="sm" onClick={openEditDialog}>
                     <Pencil className="h-4 w-4 mr-1" />
@@ -238,15 +246,25 @@ export default function SchoolDetail() {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Location & Contact Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Location & Contact
-              </CardTitle>
-            </CardHeader>
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="branding">
+              <Palette className="h-4 w-4 mr-1" />
+              Branding
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="details" className="mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Location & Contact Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Location & Contact
+                  </CardTitle>
+                </CardHeader>
             <CardContent className="space-y-4">
               {isLoading ? (
                 <div className="space-y-2">
@@ -430,7 +448,26 @@ export default function SchoolDetail() {
               )}
             </CardContent>
           </Card>
-        </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="branding" className="mt-6">
+            {school && (
+              <SchoolBrandingEditor 
+                schoolId={school.id}
+                initialData={{
+                  logo_url: school.logo_url,
+                  primary_color: school.primary_color,
+                  secondary_color: school.secondary_color,
+                  accent_color: school.accent_color,
+                  text_on_primary: school.text_on_primary,
+                  theme_source: school.theme_source
+                }}
+                onSave={() => queryClient.invalidateQueries({ queryKey: ['school-detail', id] })}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Edit Dialog */}

@@ -859,6 +859,7 @@ export type Database = {
       }
       schools: {
         Row: {
+          accent_color: string | null
           address: string | null
           charter_status: string | null
           city: string | null
@@ -869,16 +870,21 @@ export type Database = {
           latitude: number | null
           lea_id: string | null
           level: string | null
+          logo_url: string | null
           longitude: number | null
           magnet_status: string | null
           name: string
           nces_id: string | null
           operational_status: string | null
           phone: string | null
+          primary_color: string | null
           school_type: string | null
           school_year: string | null
+          secondary_color: string | null
           state: string | null
           sy_status: string | null
+          text_on_primary: string | null
+          theme_source: string | null
           title1_status: string | null
           updated_at: string
           virtual_status: string | null
@@ -886,6 +892,7 @@ export type Database = {
           zip: string | null
         }
         Insert: {
+          accent_color?: string | null
           address?: string | null
           charter_status?: string | null
           city?: string | null
@@ -896,16 +903,21 @@ export type Database = {
           latitude?: number | null
           lea_id?: string | null
           level?: string | null
+          logo_url?: string | null
           longitude?: number | null
           magnet_status?: string | null
           name: string
           nces_id?: string | null
           operational_status?: string | null
           phone?: string | null
+          primary_color?: string | null
           school_type?: string | null
           school_year?: string | null
+          secondary_color?: string | null
           state?: string | null
           sy_status?: string | null
+          text_on_primary?: string | null
+          theme_source?: string | null
           title1_status?: string | null
           updated_at?: string
           virtual_status?: string | null
@@ -913,6 +925,7 @@ export type Database = {
           zip?: string | null
         }
         Update: {
+          accent_color?: string | null
           address?: string | null
           charter_status?: string | null
           city?: string | null
@@ -923,16 +936,21 @@ export type Database = {
           latitude?: number | null
           lea_id?: string | null
           level?: string | null
+          logo_url?: string | null
           longitude?: number | null
           magnet_status?: string | null
           name?: string
           nces_id?: string | null
           operational_status?: string | null
           phone?: string | null
+          primary_color?: string | null
           school_type?: string | null
           school_year?: string | null
+          secondary_color?: string | null
           state?: string | null
           sy_status?: string | null
+          text_on_primary?: string | null
+          theme_source?: string | null
           title1_status?: string | null
           updated_at?: string
           virtual_status?: string | null
@@ -991,6 +1009,7 @@ export type Database = {
           maturity: string
           season: string
           sport_code: string
+          sport_icon_key: string | null
           sport_id: string
           sport_name: string
           updated_at: string | null
@@ -1003,6 +1022,7 @@ export type Database = {
           maturity: string
           season: string
           sport_code: string
+          sport_icon_key?: string | null
           sport_id: string
           sport_name: string
           updated_at?: string | null
@@ -1015,6 +1035,7 @@ export type Database = {
           maturity?: string
           season?: string
           sport_code?: string
+          sport_icon_key?: string | null
           sport_id?: string
           sport_name?: string
           updated_at?: string | null

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { SchoolBrandingProvider } from "@/contexts/SchoolBrandingContext";
 import { AIChatbot } from "@/components/chat/AIChatbot";
 import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import Dashboard from "./pages/Dashboard";
@@ -36,10 +37,11 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <ImpersonationBanner />
+      <SchoolBrandingProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <ImpersonationBanner />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Dashboard />} />
@@ -75,9 +77,10 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-        <AIChatbot />
-      </TooltipProvider>
+          </BrowserRouter>
+          <AIChatbot />
+        </TooltipProvider>
+      </SchoolBrandingProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
