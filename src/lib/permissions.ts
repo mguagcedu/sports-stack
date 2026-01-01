@@ -164,7 +164,7 @@ export function getDefaultDashboard(role: AppRole | null): string {
   
   // Admin roles
   if (['superadmin', 'system_admin', 'org_admin', 'district_owner', 'district_admin', 'school_owner', 'school_admin', 'athletic_director'].includes(role)) {
-    return '/';
+    return '/dashboard';
   }
   
   // Coach roles
@@ -203,7 +203,7 @@ export function getDefaultDashboard(role: AppRole | null): string {
   }
   
   // Default for viewers
-  return '/';
+  return '/dashboard';
 }
 
 // Export the permissions for display in UI
