@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.import-sanction-data]
 verify_jwt = false
+
+[functions.extract-logo-colors]
+verify_jwt = false
