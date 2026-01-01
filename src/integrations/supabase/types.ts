@@ -122,6 +122,112 @@ export type Database = {
           },
         ]
       }
+      attendance_records: {
+        Row: {
+          auto_complete_reason: string | null
+          auto_complete_scheduled_at: string | null
+          auto_completed: boolean | null
+          check_in_latitude: number | null
+          check_in_longitude: number | null
+          check_in_method: string | null
+          check_in_time: string | null
+          check_in_verified: boolean | null
+          check_out_latitude: number | null
+          check_out_longitude: number | null
+          check_out_method: string | null
+          check_out_time: string | null
+          check_out_verified: boolean | null
+          coach_notes: string | null
+          created_at: string
+          event_date: string
+          event_id: string | null
+          event_type: string
+          id: string
+          is_away_event: boolean
+          marked_by_user_id: string | null
+          status: string
+          team_id: string
+          team_member_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_complete_reason?: string | null
+          auto_complete_scheduled_at?: string | null
+          auto_completed?: boolean | null
+          check_in_latitude?: number | null
+          check_in_longitude?: number | null
+          check_in_method?: string | null
+          check_in_time?: string | null
+          check_in_verified?: boolean | null
+          check_out_latitude?: number | null
+          check_out_longitude?: number | null
+          check_out_method?: string | null
+          check_out_time?: string | null
+          check_out_verified?: boolean | null
+          coach_notes?: string | null
+          created_at?: string
+          event_date?: string
+          event_id?: string | null
+          event_type?: string
+          id?: string
+          is_away_event?: boolean
+          marked_by_user_id?: string | null
+          status?: string
+          team_id: string
+          team_member_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_complete_reason?: string | null
+          auto_complete_scheduled_at?: string | null
+          auto_completed?: boolean | null
+          check_in_latitude?: number | null
+          check_in_longitude?: number | null
+          check_in_method?: string | null
+          check_in_time?: string | null
+          check_in_verified?: boolean | null
+          check_out_latitude?: number | null
+          check_out_longitude?: number | null
+          check_out_method?: string | null
+          check_out_time?: string | null
+          check_out_verified?: boolean | null
+          coach_notes?: string | null
+          created_at?: string
+          event_date?: string
+          event_id?: string | null
+          event_type?: string
+          id?: string
+          is_away_event?: boolean
+          marked_by_user_id?: string | null
+          status?: string
+          team_id?: string
+          team_member_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -1805,6 +1911,66 @@ export type Database = {
           },
         ]
       }
+      geo_fence_settings: {
+        Row: {
+          away_game_auto_complete_hours: number
+          created_at: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          minimum_time_minutes: number
+          radius_meters: number
+          require_check_out: boolean
+          school_id: string | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          away_game_auto_complete_hours?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          minimum_time_minutes?: number
+          radius_meters?: number
+          require_check_out?: boolean
+          school_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          away_game_auto_complete_hours?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          minimum_time_minutes?: number
+          radius_meters?: number
+          require_check_out?: boolean
+          school_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "geo_fence_settings_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "geo_fence_settings_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       governing_bodies: {
         Row: {
           created_at: string | null
@@ -2277,6 +2443,187 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_achievements: {
+        Row: {
+          achievement_date: string
+          achievement_type: string
+          awarded_by_user_id: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_public: boolean
+          stat_category: string | null
+          stat_value: number | null
+          team_member_id: string
+          title: string
+        }
+        Insert: {
+          achievement_date?: string
+          achievement_type: string
+          awarded_by_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_public?: boolean
+          stat_category?: string | null
+          stat_value?: number | null
+          team_member_id: string
+          title: string
+        }
+        Update: {
+          achievement_date?: string
+          achievement_type?: string
+          awarded_by_user_id?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_public?: boolean
+          stat_category?: string | null
+          stat_value?: number | null
+          team_member_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_achievements_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_practice_notes: {
+        Row: {
+          created_at: string
+          event_id: string | null
+          id: string
+          is_private: boolean
+          note_type: string
+          noted_by_user_id: string
+          notes: string
+          practice_date: string
+          session_effort: number | null
+          session_performance: number | null
+          team_member_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          is_private?: boolean
+          note_type?: string
+          noted_by_user_id: string
+          notes: string
+          practice_date?: string
+          session_effort?: number | null
+          session_performance?: number | null
+          team_member_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          is_private?: boolean
+          note_type?: string
+          noted_by_user_id?: string
+          notes?: string
+          practice_date?: string
+          session_effort?: number | null
+          session_performance?: number | null
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_practice_notes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_practice_notes_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_ratings: {
+        Row: {
+          areas_for_improvement: string | null
+          attitude_rating: number | null
+          coach_notes: string | null
+          coachability_rating: number | null
+          created_at: string
+          current_line: string | null
+          depth_position: number | null
+          effort_rating: number | null
+          game_iq_rating: number | null
+          id: string
+          overall_rating: number | null
+          rated_by_user_id: string
+          rating_date: string
+          skill_rating: number | null
+          strengths: string | null
+          team_member_id: string
+          teamwork_rating: number | null
+          updated_at: string
+        }
+        Insert: {
+          areas_for_improvement?: string | null
+          attitude_rating?: number | null
+          coach_notes?: string | null
+          coachability_rating?: number | null
+          created_at?: string
+          current_line?: string | null
+          depth_position?: number | null
+          effort_rating?: number | null
+          game_iq_rating?: number | null
+          id?: string
+          overall_rating?: number | null
+          rated_by_user_id: string
+          rating_date?: string
+          skill_rating?: number | null
+          strengths?: string | null
+          team_member_id: string
+          teamwork_rating?: number | null
+          updated_at?: string
+        }
+        Update: {
+          areas_for_improvement?: string | null
+          attitude_rating?: number | null
+          coach_notes?: string | null
+          coachability_rating?: number | null
+          created_at?: string
+          current_line?: string | null
+          depth_position?: number | null
+          effort_rating?: number | null
+          game_iq_rating?: number | null
+          id?: string
+          overall_rating?: number | null
+          rated_by_user_id?: string
+          rating_date?: string
+          skill_rating?: number | null
+          strengths?: string | null
+          team_member_id?: string
+          teamwork_rating?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_ratings_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
             referencedColumns: ["id"]
           },
         ]

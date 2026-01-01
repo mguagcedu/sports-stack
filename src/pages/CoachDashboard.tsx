@@ -11,6 +11,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { getCurrentSeason, getCurrentSchoolYear, getSeasonYearLabel, SEASON_LABELS, SportSeasonType } from '@/lib/seasonUtils';
+import { AddPlayerDialog } from '@/components/coach/AddPlayerDialog';
+import { AttendanceTracker } from '@/components/coach/AttendanceTracker';
+import { PlayerRatingDialog } from '@/components/coach/PlayerRatingDialog';
 import { 
   Users, 
   Calendar, 
@@ -22,7 +25,8 @@ import {
   Phone,
   Loader2,
   Activity,
-  Info
+  Info,
+  Star
 } from 'lucide-react';
 
 interface Sport {
@@ -56,6 +60,8 @@ export default function CoachDashboard() {
   const [selectedSeason, setSelectedSeason] = useState<SportSeasonType | 'all'>(currentSeason);
   const [selectedSchoolYear, setSelectedSchoolYear] = useState<number>(currentSchoolYear);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+  const [addPlayerOpen, setAddPlayerOpen] = useState(false);
+  const [ratingPlayer, setRatingPlayer] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch sports
   const { data: sports, isLoading: sportsLoading } = useQuery({
@@ -371,7 +377,7 @@ export default function CoachDashboard() {
                     <CardTitle>Team Roster</CardTitle>
                     <CardDescription>{selectedTeam.name}</CardDescription>
                   </div>
-                  <Button>
+                  <Button onClick={() => setAddPlayerOpen(true)}>
                     <UserPlus className="mr-2 h-4 w-4" />
                     Add Player
                   </Button>
@@ -418,6 +424,14 @@ export default function CoachDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => setRatingPlayer({ id: player.id, name: player.name })}
+                                title="Rate Player"
+                              >
+                                <Star className="h-4 w-4" />
+                              </Button>
                               <Button variant="ghost" size="icon">
                                 <Mail className="h-4 w-4" />
                               </Button>
@@ -480,21 +494,10 @@ export default function CoachDashboard() {
             </TabsContent>
 
             <TabsContent value="attendance">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Attendance Tracking</CardTitle>
-                  <CardDescription>Track practice and game attendance</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-center py-12 text-muted-foreground">
-                    <div className="text-center">
-                      <ClipboardList className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                      <p>Attendance tracking coming soon</p>
-                      <p className="text-sm">Select a date to take attendance</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <AttendanceTracker 
+                teamId={selectedTeamId} 
+                teamName={selectedTeam.name}
+              />
             </TabsContent>
           </Tabs>
         ) : (
@@ -509,6 +512,25 @@ export default function CoachDashboard() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Dialogs */}
+        {selectedTeam && (
+          <AddPlayerDialog
+            open={addPlayerOpen}
+            onOpenChange={setAddPlayerOpen}
+            teamId={selectedTeamId}
+            teamName={selectedTeam.name}
+          />
+        )}
+        
+        {ratingPlayer && (
+          <PlayerRatingDialog
+            open={!!ratingPlayer}
+            onOpenChange={(open) => !open && setRatingPlayer(null)}
+            teamMemberId={ratingPlayer.id}
+            playerName={ratingPlayer.name}
+          />
         )}
       </div>
     </DashboardLayout>
