@@ -8,6 +8,7 @@ import { SchoolBrandingProvider } from "@/contexts/SchoolBrandingContext";
 import { ProtectedRoute, PublicOnlyRoute } from "@/components/guards/ProtectedRoute";
 import { AIChatbot } from "@/components/chat/AIChatbot";
 import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
+import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -55,14 +56,18 @@ const App = () => (
           <ImpersonationBanner />
         <BrowserRouter>
           <Routes>
-            {/* Public routes */}
+            {/* Public landing page */}
+            <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
+            
+            {/* Auth routes */}
             <Route path="/auth" element={<PublicOnlyRoute><Auth /></PublicOnlyRoute>} />
+            <Route path="/login" element={<PublicOnlyRoute><Auth /></PublicOnlyRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute requireAuth={true}><Onboarding /></ProtectedRoute>} />
             <Route path="/join/:code" element={<JoinTeam />} />
             <Route path="/join" element={<JoinTeam />} />
             
             {/* Role-specific dashboards */}
-            <Route path="/" element={
+            <Route path="/dashboard" element={
               <ProtectedRoute pageKey="dashboard">
                 <Dashboard />
               </ProtectedRoute>
