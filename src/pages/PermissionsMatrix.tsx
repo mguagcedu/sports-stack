@@ -41,7 +41,6 @@ const PAGE_LABELS: Record<PageKey, string> = {
   approvals: 'Role Approvals',
   integrations: 'Integrations',
 };
-};
 
 const FEATURE_LABELS: Record<FeatureKey, string> = {
   manage_users: 'Manage Users',
