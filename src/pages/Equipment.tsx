@@ -13,7 +13,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { QRScanner } from '@/components/equipment/QRScanner';
+import { 
+  QRScanner, 
+  EquipmentLabelGenerator, 
+  EquipmentSizeManager, 
+  EquipmentHistory,
+  EquipmentReturnDialog 
+} from '@/components/equipment';
 import { 
   Package, 
   Plus, 
@@ -25,7 +31,10 @@ import {
   AlertTriangle,
   Clock,
   User,
-  Camera
+  Camera,
+  Printer,
+  Ruler,
+  History
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -59,8 +68,13 @@ export default function Equipment() {
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isLabelOpen, setIsLabelOpen] = useState(false);
+  const [isSizeOpen, setIsSizeOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [scanMode, setScanMode] = useState<'search' | 'add' | 'checkout'>('search');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedCheckoutId, setSelectedCheckoutId] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -117,6 +131,22 @@ export default function Equipment() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch equipment sizes
+  const { data: sizes } = useQuery({
+    queryKey: ['equipment-sizes', selectedItemId],
+    queryFn: async () => {
+      if (!selectedItemId) return [];
+      const { data, error } = await supabase
+        .from('equipment_sizes')
+        .select('*')
+        .eq('equipment_item_id', selectedItemId)
+        .order('size_label');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedItemId,
   });
 
   // Fetch users for checkout
@@ -577,13 +607,36 @@ export default function Equipment() {
                           </TableCell>
                           <TableCell>{item.total_quantity}</TableCell>
                           <TableCell>
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleCheckout(item.id)}
-                              disabled={item.available_quantity <= 0}
-                            >
-                              Check Out
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleCheckout(item.id)}
+                                disabled={item.available_quantity <= 0}
+                              >
+                                Check Out
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => { setSelectedItemId(item.id); setIsLabelOpen(true); }}
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => { setSelectedItemId(item.id); setIsSizeOpen(true); }}
+                              >
+                                <Ruler className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => { setSelectedItemId(item.id); setIsHistoryOpen(true); }}
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -646,11 +699,10 @@ export default function Equipment() {
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => returnMutation.mutate({ 
-                                checkoutId: checkout.id, 
-                                condition: checkout.condition_on_checkout 
-                              })}
-                              disabled={returnMutation.isPending}
+                              onClick={() => { 
+                                setSelectedCheckoutId(checkout.id); 
+                                setIsReturnOpen(true); 
+                              }}
                             >
                               Return
                             </Button>
@@ -814,6 +866,45 @@ export default function Equipment() {
               ? 'Scan Barcode for Item'
               : 'Scan Tracking Code'
           }
+        />
+
+        {/* Label Generator */}
+        <EquipmentLabelGenerator
+          open={isLabelOpen}
+          onClose={() => setIsLabelOpen(false)}
+          item={items?.find(i => i.id === selectedItemId) || null}
+        />
+
+        {/* Size Manager */}
+        <EquipmentSizeManager
+          open={isSizeOpen}
+          onClose={() => setIsSizeOpen(false)}
+          item={items?.find(i => i.id === selectedItemId) || null}
+          sizes={sizes || []}
+        />
+
+        {/* Equipment History */}
+        <EquipmentHistory
+          open={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          itemId={selectedItemId}
+          itemName={items?.find(i => i.id === selectedItemId)?.name}
+        />
+
+        {/* Return Dialog */}
+        <EquipmentReturnDialog
+          open={isReturnOpen}
+          onClose={() => setIsReturnOpen(false)}
+          onReturn={(data) => {
+            const checkout = checkouts?.find(c => c.id === selectedCheckoutId);
+            if (checkout) {
+              returnMutation.mutate({ checkoutId: checkout.id, condition: data.condition });
+            }
+            setIsReturnOpen(false);
+          }}
+          itemName={checkouts?.find(c => c.id === selectedCheckoutId)?.equipment_items?.name}
+          checkoutCondition={checkouts?.find(c => c.id === selectedCheckoutId)?.condition_on_checkout || undefined}
+          isPending={returnMutation.isPending}
         />
       </div>
     </DashboardLayout>
