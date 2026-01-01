@@ -169,9 +169,20 @@ export default function Equipment() {
       sku: string;
       barcode: string;
       unit_cost: string;
+      our_cost: string;
+      retail_price: string;
+      assigned_value: string;
       total_quantity: string;
       reorder_threshold: string;
+      code_type: string;
+      is_returnable: boolean;
+      non_returnable_reason: string;
+      received_date: string;
+      recertification_interval_months: string;
     }) => {
+      const quantity = parseInt(itemData.total_quantity) || 1;
+      const availableQty = itemData.is_returnable ? quantity : 0; // Non-returnable items start at 0 available
+      
       const { data, error } = await supabase
         .from('equipment_items')
         .insert({
@@ -181,9 +192,20 @@ export default function Equipment() {
           sku: itemData.sku || null,
           barcode: itemData.barcode || null,
           unit_cost: itemData.unit_cost ? parseFloat(itemData.unit_cost) : null,
-          total_quantity: parseInt(itemData.total_quantity) || 1,
-          available_quantity: parseInt(itemData.total_quantity) || 1,
+          our_cost: itemData.our_cost ? parseFloat(itemData.our_cost) : null,
+          retail_price: itemData.retail_price ? parseFloat(itemData.retail_price) : null,
+          assigned_value: itemData.assigned_value ? parseFloat(itemData.assigned_value) : null,
+          total_quantity: quantity,
+          available_quantity: availableQty,
           reorder_threshold: itemData.reorder_threshold ? parseInt(itemData.reorder_threshold) : null,
+          code_type: itemData.code_type || 'qr',
+          is_returnable: itemData.is_returnable,
+          non_returnable_reason: !itemData.is_returnable ? itemData.non_returnable_reason : null,
+          received_date: itemData.received_date || null,
+          recertification_interval_months: itemData.recertification_interval_months 
+            ? parseInt(itemData.recertification_interval_months) 
+            : null,
+          lifecycle_status: 'active',
         })
         .select()
         .single();
@@ -405,6 +427,9 @@ export default function Equipment() {
                 <div>
                   <p className="text-2xl font-bold">{items?.length || 0}</p>
                   <p className="text-sm text-muted-foreground">Total Items</p>
+                  <p className="text-xs text-muted-foreground">
+                    ${items?.reduce((sum, i) => sum + ((i.our_cost || i.unit_cost || 0) * i.total_quantity), 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -418,6 +443,12 @@ export default function Equipment() {
                 <div>
                   <p className="text-2xl font-bold">{checkouts?.length || 0}</p>
                   <p className="text-sm text-muted-foreground">Checked Out</p>
+                  <p className="text-xs text-muted-foreground">
+                    ${checkouts?.reduce((sum, c) => {
+                      const item = items?.find(i => i.id === c.equipment_item_id);
+                      return sum + ((item?.our_cost || item?.unit_cost || 0) * c.quantity);
+                    }, 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -433,6 +464,9 @@ export default function Equipment() {
                     {items?.reduce((sum, i) => sum + i.available_quantity, 0) || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Available</p>
+                  <p className="text-xs text-muted-foreground">
+                    ${items?.reduce((sum, i) => sum + ((i.our_cost || i.unit_cost || 0) * i.available_quantity), 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -446,6 +480,9 @@ export default function Equipment() {
                 <div>
                   <p className="text-2xl font-bold">{lowStockItems.length}</p>
                   <p className="text-sm text-muted-foreground">Low Stock</p>
+                  <p className="text-xs text-muted-foreground">
+                    {items?.filter(i => i.is_returnable === false).length || 0} non-returnable
+                  </p>
                 </div>
               </div>
             </CardContent>

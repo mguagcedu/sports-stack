@@ -786,6 +786,59 @@ export type Database = {
           },
         ]
       }
+      equipment_documents: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          document_type: string
+          equipment_item_id: string
+          file_name: string
+          file_size_bytes: number | null
+          file_url: string
+          id: string
+          mime_type: string | null
+          uploaded_by_user_id: string | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          document_type: string
+          equipment_item_id: string
+          file_name: string
+          file_size_bytes?: number | null
+          file_url: string
+          id?: string
+          mime_type?: string | null
+          uploaded_by_user_id?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          document_type?: string
+          equipment_item_id?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          file_url?: string
+          id?: string
+          mime_type?: string | null
+          uploaded_by_user_id?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_documents_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment_issuance: {
         Row: {
           completed_at: string | null
@@ -959,17 +1012,23 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          is_returnable: boolean | null
           last_inspection_date: string | null
+          last_recertification_date: string | null
           lifecycle_status: string | null
           manufacturer: string | null
           max_lifespan_years: number | null
           model_number: string | null
           name: string
           next_inspection_date: string | null
+          non_returnable_reason: string | null
           notes: string | null
           organization_id: string | null
           our_cost: number | null
           purchase_date: string | null
+          received_date: string | null
+          recertification_due_date: string | null
+          recertification_interval_months: number | null
           reorder_threshold: number | null
           requires_washing: boolean | null
           retail_price: number | null
@@ -995,17 +1054,23 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_returnable?: boolean | null
           last_inspection_date?: string | null
+          last_recertification_date?: string | null
           lifecycle_status?: string | null
           manufacturer?: string | null
           max_lifespan_years?: number | null
           model_number?: string | null
           name: string
           next_inspection_date?: string | null
+          non_returnable_reason?: string | null
           notes?: string | null
           organization_id?: string | null
           our_cost?: number | null
           purchase_date?: string | null
+          received_date?: string | null
+          recertification_due_date?: string | null
+          recertification_interval_months?: number | null
           reorder_threshold?: number | null
           requires_washing?: boolean | null
           retail_price?: number | null
@@ -1031,17 +1096,23 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          is_returnable?: boolean | null
           last_inspection_date?: string | null
+          last_recertification_date?: string | null
           lifecycle_status?: string | null
           manufacturer?: string | null
           max_lifespan_years?: number | null
           model_number?: string | null
           name?: string
           next_inspection_date?: string | null
+          non_returnable_reason?: string | null
           notes?: string | null
           organization_id?: string | null
           our_cost?: number | null
           purchase_date?: string | null
+          received_date?: string | null
+          recertification_due_date?: string | null
+          recertification_interval_months?: number | null
           reorder_threshold?: number | null
           requires_washing?: boolean | null
           retail_price?: number | null
@@ -1068,6 +1139,56 @@ export type Database = {
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_lifecycle_logs: {
+        Row: {
+          action_date: string | null
+          action_type: string
+          created_at: string | null
+          document_url: string | null
+          equipment_item_id: string
+          id: string
+          metadata: Json | null
+          new_status: string | null
+          notes: string | null
+          old_status: string | null
+          performed_by_user_id: string | null
+        }
+        Insert: {
+          action_date?: string | null
+          action_type: string
+          created_at?: string | null
+          document_url?: string | null
+          equipment_item_id: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          notes?: string | null
+          old_status?: string | null
+          performed_by_user_id?: string | null
+        }
+        Update: {
+          action_date?: string | null
+          action_type?: string
+          created_at?: string | null
+          document_url?: string | null
+          equipment_item_id?: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          notes?: string | null
+          old_status?: string | null
+          performed_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_lifecycle_logs_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
             referencedColumns: ["id"]
           },
         ]
@@ -1243,6 +1364,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      equipment_sku_settings: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          next_number: number | null
+          organization_id: string | null
+          prefix: string
+          school_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          next_number?: number | null
+          organization_id?: string | null
+          prefix: string
+          school_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          next_number?: number | null
+          organization_id?: string | null
+          prefix?: string
+          school_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       event_tickets: {
         Row: {
