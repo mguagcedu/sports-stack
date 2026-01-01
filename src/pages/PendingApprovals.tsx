@@ -26,7 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { formatDistanceToNow } from 'date-fns';
-import { Check, X, Clock, User, Loader2 } from 'lucide-react';
+import { Check, X, Clock, User, Loader2, Sparkles, Brain } from 'lucide-react';
 
 interface PendingApproval {
   id: string;
@@ -53,6 +53,10 @@ export default function PendingApprovals() {
   const [selectedApproval, setSelectedApproval] = useState<PendingApproval | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [bulkAnalysis, setBulkAnalysis] = useState<string | null>(null);
+  const [bulkAnalyzing, setBulkAnalyzing] = useState(false);
 
   const canManageApprovals = hasAnyRole(['system_admin', 'org_admin', 'superadmin']);
 
@@ -75,7 +79,6 @@ export default function PendingApprovals() {
 
       if (error) throw error;
 
-      // Fetch profiles separately to avoid join issues
       const userIds = data?.map(a => a.user_id) || [];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -91,9 +94,69 @@ export default function PendingApprovals() {
     },
   });
 
+  const analyzeRequest = async (approval: PendingApproval) => {
+    setAiLoading(true);
+    setAiAnalysis(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-role-assistant', {
+        body: {
+          type: 'analyze_request',
+          data: {
+            requested_role: approval.requested_role,
+            user_email: approval.profiles?.email,
+            organization_name: approval.organizations?.name,
+            justification: approval.rejection_reason, // This field might store justification
+          },
+        },
+      });
+
+      if (error) throw error;
+      setAiAnalysis(data.result);
+    } catch (error: any) {
+      toast({
+        title: 'AI Analysis Failed',
+        description: error.message || 'Could not analyze request',
+        variant: 'destructive',
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const analyzeBulkRequests = async () => {
+    if (!pendingApprovals.length) return;
+    
+    setBulkAnalyzing(true);
+    setBulkAnalysis(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-role-assistant', {
+        body: {
+          type: 'bulk_analyze',
+          data: {
+            requests: pendingApprovals.map(a => ({
+              requested_role: a.requested_role,
+              user_email: a.profiles?.email,
+              justification: a.rejection_reason,
+            })),
+          },
+        },
+      });
+
+      if (error) throw error;
+      setBulkAnalysis(data.result);
+    } catch (error: any) {
+      toast({
+        title: 'Bulk Analysis Failed',
+        description: error.message || 'Could not analyze requests',
+        variant: 'destructive',
+      });
+    } finally {
+      setBulkAnalyzing(false);
+    }
+  };
+
   const approveMutation = useMutation({
     mutationFn: async ({ approvalId, userId, role }: { approvalId: string; userId: string; role: string }) => {
-      // First, update the approval status
       const { error: approvalError } = await supabase
         .from('pending_approvals')
         .update({
@@ -104,17 +167,15 @@ export default function PendingApprovals() {
 
       if (approvalError) throw approvalError;
 
-      // Then, add the role to the user
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
           user_id: userId,
-          role: role as any, // Cast needed for app_role enum
+          role: role as any,
         });
 
       if (roleError) throw roleError;
 
-      // Remove temporary viewer role if exists
       await supabase
         .from('user_roles')
         .delete()
@@ -126,6 +187,7 @@ export default function PendingApprovals() {
       toast({ title: 'Request approved', description: 'The user has been granted the requested role.' });
       setSelectedApproval(null);
       setActionType(null);
+      setAiAnalysis(null);
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -151,6 +213,7 @@ export default function PendingApprovals() {
       setSelectedApproval(null);
       setActionType(null);
       setRejectionReason('');
+      setAiAnalysis(null);
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -212,10 +275,51 @@ export default function PendingApprovals() {
   return (
     <DashboardLayout title="Role Approvals">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Role Approvals</h1>
-          <p className="text-muted-foreground">Review and manage role requests from users</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Role Approvals</h1>
+            <p className="text-muted-foreground">Review and manage role requests from users</p>
+          </div>
+          {pendingApprovals.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={analyzeBulkRequests}
+              disabled={bulkAnalyzing}
+              className="gap-2"
+            >
+              {bulkAnalyzing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Brain className="h-4 w-4" />
+              )}
+              AI Bulk Analysis
+            </Button>
+          )}
         </div>
+
+        {bulkAnalysis && (
+          <Card className="border-purple-200 bg-purple-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-purple-600" />
+                AI Bulk Analysis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-sm max-w-none text-sm whitespace-pre-wrap">
+                {bulkAnalysis}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => setBulkAnalysis(null)}
+              >
+                Dismiss
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="pending">
           <TabsList>
@@ -279,6 +383,17 @@ export default function PendingApprovals() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                onClick={() => {
+                                  setSelectedApproval(approval);
+                                  analyzeRequest(approval);
+                                }}
+                              >
+                                <Sparkles className="h-4 w-4" />
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -367,6 +482,64 @@ export default function PendingApprovals() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* AI Analysis Dialog */}
+      <Dialog open={aiLoading || !!aiAnalysis} onOpenChange={() => { setAiAnalysis(null); setSelectedApproval(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              AI Analysis
+            </DialogTitle>
+            <DialogDescription>
+              Analysis for {selectedApproval ? getUserName(selectedApproval) : ''}'s request for {selectedApproval?.requested_role}
+            </DialogDescription>
+          </DialogHeader>
+
+          {aiLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+              <span className="ml-2 text-muted-foreground">Analyzing request...</span>
+            </div>
+          ) : aiAnalysis ? (
+            <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
+              {aiAnalysis}
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAiAnalysis(null); setSelectedApproval(null); }}>
+              Close
+            </Button>
+            {selectedApproval && !aiLoading && (
+              <>
+                <Button
+                  variant="outline"
+                  className="text-green-600"
+                  onClick={() => {
+                    setAiAnalysis(null);
+                    setActionType('approve');
+                  }}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-red-600"
+                  onClick={() => {
+                    setAiAnalysis(null);
+                    setActionType('reject');
+                  }}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Reject
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Approve/Reject Dialog */}
       <Dialog open={!!actionType} onOpenChange={() => { setActionType(null); setSelectedApproval(null); setRejectionReason(''); }}>
