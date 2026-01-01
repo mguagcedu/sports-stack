@@ -24,6 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Users, Filter, Shield } from "lucide-react";
 import { TeamCreationWizard } from "@/components/teams/TeamCreationWizard";
 import { SanctionBadge } from "@/components/governance/SanctionBadge";
+import { SchoolLogo } from "@/components/branding/SchoolLogo";
+import { SportIcon } from "@/components/branding/SportIcon";
 
 export default function Teams() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -44,7 +46,7 @@ export default function Teams() {
           organizations(name, state, district_id),
           sports(name, icon, code),
           seasons(name),
-          schools(name, state, district_id)
+          schools(id, name, state, district_id, logo_url, primary_color, secondary_color)
         `)
         .order("name");
       if (error) throw error;
@@ -200,6 +202,7 @@ export default function Teams() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]"></TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Organization</TableHead>
                 <TableHead>Sport</TableHead>
@@ -212,11 +215,11 @@ export default function Teams() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">Loading teams...</TableCell>
+                  <TableCell colSpan={8} className="text-center py-8">Loading teams...</TableCell>
                 </TableRow>
               ) : filteredTeams?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No teams found. Create your first team to get started.
                   </TableCell>
                 </TableRow>
@@ -224,6 +227,7 @@ export default function Teams() {
                 filteredTeams?.map((team) => {
                   const { state, districtId } = getTeamLocation(team);
                   const sportCode = team.sports?.code;
+                  const schoolBranding = team.schools;
                   
                   return (
                     <TableRow
@@ -231,9 +235,27 @@ export default function Teams() {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => navigate(`/teams/${team.id}`)}
                     >
+                      <TableCell>
+                        {schoolBranding?.logo_url ? (
+                          <img 
+                            src={schoolBranding.logo_url} 
+                            alt="" 
+                            className="h-8 w-8 object-contain"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{team.name}</TableCell>
-                      <TableCell>{team.organizations?.name || "-"}</TableCell>
-                      <TableCell>{team.sports?.name || "-"}</TableCell>
+                      <TableCell>{schoolBranding?.name || team.organizations?.name || "-"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <SportIcon sportName={team.sports?.name} size="sm" useSchoolColors={false} />
+                          {team.sports?.name || "-"}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <SanctionBadge
                           stateCode={state}
