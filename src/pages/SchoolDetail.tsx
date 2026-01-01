@@ -18,7 +18,6 @@ import { StateAssociationLookup } from '@/components/governance/StateAssociation
 import { SchoolBrandingEditor, SchoolLogo } from '@/components/branding';
 import { SchoolSanctioningBodies } from '@/components/schools/SchoolSanctioningBodies';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
   MapPin, 
