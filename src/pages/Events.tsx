@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Calendar, MapPin, Ticket, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { ScheduleUploader } from "@/components/events/ScheduleUploader";
 
 interface EventWithTeams {
   id: string;
@@ -212,13 +213,15 @@ export default function Events() {
             <h1 className="text-3xl font-bold tracking-tight">Events</h1>
             <p className="text-muted-foreground">Manage games, practices, and events</p>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Event
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <ScheduleUploader organizationId={organizations?.[0]?.id} />
+            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Event
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Create New Event</DialogTitle>
@@ -366,6 +369,7 @@ export default function Events() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
