@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { QRScanner } from '@/components/equipment/QRScanner';
 import { 
   Package, 
   Plus, 
@@ -23,7 +24,8 @@ import {
   CheckCircle,
   AlertTriangle,
   Clock,
-  User
+  User,
+  Camera
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -56,6 +58,8 @@ export default function Equipment() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scanMode, setScanMode] = useState<'search' | 'add' | 'checkout'>('search');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({
     name: '',
@@ -280,6 +284,40 @@ export default function Equipment() {
     setIsCheckoutOpen(true);
   };
 
+  const handleScanResult = (code: string) => {
+    if (scanMode === 'search') {
+      setSearchQuery(code);
+      // Try to find matching item
+      const matchingItem = items?.find(
+        (item) => item.barcode === code || item.sku === code
+      );
+      if (matchingItem) {
+        toast({
+          title: 'Item Found',
+          description: `Found: ${matchingItem.name}`,
+        });
+      } else {
+        toast({
+          title: 'No Match',
+          description: `No item found with code: ${code}`,
+          variant: 'destructive',
+        });
+      }
+    } else if (scanMode === 'add') {
+      setNewItem((prev) => ({ ...prev, barcode: code }));
+      toast({ title: 'Code Scanned', description: `Barcode set to: ${code}` });
+    } else if (scanMode === 'checkout') {
+      setCheckoutData((prev) => ({ ...prev, tracking_code: code }));
+      toast({ title: 'Code Scanned', description: `Tracking code set to: ${code}` });
+    }
+    setIsScannerOpen(false);
+  };
+
+  const openScanner = (mode: 'search' | 'add' | 'checkout') => {
+    setScanMode(mode);
+    setIsScannerOpen(true);
+  };
+
   const lowStockItems = items?.filter(item => 
     item.reorder_threshold && item.available_quantity <= item.reorder_threshold
   ) || [];
@@ -339,11 +377,22 @@ export default function Equipment() {
                   </div>
                   <div className="space-y-2">
                     <Label>Barcode/QR</Label>
-                    <Input
-                      value={newItem.barcode}
-                      onChange={(e) => setNewItem({ ...newItem, barcode: e.target.value })}
-                      placeholder="Scan code"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        value={newItem.barcode}
+                        onChange={(e) => setNewItem({ ...newItem, barcode: e.target.value })}
+                        placeholder="Scan code"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => openScanner('add')}
+                      >
+                        <Camera className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -465,14 +514,20 @@ export default function Equipment() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Equipment Items</CardTitle>
-                  <div className="relative w-64">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name, SKU, or barcode..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name, SKU, or barcode..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button variant="outline" onClick={() => openScanner('search')}>
+                      <Camera className="mr-2 h-4 w-4" />
+                      Scan
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -681,11 +736,22 @@ export default function Equipment() {
               {checkoutData.tracking_method !== 'manual' && (
                 <div className="space-y-2">
                   <Label>Tracking Code</Label>
-                  <Input
-                    value={checkoutData.tracking_code}
-                    onChange={(e) => setCheckoutData({ ...checkoutData, tracking_code: e.target.value })}
-                    placeholder="Scan or enter code..."
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      value={checkoutData.tracking_code}
+                      onChange={(e) => setCheckoutData({ ...checkoutData, tracking_code: e.target.value })}
+                      placeholder="Scan or enter code..."
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => openScanner('checkout')}
+                    >
+                      <Camera className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
@@ -735,6 +801,20 @@ export default function Equipment() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* QR/Barcode Scanner */}
+        <QRScanner
+          open={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onScan={handleScanResult}
+          title={
+            scanMode === 'search'
+              ? 'Scan to Search'
+              : scanMode === 'add'
+              ? 'Scan Barcode for Item'
+              : 'Scan Tracking Code'
+          }
+        />
       </div>
     </DashboardLayout>
   );
