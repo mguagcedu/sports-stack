@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.clear-schools]
 verify_jwt = false
+
+[functions.import-sanction-data]
+verify_jwt = false

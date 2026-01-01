@@ -101,6 +101,47 @@ export type Database = {
         }
         Relationships: []
       }
+      district_sport_override: {
+        Row: {
+          created_at: string | null
+          district_id: string
+          id: string
+          last_verified_date: string | null
+          rules_url_override: string | null
+          sanctioned_override: boolean | null
+          sport_code: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          district_id: string
+          id?: string
+          last_verified_date?: string | null
+          rules_url_override?: string | null
+          sanctioned_override?: boolean | null
+          sport_code: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          district_id?: string
+          id?: string
+          last_verified_date?: string | null
+          rules_url_override?: string | null
+          sanctioned_override?: boolean | null
+          sport_code?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "district_sport_override_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       districts: {
         Row: {
           address: string | null
@@ -941,6 +982,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sport_types: {
+        Row: {
+          created_at: string | null
+          format: string
+          gender: string
+          image_url: string | null
+          maturity: string
+          season: string
+          sport_code: string
+          sport_id: string
+          sport_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          format: string
+          gender: string
+          image_url?: string | null
+          maturity: string
+          season: string
+          sport_code: string
+          sport_id: string
+          sport_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          format?: string
+          gender?: string
+          image_url?: string | null
+          maturity?: string
+          season?: string
+          sport_code?: string
+          sport_id?: string
+          sport_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       sports: {
         Row: {
           code: string | null
@@ -971,6 +1051,108 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      state_athletic_associations: {
+        Row: {
+          association_abbrev: string
+          association_name: string
+          created_at: string | null
+          nfhs_status: string | null
+          state_association_id: string
+          state_code: string
+          state_name: string
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          association_abbrev: string
+          association_name: string
+          created_at?: string | null
+          nfhs_status?: string | null
+          state_association_id: string
+          state_code: string
+          state_name: string
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          association_abbrev?: string
+          association_name?: string
+          created_at?: string | null
+          nfhs_status?: string | null
+          state_association_id?: string
+          state_code?: string
+          state_name?: string
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      state_sport_sanction: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_verified_date: string | null
+          rules_url: string | null
+          sanctioned: boolean | null
+          season_override: string | null
+          sport_code: string
+          state_code: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_verified_date?: string | null
+          rules_url?: string | null
+          sanctioned?: boolean | null
+          season_override?: string | null
+          sport_code: string
+          state_code: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_verified_date?: string | null
+          rules_url?: string | null
+          sanctioned?: boolean | null
+          season_override?: string | null
+          sport_code?: string
+          state_code?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      subscription_features: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          enabled: boolean | null
+          feature_key: string
+          feature_name: string
+          id: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          feature_key: string
+          feature_name: string
+          id?: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean | null
+          feature_key?: string
+          feature_name?: string
+          id?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
         }
         Relationships: []
       }
@@ -1431,6 +1613,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_org_features: { Args: { _org_id: string }; Returns: string[] }
       get_user_context: {
         Args: { _user_id: string }
         Returns: {
@@ -1452,6 +1635,13 @@ export type Database = {
           _district_id: string
           _roles: Database["public"]["Enums"]["app_role"][]
           _user_id: string
+        }
+        Returns: boolean
+      }
+      has_feature: {
+        Args: {
+          _feature_key: string
+          _tier: Database["public"]["Enums"]["subscription_tier"]
         }
         Returns: boolean
       }
