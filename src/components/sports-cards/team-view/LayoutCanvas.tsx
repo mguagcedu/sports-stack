@@ -2,14 +2,15 @@ import { cn } from '@/lib/utils';
 import { SportsCard } from '../SportsCard';
 import { SportLayoutTemplate, TeamMemberForLayout, SlotAssignment } from './types';
 import { useMemo } from 'react';
+import { DroppableSlot } from './DroppableSlot';
 
 interface LayoutCanvasProps {
   template: SportLayoutTemplate;
   members: TeamMemberForLayout[];
   slotAssignments: SlotAssignment[];
   highlightedMemberId: string | null;
-  onSlotClick?: (slotKey: string) => void;
-  onMemberDrop?: (slotKey: string, memberId: string) => void;
+  onSlotDrop?: (slotKey: string, memberId: string) => void;
+  onSlotRemove?: (slotKey: string) => void;
   className?: string;
 }
 
@@ -18,7 +19,8 @@ export function LayoutCanvas({
   members,
   slotAssignments,
   highlightedMemberId,
-  onSlotClick,
+  onSlotDrop,
+  onSlotRemove,
   className,
 }: LayoutCanvasProps) {
   // Create a map of slot -> member
@@ -62,6 +64,8 @@ export function LayoutCanvas({
     return <GroupedListView members={members} highlightedMemberId={highlightedMemberId} />;
   }
 
+  const activeMap = slotAssignments.length > 0 ? slotMemberMap : autoAssignments;
+
   return (
     <div className={cn('relative w-full h-full', className)}>
       {/* Field/Court background */}
@@ -72,17 +76,29 @@ export function LayoutCanvas({
         {/* Field markings based on sport */}
         <FieldMarkings templateType={template.templateType} sportKey={template.sportKey} />
         
-        {/* Slots */}
+        {/* Slots with drag-and-drop */}
         {template.slots.map(slot => {
-          const member = autoAssignments.get(slot.key);
+          const member = activeMap.get(slot.key);
           const isHighlighted = member && member.id === highlightedMemberId;
+          
+          if (onSlotDrop && onSlotRemove) {
+            return (
+              <DroppableSlot
+                key={slot.key}
+                slot={slot}
+                member={member || null}
+                isHighlighted={isHighlighted}
+                onDrop={(memberId) => onSlotDrop(slot.key, memberId)}
+                onRemove={() => onSlotRemove(slot.key)}
+              />
+            );
+          }
           
           return (
             <div
               key={slot.key}
               className="absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300"
               style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-              onClick={() => onSlotClick?.(slot.key)}
             >
               {member ? (
                 <div className={cn(

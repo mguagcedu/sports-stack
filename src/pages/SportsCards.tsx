@@ -318,6 +318,7 @@ export default function SportsCards() {
         ) : (
           <Card className="overflow-hidden">
             <TeamView
+              teamId={selectedTeam?.id || ''}
               teamName={selectedTeam?.name || ''}
               sportKey={selectedTeam?.sport_key || ''}
               sportName={selectedTeam?.sport_key?.replace(/_/g, ' ') || 'Sport'}

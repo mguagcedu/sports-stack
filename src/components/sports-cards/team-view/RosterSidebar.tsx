@@ -4,7 +4,7 @@ import { TeamMemberForLayout } from './types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
-import { Search, Filter } from 'lucide-react';
+import { Search, GripVertical } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DraggableMemberCard } from './DraggableMemberCard';
 
 interface RosterSidebarProps {
   members: TeamMemberForLayout[];
@@ -28,6 +29,7 @@ interface RosterSidebarProps {
     startersOnly: boolean;
   }) => void;
   className?: string;
+  draggable?: boolean;
 }
 
 export function RosterSidebar({
@@ -41,6 +43,7 @@ export function RosterSidebar({
   filterStartersOnly,
   onFilterChange,
   className,
+  draggable = false,
 }: RosterSidebarProps) {
   const [search, setSearch] = useState('');
 
@@ -76,11 +79,46 @@ export function RosterSidebar({
   const athletes = filteredMembers.filter(m => m.cardData.role === 'player');
   const staff = filteredMembers.filter(m => m.cardData.role === 'staff');
 
+  const renderMemberCard = (m: TeamMemberForLayout, showPositions: string[] | null = null) => {
+    if (draggable && m.cardData.role === 'player') {
+      return (
+        <DraggableMemberCard
+          key={m.id}
+          member={m}
+          isSelected={selectedMemberId === m.id}
+          onClick={() => onMemberClick(m.id)}
+        />
+      );
+    }
+
+    return (
+      <MiniCard
+        key={m.id}
+        firstName={m.cardData.firstName}
+        lastName={m.cardData.lastName}
+        photoUrl={m.cardData.photoUrl}
+        jerseyNumber={m.cardData.jerseyNumber}
+        positions={showPositions || m.positions.slice(0, 2)}
+        lineGroups={m.lineGroups.slice(0, 1)}
+        onClick={() => onMemberClick(m.id)}
+        isActive={selectedMemberId === m.id}
+      />
+    );
+  };
+
   return (
     <div className={cn('flex flex-col h-full bg-card border-l', className)}>
       {/* Header */}
       <div className="p-4 border-b space-y-3">
-        <h3 className="font-semibold text-sm">Roster ({members.length})</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Roster ({members.length})</h3>
+          {draggable && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <GripVertical className="h-3 w-3" />
+              Drag to assign
+            </span>
+          )}
+        </div>
         
         {/* Search */}
         <div className="relative">
@@ -160,17 +198,7 @@ export function RosterSidebar({
                 Coaches ({coaches.length})
               </h4>
               <div className="space-y-0.5">
-                {coaches.map(m => (
-                  <MiniCard
-                    key={m.id}
-                    firstName={m.cardData.firstName}
-                    lastName={m.cardData.lastName}
-                    photoUrl={m.cardData.photoUrl}
-                    positions={[m.cardData.roleTitle || 'Coach']}
-                    onClick={() => onMemberClick(m.id)}
-                    isActive={selectedMemberId === m.id}
-                  />
-                ))}
+                {coaches.map(m => renderMemberCard(m, [m.cardData.roleTitle || 'Coach']))}
               </div>
             </div>
           )}
@@ -182,19 +210,7 @@ export function RosterSidebar({
                 Athletes ({athletes.length})
               </h4>
               <div className="space-y-0.5">
-                {athletes.map(m => (
-                  <MiniCard
-                    key={m.id}
-                    firstName={m.cardData.firstName}
-                    lastName={m.cardData.lastName}
-                    photoUrl={m.cardData.photoUrl}
-                    jerseyNumber={m.cardData.jerseyNumber}
-                    positions={m.positions.slice(0, 2)}
-                    lineGroups={m.lineGroups.slice(0, 1)}
-                    onClick={() => onMemberClick(m.id)}
-                    isActive={selectedMemberId === m.id}
-                  />
-                ))}
+                {athletes.map(m => renderMemberCard(m))}
               </div>
             </div>
           )}
@@ -206,17 +222,7 @@ export function RosterSidebar({
                 Staff ({staff.length})
               </h4>
               <div className="space-y-0.5">
-                {staff.map(m => (
-                  <MiniCard
-                    key={m.id}
-                    firstName={m.cardData.firstName}
-                    lastName={m.cardData.lastName}
-                    photoUrl={m.cardData.photoUrl}
-                    positions={[m.cardData.roleTitle || 'Staff']}
-                    onClick={() => onMemberClick(m.id)}
-                    isActive={selectedMemberId === m.id}
-                  />
-                ))}
+                {staff.map(m => renderMemberCard(m, [m.cardData.roleTitle || 'Staff']))}
               </div>
             </div>
           )}
