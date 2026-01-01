@@ -49,33 +49,46 @@ export function useUserRoles() {
     }
 
     const fetchRoles = async () => {
-      const { data, error } = await supabase
+      // Fetch user roles
+      const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('id, role, organization_id, team_id')
         .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error fetching roles:', error);
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError);
         setRoles([]);
       } else {
-        const typedRoles = (data || []).map(r => ({
+        const typedRoles = (rolesData || []).map(r => ({
           ...r,
           role: r.role as AppRole
         }));
         setRoles(typedRoles);
         
-        // Set default active role (highest privilege first)
-        const roleHierarchy: AppRole[] = [
-          'system_admin', 'org_admin', 'athletic_director', 
-          'coach', 'assistant_coach', 'team_manager',
-          'registrar', 'finance_admin', 'gate_staff',
-          'parent', 'guardian', 'athlete', 'viewer'
-        ];
+        // Try to load saved active role from user_role_contexts
+        const { data: contextData } = await supabase
+          .from('user_role_contexts')
+          .select('active_role')
+          .eq('user_id', user.id)
+          .maybeSingle();
         
-        const highestRole = roleHierarchy.find(r => 
-          typedRoles.some(ur => ur.role === r)
-        );
-        setActiveRole(highestRole || null);
+        if (contextData?.active_role && typedRoles.some(r => r.role === contextData.active_role)) {
+          setActiveRole(contextData.active_role as AppRole);
+        } else {
+          // Set default active role (highest privilege first)
+          const roleHierarchy: AppRole[] = [
+            'superadmin', 'system_admin', 'org_admin', 'district_owner', 'district_admin',
+            'school_owner', 'school_admin', 'athletic_director', 
+            'coach', 'assistant_coach', 'team_manager',
+            'registrar', 'finance_admin', 'gate_staff',
+            'parent', 'guardian', 'athlete', 'viewer'
+          ];
+          
+          const highestRole = roleHierarchy.find(r => 
+            typedRoles.some(ur => ur.role === r)
+          );
+          setActiveRole(highestRole || null);
+        }
       }
       setLoading(false);
     };
