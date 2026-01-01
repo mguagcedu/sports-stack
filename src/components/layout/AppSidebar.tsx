@@ -62,6 +62,7 @@ const adminNavItems = [
   { title: 'Governance', url: '/governance', icon: Trophy },
   { title: 'Import Data', url: '/import', icon: Database },
   { title: 'User Management', url: '/users', icon: Users },
+  { title: 'Permissions', url: '/permissions', icon: Shield },
   { title: 'Reports', url: '/reports', icon: BarChart3 },
   { title: 'Audit Logs', url: '/audit-logs', icon: Database },
 ];
