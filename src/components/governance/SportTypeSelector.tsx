@@ -43,12 +43,12 @@ interface SportTypeSelectorProps {
 }
 
 const SEASON_COLORS: Record<string, string> = {
-  Fall: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  Winter: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  Spring: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  "Fall/Winter": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  "Fall/Spring": "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
-  "Year-round": "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
+  Fall: "bg-orange-600 text-white",
+  Winter: "bg-blue-600 text-white",
+  Spring: "bg-green-600 text-white",
+  "Fall/Winter": "bg-purple-600 text-white",
+  "Fall/Spring": "bg-teal-600 text-white",
+  "Year-round": "bg-gray-600 text-white",
 };
 
 const MATURITY_COLORS: Record<string, string> = {

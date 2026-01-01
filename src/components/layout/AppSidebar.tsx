@@ -17,6 +17,7 @@ import {
   Trophy,
   UserCircle,
   Dumbbell,
+  UserCheck,
 } from 'lucide-react';
 import { NavLink as RouterNavLink, useNavigate } from 'react-router-dom';
 import {
@@ -73,6 +74,7 @@ const adminNavItems: NavItem[] = [
   { title: 'Governance', url: '/governance', icon: Trophy, pageKey: 'governance' },
   { title: 'Import Data', url: '/import', icon: Database, pageKey: 'import' },
   { title: 'User Management', url: '/users', icon: Users, pageKey: 'users' },
+  { title: 'Role Approvals', url: '/approvals', icon: UserCheck, pageKey: 'approvals' },
   { title: 'Permissions', url: '/permissions', icon: Shield, pageKey: 'settings' },
   { title: 'Reports', url: '/reports', icon: BarChart3, pageKey: 'reports' },
   { title: 'Audit Logs', url: '/audit-logs', icon: Database, pageKey: 'audit_logs' },
