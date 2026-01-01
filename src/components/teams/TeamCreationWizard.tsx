@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,14 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Check, Sparkles, Edit, AlertTriangle, Shield, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SportTypeSelector } from "@/components/governance/SportTypeSelector";
+import { YearSeasonSelector } from "@/components/teams/YearSeasonSelector";
+import { 
+  SportSeasonType, 
+  getCurrentSeason, 
+  getCurrentSchoolYear, 
+  getSeasonYearLabel,
+  getSeasonForSport 
+} from "@/lib/seasonUtils";
 
 interface TeamCreationWizardProps {
   open: boolean;
@@ -67,12 +75,19 @@ interface SportType {
 
 export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardProps) {
   const [currentStep, setCurrentStep] = useState<Step>("organization");
+  // Smart defaults for season and year
+  const defaultSeason = useMemo(() => getCurrentSeason(), []);
+  const defaultSchoolYear = useMemo(() => getCurrentSchoolYear(), []);
+
   const [teamData, setTeamData] = useState({
     organization_id: "",
     sport_code: "",
     sport_name: "",
     sport_gender: "",
     season_id: "",
+    season: defaultSeason as SportSeasonType,
+    school_year: defaultSchoolYear,
+    custom_season_label: "",
     level: "varsity",
     max_roster_size: 25,
     name: "",
@@ -268,6 +283,9 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
       sport_name: "",
       sport_gender: "",
       season_id: "",
+      season: defaultSeason as SportSeasonType,
+      school_year: defaultSchoolYear,
+      custom_season_label: "",
       level: "varsity",
       max_roster_size: 25,
       name: "",
@@ -291,7 +309,7 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
       case "sport":
         return !!teamData.sport_code;
       case "details":
-        return !!teamData.season_id && !!teamData.level;
+        return !!teamData.level && (teamData.season !== 'custom' || !!teamData.custom_season_label);
       case "name":
         return !teamData.useCustomName || !!teamData.name.trim();
       case "review":

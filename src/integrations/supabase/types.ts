@@ -276,6 +276,204 @@ export type Database = {
           },
         ]
       }
+      equipment_checkouts: {
+        Row: {
+          actual_return_date: string | null
+          checked_out_by_user_id: string
+          checkout_date: string
+          condition_on_checkout: string | null
+          condition_on_return: string | null
+          created_at: string | null
+          equipment_item_id: string
+          expected_return_date: string | null
+          id: string
+          notes: string | null
+          quantity: number
+          return_received_by_user_id: string | null
+          status: string
+          team_id: string | null
+          team_member_id: string | null
+          tracking_code: string | null
+          tracking_method: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_return_date?: string | null
+          checked_out_by_user_id: string
+          checkout_date?: string
+          condition_on_checkout?: string | null
+          condition_on_return?: string | null
+          created_at?: string | null
+          equipment_item_id: string
+          expected_return_date?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          return_received_by_user_id?: string | null
+          status?: string
+          team_id?: string | null
+          team_member_id?: string | null
+          tracking_code?: string | null
+          tracking_method?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_return_date?: string | null
+          checked_out_by_user_id?: string
+          checkout_date?: string
+          condition_on_checkout?: string | null
+          condition_on_return?: string | null
+          created_at?: string | null
+          equipment_item_id?: string
+          expected_return_date?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          return_received_by_user_id?: string | null
+          status?: string
+          team_id?: string | null
+          team_member_id?: string | null
+          tracking_code?: string | null
+          tracking_method?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_checkouts_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_checkouts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_checkouts_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_items: {
+        Row: {
+          available_quantity: number
+          barcode: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          reorder_threshold: number | null
+          school_id: string | null
+          sku: string | null
+          sport_code: string | null
+          total_quantity: number
+          unit_cost: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          available_quantity?: number
+          barcode?: string | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          reorder_threshold?: number | null
+          school_id?: string | null
+          sku?: string | null
+          sport_code?: string | null
+          total_quantity?: number
+          unit_cost?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          available_quantity?: number
+          barcode?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          reorder_threshold?: number | null
+          school_id?: string | null
+          sku?: string | null
+          sport_code?: string | null
+          total_quantity?: number
+          unit_cost?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_items_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_sizes: {
+        Row: {
+          available_quantity: number
+          created_at: string | null
+          equipment_item_id: string
+          id: string
+          quantity: number
+          size_label: string
+        }
+        Insert: {
+          available_quantity?: number
+          created_at?: string | null
+          equipment_item_id: string
+          id?: string
+          quantity?: number
+          size_label: string
+        }
+        Update: {
+          available_quantity?: number
+          created_at?: string | null
+          equipment_item_id?: string
+          id?: string
+          quantity?: number
+          size_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_sizes_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_tickets: {
         Row: {
           created_at: string | null
