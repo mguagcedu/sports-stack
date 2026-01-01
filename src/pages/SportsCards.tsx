@@ -26,38 +26,22 @@ export default function SportsCards() {
     },
   });
 
-  // Fetch team memberships
-  const { data: memberships = [] } = useQuery({
-    queryKey: ['team-memberships', selectedTeamId],
+  // Fetch team members (using team_members table which has actual data)
+  const { data: teamMembersData = [] } = useQuery({
+    queryKey: ['team-members', selectedTeamId],
     enabled: !!selectedTeamId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('team_memberships')
-        .select('id, person_id, person_type, role_on_team, is_active')
-        .eq('team_id', selectedTeamId!)
-        .eq('is_active', true);
+        .from('team_members')
+        .select('id, team_id, user_id, role, jersey_number, position, is_captain')
+        .eq('team_id', selectedTeamId!);
       if (error) throw error;
       return data || [];
     },
   });
 
-  // Fetch athletes for athlete-type memberships
-  const athleteIds = memberships.filter(m => m.person_type === 'athlete').map(m => m.person_id);
-  const { data: athletes = [] } = useQuery({
-    queryKey: ['athletes-for-cards', athleteIds],
-    enabled: athleteIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('athletes')
-        .select('id, first_name, last_name, photo_url, grad_year, height, weight')
-        .in('id', athleteIds);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch profiles for user-type memberships
-  const userIds = memberships.filter(m => m.person_type === 'user').map(m => m.person_id);
+  // Fetch profiles for team members (all are linked via user_id)
+  const userIds = teamMembersData.map(m => m.user_id);
   const { data: profiles = [] } = useQuery({
     queryKey: ['profiles-for-cards', userIds],
     enabled: userIds.length > 0,
@@ -71,36 +55,7 @@ export default function SportsCards() {
     },
   });
 
-  // Fetch positions for team members
-  const membershipIds = memberships.map(m => m.id);
-  const { data: positions = [] } = useQuery({
-    queryKey: ['athlete-positions', membershipIds],
-    enabled: membershipIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('athlete_positions')
-        .select('id, team_membership_id, position_id, is_primary, depth_order, sport_positions(position_key, display_name)')
-        .in('team_membership_id', membershipIds);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch jersey numbers
-  const { data: jerseyNumbers = [] } = useQuery({
-    queryKey: ['jersey-numbers', membershipIds],
-    enabled: membershipIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('jersey_numbers')
-        .select('team_membership_id, jersey_number, is_primary')
-        .in('team_membership_id', membershipIds);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch line groups
+  // Fetch line groups for team
   const { data: lineGroups = [] } = useQuery({
     queryKey: ['line-groups', selectedTeamId],
     enabled: !!selectedTeamId,
@@ -115,73 +70,26 @@ export default function SportsCards() {
     },
   });
 
-  // Fetch member line groups
-  const { data: memberLineGroupsData = [] } = useQuery({
-    queryKey: ['member-line-groups', membershipIds],
-    enabled: membershipIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('member_line_groups')
-        .select('team_membership_id, line_group_id, is_primary, line_groups(line_key, display_name)')
-        .in('team_membership_id', membershipIds);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
 
-  // Build card data for each member
+  // Build card data for each team member
   const cardData: SportsCardData[] = useMemo(() => {
     if (!selectedTeam) return [];
 
-    return memberships.map(m => {
-      let firstName = 'Unknown';
-      let lastName = '';
-      let photoUrl: string | null = null;
-      let gradYear: number | null = null;
-      let height: string | null = null;
-      let weight: string | null = null;
+    return teamMembersData.map(m => {
+      const profile = profiles.find(p => p.id === m.user_id);
+      const firstName = profile?.first_name || 'Unknown';
+      const lastName = profile?.last_name || '';
+      const photoUrl = profile?.avatar_url || null;
 
-      if (m.person_type === 'athlete') {
-        const athlete = athletes.find(a => a.id === m.person_id);
-        if (athlete) {
-          firstName = athlete.first_name;
-          lastName = athlete.last_name;
-          photoUrl = athlete.photo_url;
-          gradYear = athlete.grad_year;
-          height = athlete.height;
-          weight = athlete.weight;
-        }
-      } else {
-        const profile = profiles.find(p => p.id === m.person_id);
-        if (profile) {
-          firstName = profile.first_name || 'Unknown';
-          lastName = profile.last_name || '';
-          photoUrl = profile.avatar_url;
-        }
-      }
-
-      const memberPositions = positions
-        .filter(p => p.team_membership_id === m.id)
-        .map(p => ({
-          id: p.id,
-          position_key: (p.sport_positions as any)?.position_key || '',
-          display_name: (p.sport_positions as any)?.display_name || '',
-          is_primary: p.is_primary || false,
-          depth_order: p.depth_order,
-        }));
-
-      const memberLines = memberLineGroupsData
-        .filter((lg: any) => lg.team_membership_id === m.id)
-        .map((lg: any) => ({
-          id: lg.line_group_id,
-          line_key: lg.line_groups?.line_key || '',
-          display_name: lg.line_groups?.display_name || '',
-          is_primary: lg.is_primary || false,
-        }));
-
-      const jersey = jerseyNumbers.find(j => j.team_membership_id === m.id && j.is_primary);
+      // Build position from the team_members.position field
+      const memberPositions = m.position ? [{
+        id: m.id,
+        position_key: m.position,
+        display_name: m.position,
+        is_primary: true,
+        depth_order: 1,
+      }] : [];
 
       return {
         id: m.id,
@@ -192,18 +100,18 @@ export default function SportsCards() {
         sportKey: selectedTeam.sport_key || '',
         sportName: selectedTeam.sport_key?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Sport',
         seasonLabel: '2025-26',
-        jerseyNumber: jersey?.jersey_number,
+        jerseyNumber: m.jersey_number ? parseInt(m.jersey_number) : undefined,
         positions: memberPositions,
-        lineGroups: memberLines,
-        gradYear,
-        height,
-        weight,
-        role: m.role_on_team === 'athlete' ? 'player' : m.role_on_team === 'coach' ? 'coach' : 'staff',
-        badges: [],
+        lineGroups: [],
+        gradYear: null,
+        height: null,
+        weight: null,
+        role: m.role === 'athlete' ? 'player' : m.role === 'coach' ? 'coach' : 'staff',
+        badges: m.is_captain ? [{ key: 'captain', label: 'Captain' }] : [],
         backgroundStyle: 'classic' as const,
       };
     });
-  }, [memberships, athletes, profiles, positions, jerseyNumbers, memberLineGroupsData, selectedTeam]);
+  }, [teamMembersData, profiles, selectedTeam]);
 
   // Build reveal cards
   const revealCards: RevealCard[] = useMemo(() => {
@@ -215,7 +123,7 @@ export default function SportsCards() {
   }, [cardData]);
 
   // Build team member data for TeamView
-  const teamMembers: TeamMemberForLayout[] = useMemo(() => {
+  const teamMembersForLayout: TeamMemberForLayout[] = useMemo(() => {
     return cardData.map(card => ({
       id: card.id,
       membershipId: card.id,
@@ -318,7 +226,7 @@ export default function SportsCards() {
               sportKey={selectedTeam?.sport_key || ''}
               sportName={selectedTeam?.sport_key?.replace(/_/g, ' ') || 'Sport'}
               seasonLabel="2025-26"
-              members={teamMembers}
+              members={teamMembersForLayout}
               lineGroups={lineGroups.map(lg => ({
                 id: lg.id,
                 lineKey: lg.line_key,
