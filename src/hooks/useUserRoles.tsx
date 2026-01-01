@@ -6,9 +6,13 @@ export type AppRole =
   | 'system_admin'
   | 'org_admin'
   | 'athletic_director'
+  | 'head_coach'
   | 'coach'
   | 'assistant_coach'
   | 'team_manager'
+  | 'equipment_manager'
+  | 'student_manager'
+  | 'student_equipment_manager'
   | 'parent'
   | 'athlete'
   | 'guardian'
@@ -79,7 +83,8 @@ export function useUserRoles() {
           const roleHierarchy: AppRole[] = [
             'superadmin', 'system_admin', 'org_admin', 'district_owner', 'district_admin',
             'school_owner', 'school_admin', 'athletic_director', 
-            'coach', 'assistant_coach', 'team_manager',
+            'head_coach', 'coach', 'assistant_coach', 'team_manager', 'equipment_manager',
+            'student_manager', 'student_equipment_manager',
             'registrar', 'finance_admin', 'gate_staff',
             'parent', 'guardian', 'athlete', 'viewer'
           ];

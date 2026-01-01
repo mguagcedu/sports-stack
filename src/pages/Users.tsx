@@ -53,9 +53,13 @@ const ROLE_LABELS: Record<AppRole, string> = {
   school_admin: 'School Admin',
   school_viewer: 'School Viewer',
   athletic_director: 'Athletic Director',
+  head_coach: 'Head Coach',
   coach: 'Coach',
   assistant_coach: 'Assistant Coach',
   team_manager: 'Team Manager',
+  equipment_manager: 'Equipment Manager',
+  student_manager: 'Student Manager',
+  student_equipment_manager: 'Student Equipment Manager',
   trainer: 'Trainer',
   scorekeeper: 'Scorekeeper',
   parent: 'Parent',
@@ -72,7 +76,9 @@ const ROLE_COLORS: Partial<Record<AppRole, string>> = {
   system_admin: 'bg-destructive/10 text-destructive',
   superadmin: 'bg-destructive/10 text-destructive',
   org_admin: 'bg-primary/10 text-primary',
+  head_coach: 'bg-success/10 text-success',
   coach: 'bg-success/10 text-success',
+  equipment_manager: 'bg-accent/10 text-accent-foreground',
   athlete: 'bg-info/10 text-info',
   parent: 'bg-warning/10 text-warning',
 };
@@ -80,7 +86,8 @@ const ROLE_COLORS: Partial<Record<AppRole, string>> = {
 const ALL_ROLES: AppRole[] = [
   'system_admin', 'superadmin', 'org_admin', 'district_owner', 'district_admin', 
   'district_viewer', 'school_owner', 'school_admin', 'school_viewer', 'athletic_director',
-  'coach', 'assistant_coach', 'team_manager', 'trainer', 'scorekeeper', 'parent',
+  'head_coach', 'coach', 'assistant_coach', 'team_manager', 'equipment_manager',
+  'student_manager', 'student_equipment_manager', 'trainer', 'scorekeeper', 'parent',
   'guardian', 'athlete', 'registrar', 'finance_admin', 'finance_clerk', 'gate_staff', 'viewer'
 ];
 
