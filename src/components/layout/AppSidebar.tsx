@@ -19,6 +19,7 @@ import {
   Dumbbell,
   UserCheck,
   Plug,
+  Package,
 } from 'lucide-react';
 import { NavLink as RouterNavLink, useNavigate } from 'react-router-dom';
 import {
@@ -67,6 +68,7 @@ const managementNavItems: NavItem[] = [
   { title: 'Registrations', url: '/registrations', icon: FileText, pageKey: 'registrations' },
   { title: 'Payments', url: '/payments', icon: CreditCard, pageKey: 'payments' },
   { title: 'Events & Tickets', url: '/events', icon: Ticket, pageKey: 'events' },
+  { title: 'Equipment', url: '/equipment', icon: Package, pageKey: 'equipment' },
 ];
 
 const adminNavItems: NavItem[] = [
