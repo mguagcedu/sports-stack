@@ -5,3 +5,5 @@ export { EquipmentHistory } from './EquipmentHistory';
 export { EquipmentReturnDialog } from './EquipmentReturnDialog';
 export { EquipmentAccessManager } from './EquipmentAccessManager';
 export { AddEquipmentDialog } from './AddEquipmentDialog';
+export { EquipmentCheckoutCart } from './EquipmentCheckoutCart';
+export { EquipmentPackageManager } from './EquipmentPackageManager';

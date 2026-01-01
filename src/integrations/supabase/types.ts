@@ -384,6 +384,89 @@ export type Database = {
           },
         ]
       }
+      equipment_cart: {
+        Row: {
+          condition: string | null
+          created_at: string | null
+          created_by_user_id: string
+          equipment_item_id: string
+          id: string
+          notes: string | null
+          quantity: number | null
+          recipient_team_member_id: string | null
+          recipient_user_id: string
+          session_id: string
+          size_id: string | null
+          status: string | null
+          team_id: string | null
+          tracking_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          condition?: string | null
+          created_at?: string | null
+          created_by_user_id: string
+          equipment_item_id: string
+          id?: string
+          notes?: string | null
+          quantity?: number | null
+          recipient_team_member_id?: string | null
+          recipient_user_id: string
+          session_id: string
+          size_id?: string | null
+          status?: string | null
+          team_id?: string | null
+          tracking_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          condition?: string | null
+          created_at?: string | null
+          created_by_user_id?: string
+          equipment_item_id?: string
+          id?: string
+          notes?: string | null
+          quantity?: number | null
+          recipient_team_member_id?: string | null
+          recipient_user_id?: string
+          session_id?: string
+          size_id?: string | null
+          status?: string | null
+          team_id?: string | null
+          tracking_code?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_cart_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_cart_recipient_team_member_id_fkey"
+            columns: ["recipient_team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_cart_size_id_fkey"
+            columns: ["size_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_sizes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_cart_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment_categories: {
         Row: {
           code: string
@@ -599,8 +682,169 @@ export type Database = {
           },
         ]
       }
+      equipment_issuance: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          issued_at: string | null
+          issued_by_user_id: string | null
+          notes: string | null
+          package_id: string | null
+          received_by_user_id: string | null
+          return_due_date: string | null
+          returned_at: string | null
+          status: string | null
+          team_id: string | null
+          team_member_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_by_user_id?: string | null
+          notes?: string | null
+          package_id?: string | null
+          received_by_user_id?: string | null
+          return_due_date?: string | null
+          returned_at?: string | null
+          status?: string | null
+          team_id?: string | null
+          team_member_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_by_user_id?: string | null
+          notes?: string | null
+          package_id?: string | null
+          received_by_user_id?: string | null
+          return_due_date?: string | null
+          returned_at?: string | null
+          status?: string | null
+          team_id?: string | null
+          team_member_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_issuance_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_issuance_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_issuance_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_issuance_items: {
+        Row: {
+          checkout_id: string | null
+          created_at: string | null
+          equipment_item_id: string | null
+          id: string
+          issuance_id: string
+          issued_at: string | null
+          notes: string | null
+          package_item_id: string | null
+          quantity_expected: number | null
+          quantity_issued: number | null
+          returned_at: string | null
+          size_id: string | null
+          status: string | null
+        }
+        Insert: {
+          checkout_id?: string | null
+          created_at?: string | null
+          equipment_item_id?: string | null
+          id?: string
+          issuance_id: string
+          issued_at?: string | null
+          notes?: string | null
+          package_item_id?: string | null
+          quantity_expected?: number | null
+          quantity_issued?: number | null
+          returned_at?: string | null
+          size_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          checkout_id?: string | null
+          created_at?: string | null
+          equipment_item_id?: string | null
+          id?: string
+          issuance_id?: string
+          issued_at?: string | null
+          notes?: string | null
+          package_item_id?: string | null
+          quantity_expected?: number | null
+          quantity_issued?: number | null
+          returned_at?: string | null
+          size_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_issuance_items_checkout_id_fkey"
+            columns: ["checkout_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_checkouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_issuance_items_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_issuance_items_issuance_id_fkey"
+            columns: ["issuance_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_issuance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_issuance_items_package_item_id_fkey"
+            columns: ["package_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_package_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_issuance_items_size_id_fkey"
+            columns: ["size_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_sizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment_items: {
         Row: {
+          assigned_value: number | null
           available_quantity: number
           barcode: string | null
           category: string
@@ -620,9 +864,11 @@ export type Database = {
           next_inspection_date: string | null
           notes: string | null
           organization_id: string | null
+          our_cost: number | null
           purchase_date: string | null
           reorder_threshold: number | null
           requires_washing: boolean | null
+          retail_price: number | null
           retirement_date: string | null
           school_id: string | null
           serial_number: string | null
@@ -634,6 +880,7 @@ export type Database = {
           warranty_expiry: string | null
         }
         Insert: {
+          assigned_value?: number | null
           available_quantity?: number
           barcode?: string | null
           category: string
@@ -653,9 +900,11 @@ export type Database = {
           next_inspection_date?: string | null
           notes?: string | null
           organization_id?: string | null
+          our_cost?: number | null
           purchase_date?: string | null
           reorder_threshold?: number | null
           requires_washing?: boolean | null
+          retail_price?: number | null
           retirement_date?: string | null
           school_id?: string | null
           serial_number?: string | null
@@ -667,6 +916,7 @@ export type Database = {
           warranty_expiry?: string | null
         }
         Update: {
+          assigned_value?: number | null
           available_quantity?: number
           barcode?: string | null
           category?: string
@@ -686,9 +936,11 @@ export type Database = {
           next_inspection_date?: string | null
           notes?: string | null
           organization_id?: string | null
+          our_cost?: number | null
           purchase_date?: string | null
           reorder_threshold?: number | null
           requires_washing?: boolean | null
+          retail_price?: number | null
           retirement_date?: string | null
           school_id?: string | null
           serial_number?: string | null
@@ -715,6 +967,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      equipment_package_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          equipment_item_id: string | null
+          id: string
+          is_required: boolean | null
+          item_name: string
+          notes: string | null
+          package_id: string
+          quantity: number | null
+          subcategory: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          equipment_item_id?: string | null
+          id?: string
+          is_required?: boolean | null
+          item_name: string
+          notes?: string | null
+          package_id: string
+          quantity?: number | null
+          subcategory?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          equipment_item_id?: string | null
+          id?: string
+          is_required?: boolean | null
+          item_name?: string
+          notes?: string | null
+          package_id?: string
+          quantity?: number | null
+          subcategory?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_package_items_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_packages: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          sport_code: string | null
+          team_level: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          sport_code?: string | null
+          team_level?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          sport_code?: string | null
+          team_level?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       equipment_sizes: {
         Row: {
