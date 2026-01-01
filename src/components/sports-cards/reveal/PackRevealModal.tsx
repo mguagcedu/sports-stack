@@ -13,6 +13,8 @@ export function PackRevealModal({
   sportName,
   seasonLabel,
   schoolLogo,
+  autoAdvance = true,
+  autoAdvanceDelay = 3500,
   onComplete,
   onClose,
 }: PackRevealProps) {
@@ -127,7 +129,12 @@ export function PackRevealModal({
 
           {/* Revealing phase */}
           {phase === 'revealing' && (
-            <RevealStage cards={cards} onAllRevealed={handleAllRevealed} />
+            <RevealStage 
+              cards={cards} 
+              onAllRevealed={handleAllRevealed}
+              autoAdvance={autoAdvance}
+              autoAdvanceDelay={autoAdvanceDelay}
+            />
           )}
 
           {/* Complete phase */}

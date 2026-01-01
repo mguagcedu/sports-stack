@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { SportsCard } from '../SportsCard';
 import { RevealCard } from './types';
@@ -6,27 +6,53 @@ import { RevealCard } from './types';
 interface CardRevealAnimationProps {
   card: RevealCard;
   delay: number;
+  autoAdvanceDelay?: number; // How long to show card before auto-advancing (0 = manual only)
   onRevealComplete: () => void;
+  onCardClick?: () => void;
 }
 
-export function CardRevealAnimation({ card, delay, onRevealComplete }: CardRevealAnimationProps) {
+export function CardRevealAnimation({ 
+  card, 
+  delay, 
+  autoAdvanceDelay = 0,
+  onRevealComplete,
+  onCardClick,
+}: CardRevealAnimationProps) {
   const [phase, setPhase] = useState<'hidden' | 'flipping' | 'revealed'>('hidden');
 
   useEffect(() => {
+    // Start flip animation after delay
     const showTimer = setTimeout(() => {
       setPhase('flipping');
     }, delay);
 
-    const revealTimer = setTimeout(() => {
+    // Complete flip animation
+    const flipCompleteTimer = setTimeout(() => {
       setPhase('revealed');
-      onRevealComplete();
     }, delay + 600);
 
     return () => {
       clearTimeout(showTimer);
-      clearTimeout(revealTimer);
+      clearTimeout(flipCompleteTimer);
     };
-  }, [delay, onRevealComplete]);
+  }, [delay]);
+
+  // Auto-advance after card is revealed (if autoAdvanceDelay > 0)
+  useEffect(() => {
+    if (phase === 'revealed' && autoAdvanceDelay > 0) {
+      const advanceTimer = setTimeout(() => {
+        onRevealComplete();
+      }, autoAdvanceDelay);
+
+      return () => clearTimeout(advanceTimer);
+    }
+  }, [phase, autoAdvanceDelay, onRevealComplete]);
+
+  const handleClick = useCallback(() => {
+    if (phase === 'revealed') {
+      onCardClick?.();
+    }
+  }, [phase, onCardClick]);
 
   const categoryLabel = {
     head_coach: 'HEAD COACH',
@@ -36,7 +62,13 @@ export function CardRevealAnimation({ card, delay, onRevealComplete }: CardRevea
   }[card.revealCategory];
 
   return (
-    <div className="relative perspective-1000">
+    <div 
+      className={cn(
+        "relative perspective-1000",
+        phase === 'revealed' && "cursor-pointer"
+      )}
+      onClick={handleClick}
+    >
       {/* Category announcement */}
       {categoryLabel && phase === 'flipping' && (
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 z-50">
