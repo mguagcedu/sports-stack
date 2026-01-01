@@ -40,6 +40,7 @@ import Equipment from "./pages/Equipment";
 import Integrations from "./pages/Integrations";
 import Volunteering from "./pages/Volunteering";
 import FinancialLedger from "./pages/FinancialLedger";
+import SportsCards from "./pages/SportsCards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -140,6 +141,11 @@ const App = () => (
             <Route path="/teams/:id" element={
               <ProtectedRoute pageKey="teams">
                 <TeamDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/sports-cards" element={
+              <ProtectedRoute pageKey="teams">
+                <SportsCards />
               </ProtectedRoute>
             } />
             
