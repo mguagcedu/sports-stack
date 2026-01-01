@@ -11,6 +11,8 @@ export interface PackRevealProps {
   sportName: string;
   seasonLabel: string;
   schoolLogo?: string | null;
+  autoAdvance?: boolean; // Pack mode: auto-advances after delay (default true)
+  autoAdvanceDelay?: number; // Delay per card in ms (default 3500)
   onComplete: () => void;
   onClose: () => void;
 }
