@@ -80,9 +80,9 @@ export default function CoachDashboard() {
     return years;
   }, [currentSchoolYear]);
 
-  // Fetch teams filtered by season and year
+  // Fetch teams - don't filter by season/year if they're not set on teams yet
   const { data: teams, isLoading: teamsLoading } = useQuery({
-    queryKey: ['teams', selectedSportId, selectedSeason, selectedSchoolYear],
+    queryKey: ['coach-teams', selectedSportId, selectedSeason, selectedSchoolYear],
     queryFn: async () => {
       let query = supabase
         .from('teams')
@@ -93,12 +93,11 @@ export default function CoachDashboard() {
       if (selectedSportId) {
         query = query.eq('sport_id', selectedSportId);
       }
+      // Only filter by season/year if not "all" - teams may not have these set yet
       if (selectedSeason !== 'all') {
-        query = query.eq('season', selectedSeason);
+        query = query.or(`season.eq.${selectedSeason},season.is.null`);
       }
-      if (selectedSchoolYear) {
-        query = query.eq('school_year', selectedSchoolYear);
-      }
+      // Don't filter by school_year if teams don't have it set
       
       const { data, error } = await query;
       if (error) throw error;
@@ -115,14 +114,51 @@ export default function CoachDashboard() {
 
   const selectedTeam = teams?.find(t => t.id === selectedTeamId);
 
-  // Mock roster data - in production this would come from a roster table
-  const mockRoster = [
-    { id: '1', name: 'John Smith', number: 12, position: 'Guard', grade: '11', status: 'active' },
-    { id: '2', name: 'Mike Johnson', number: 23, position: 'Forward', grade: '12', status: 'active' },
-    { id: '3', name: 'Chris Davis', number: 5, position: 'Center', grade: '10', status: 'active' },
-    { id: '4', name: 'James Wilson', number: 15, position: 'Guard', grade: '11', status: 'injured' },
-    { id: '5', name: 'Robert Brown', number: 33, position: 'Forward', grade: '12', status: 'active' },
-  ];
+  // Fetch actual roster data from team_members table
+  const { data: rosterData = [], isLoading: rosterLoading } = useQuery({
+    queryKey: ['team-roster', selectedTeamId],
+    enabled: !!selectedTeamId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('id, user_id, role, jersey_number, position, is_captain, eligibility_status')
+        .eq('team_id', selectedTeamId!);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch profiles for roster members
+  const rosterUserIds = rosterData.map(m => m.user_id);
+  const { data: rosterProfiles = [] } = useQuery({
+    queryKey: ['roster-profiles', rosterUserIds],
+    enabled: rosterUserIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', rosterUserIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Build roster with profile data
+  const roster = useMemo(() => {
+    return rosterData
+      .filter(m => m.role === 'athlete')
+      .map(m => {
+        const profile = rosterProfiles.find(p => p.id === m.user_id);
+        return {
+          id: m.id,
+          name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown' : 'Unknown',
+          number: m.jersey_number ? parseInt(m.jersey_number) : null,
+          position: m.position || '-',
+          grade: '-',
+          status: m.eligibility_status || 'unknown',
+        };
+      });
+  }, [rosterData, rosterProfiles]);
 
   // Mock schedule data
   const mockSchedule = [
@@ -260,7 +296,7 @@ export default function CoachDashboard() {
                   <Users className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{selectedTeam ? mockRoster.length : '-'}</p>
+                  <p className="text-2xl font-bold">{selectedTeam ? roster.length : '-'}</p>
                   <p className="text-sm text-muted-foreground">Roster Size</p>
                 </div>
               </div>
@@ -274,7 +310,7 @@ export default function CoachDashboard() {
                   <Activity className="h-6 w-6 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{selectedTeam ? mockRoster.filter(r => r.status === 'active').length : '-'}</p>
+                  <p className="text-2xl font-bold">{selectedTeam ? roster.filter(r => r.status === 'cleared' || r.status === 'unknown').length : '-'}</p>
                   <p className="text-sm text-muted-foreground">Active Players</p>
                 </div>
               </div>
@@ -353,7 +389,13 @@ export default function CoachDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockRoster.map((player) => (
+                      {roster.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            No players on this roster yet. Add players to get started.
+                          </TableCell>
+                        </TableRow>
+                      ) : roster.map((player) => (
                         <TableRow key={player.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -368,7 +410,7 @@ export default function CoachDashboard() {
                           <TableCell>{player.grade}</TableCell>
                           <TableCell>
                             <Badge 
-                              variant={player.status === 'active' ? 'default' : 'destructive'}
+                              variant={player.status === 'cleared' ? 'default' : player.status === 'not_cleared' ? 'destructive' : 'secondary'}
                               className="capitalize"
                             >
                               {player.status}
