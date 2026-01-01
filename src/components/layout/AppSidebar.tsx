@@ -22,6 +22,7 @@ import {
   Package,
   HeartHandshake,
   DollarSign,
+  IdCard,
 } from 'lucide-react';
 import { NavLink as RouterNavLink, useNavigate } from 'react-router-dom';
 import {
@@ -61,6 +62,7 @@ const mainNavItems: NavItem[] = [
   { title: 'Dashboard', url: '/', icon: Home, pageKey: 'dashboard' },
   { title: 'Organizations', url: '/organizations', icon: Building2, pageKey: 'organizations' },
   { title: 'Teams', url: '/teams', icon: Users, pageKey: 'teams' },
+  { title: 'Sports Cards', url: '/sports-cards', icon: IdCard, pageKey: 'teams' },
   { title: 'Coach Dashboard', url: '/coach', icon: ClipboardList, pageKey: 'coach_dashboard' },
   { title: 'Parent Dashboard', url: '/parent', icon: UserCircle, pageKey: 'parent_dashboard' },
   { title: 'Athlete Dashboard', url: '/athlete', icon: Dumbbell, pageKey: 'athlete_dashboard' },
