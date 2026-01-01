@@ -330,6 +330,7 @@ export type Database = {
         Row: {
           away_team_id: string | null
           created_at: string | null
+          custom_season_label: string | null
           end_time: string | null
           event_type: string
           forms_provider:
@@ -342,6 +343,10 @@ export type Database = {
           max_capacity: number | null
           name: string
           organization_id: string
+          school_year: number | null
+          season: Database["public"]["Enums"]["sport_season_type"] | null
+          season_year_label: string | null
+          sport_key: string | null
           start_time: string
           ticket_price: number | null
           ticketing_provider:
@@ -355,6 +360,7 @@ export type Database = {
         Insert: {
           away_team_id?: string | null
           created_at?: string | null
+          custom_season_label?: string | null
           end_time?: string | null
           event_type: string
           forms_provider?:
@@ -367,6 +373,10 @@ export type Database = {
           max_capacity?: number | null
           name: string
           organization_id: string
+          school_year?: number | null
+          season?: Database["public"]["Enums"]["sport_season_type"] | null
+          season_year_label?: string | null
+          sport_key?: string | null
           start_time: string
           ticket_price?: number | null
           ticketing_provider?:
@@ -380,6 +390,7 @@ export type Database = {
         Update: {
           away_team_id?: string | null
           created_at?: string | null
+          custom_season_label?: string | null
           end_time?: string | null
           event_type?: string
           forms_provider?:
@@ -392,6 +403,10 @@ export type Database = {
           max_capacity?: number | null
           name?: string
           organization_id?: string
+          school_year?: number | null
+          season?: Database["public"]["Enums"]["sport_season_type"] | null
+          season_year_label?: string | null
+          sport_key?: string | null
           start_time?: string
           ticket_price?: number | null
           ticketing_provider?:
@@ -487,6 +502,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      governing_bodies: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_seeded: boolean | null
+          name: string
+          region_label: string | null
+          short_name: string | null
+          state_code: string | null
+          type: Database["public"]["Enums"]["governing_body_type"]
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_seeded?: boolean | null
+          name: string
+          region_label?: string | null
+          short_name?: string | null
+          state_code?: string | null
+          type?: Database["public"]["Enums"]["governing_body_type"]
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_seeded?: boolean | null
+          name?: string
+          region_label?: string | null
+          short_name?: string | null
+          state_code?: string | null
+          type?: Database["public"]["Enums"]["governing_body_type"]
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
       }
       impersonation_sessions: {
         Row: {
@@ -934,6 +991,45 @@ export type Database = {
           },
         ]
       }
+      school_governing_bodies: {
+        Row: {
+          created_at: string | null
+          governing_body_id: string
+          id: string
+          is_primary: boolean | null
+          school_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          governing_body_id: string
+          id?: string
+          is_primary?: boolean | null
+          school_id: string
+        }
+        Update: {
+          created_at?: string | null
+          governing_body_id?: string
+          id?: string
+          is_primary?: boolean | null
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_governing_bodies_governing_body_id_fkey"
+            columns: ["governing_body_id"]
+            isOneToOne: false
+            referencedRelation: "governing_bodies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_governing_bodies_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           accent_color: string | null
@@ -959,6 +1055,7 @@ export type Database = {
           operational_status: string | null
           phone: string | null
           primary_color: string | null
+          primary_governing_body_id: string | null
           school_type: string | null
           school_year: string | null
           secondary_color: string | null
@@ -996,6 +1093,7 @@ export type Database = {
           operational_status?: string | null
           phone?: string | null
           primary_color?: string | null
+          primary_governing_body_id?: string | null
           school_type?: string | null
           school_year?: string | null
           secondary_color?: string | null
@@ -1033,6 +1131,7 @@ export type Database = {
           operational_status?: string | null
           phone?: string | null
           primary_color?: string | null
+          primary_governing_body_id?: string | null
           school_type?: string | null
           school_year?: string | null
           secondary_color?: string | null
@@ -1052,6 +1151,13 @@ export type Database = {
             columns: ["district_id"]
             isOneToOne: false
             referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schools_primary_governing_body_id_fkey"
+            columns: ["primary_governing_body_id"]
+            isOneToOne: false
+            referencedRelation: "governing_bodies"
             referencedColumns: ["id"]
           },
         ]
@@ -1089,9 +1195,51 @@ export type Database = {
         }
         Relationships: []
       }
-      sport_types: {
+      sport_season_defaults: {
         Row: {
           created_at: string | null
+          default_season: Database["public"]["Enums"]["sport_season_type"]
+          governing_body_id: string | null
+          id: string
+          sport_key: string
+          state_code: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_season: Database["public"]["Enums"]["sport_season_type"]
+          governing_body_id?: string | null
+          id?: string
+          sport_key: string
+          state_code: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_season?: Database["public"]["Enums"]["sport_season_type"]
+          governing_body_id?: string | null
+          id?: string
+          sport_key?: string
+          state_code?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sport_season_defaults_governing_body_id_fkey"
+            columns: ["governing_body_id"]
+            isOneToOne: false
+            referencedRelation: "governing_bodies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sport_types: {
+        Row: {
+          allow_override: boolean | null
+          created_at: string | null
+          default_season_national:
+            | Database["public"]["Enums"]["sport_season_type"]
+            | null
           format: string
           gender: string
           image_url: string | null
@@ -1104,7 +1252,11 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allow_override?: boolean | null
           created_at?: string | null
+          default_season_national?:
+            | Database["public"]["Enums"]["sport_season_type"]
+            | null
           format: string
           gender: string
           image_url?: string | null
@@ -1117,7 +1269,11 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allow_override?: boolean | null
           created_at?: string | null
+          default_season_national?:
+            | Database["public"]["Enums"]["sport_season_type"]
+            | null
           format?: string
           gender?: string
           image_url?: string | null
@@ -1397,6 +1553,7 @@ export type Database = {
       teams: {
         Row: {
           created_at: string | null
+          custom_season_label: string | null
           gender: string | null
           id: string
           is_active: boolean | null
@@ -1405,12 +1562,17 @@ export type Database = {
           name: string
           organization_id: string | null
           school_id: string | null
+          school_year: number | null
+          season: Database["public"]["Enums"]["sport_season_type"] | null
           season_id: string | null
+          season_year_label: string | null
           sport_id: string | null
+          sport_key: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          custom_season_label?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean | null
@@ -1419,12 +1581,17 @@ export type Database = {
           name: string
           organization_id?: string | null
           school_id?: string | null
+          school_year?: number | null
+          season?: Database["public"]["Enums"]["sport_season_type"] | null
           season_id?: string | null
+          season_year_label?: string | null
           sport_id?: string | null
+          sport_key?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          custom_season_label?: string | null
           gender?: string | null
           id?: string
           is_active?: boolean | null
@@ -1433,8 +1600,12 @@ export type Database = {
           name?: string
           organization_id?: string | null
           school_id?: string | null
+          school_year?: number | null
+          season?: Database["public"]["Enums"]["sport_season_type"] | null
           season_id?: string | null
+          season_year_label?: string | null
           sport_id?: string | null
+          sport_key?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1821,12 +1992,30 @@ export type Database = {
         | "finance_clerk"
       eligibility_status_type: "unknown" | "pending" | "cleared" | "not_cleared"
       forms_provider_type: "none" | "finalforms" | "other"
+      governing_body_type:
+        | "state_primary"
+        | "state_private"
+        | "city_public"
+        | "independent_schools"
+        | "prep_conference"
+        | "charter"
+        | "national"
+        | "multi_state"
+        | "other"
       organization_type:
         | "school"
         | "district"
         | "league"
         | "club"
         | "youth_organization"
+      sport_season_type:
+        | "fall"
+        | "winter"
+        | "spring"
+        | "summer"
+        | "year_round"
+        | "varies"
+        | "custom"
       subscription_tier:
         | "free"
         | "starter"
@@ -1988,12 +2177,32 @@ export const Constants = {
       ],
       eligibility_status_type: ["unknown", "pending", "cleared", "not_cleared"],
       forms_provider_type: ["none", "finalforms", "other"],
+      governing_body_type: [
+        "state_primary",
+        "state_private",
+        "city_public",
+        "independent_schools",
+        "prep_conference",
+        "charter",
+        "national",
+        "multi_state",
+        "other",
+      ],
       organization_type: [
         "school",
         "district",
         "league",
         "club",
         "youth_organization",
+      ],
+      sport_season_type: [
+        "fall",
+        "winter",
+        "spring",
+        "summer",
+        "year_round",
+        "varies",
+        "custom",
       ],
       subscription_tier: [
         "free",
