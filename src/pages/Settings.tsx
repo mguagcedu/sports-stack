@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProfilePhotoUploader } from "@/components/profile/ProfilePhotoUploader";
+import { SessionManager } from "@/components/security/SessionManager";
 import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
@@ -27,7 +28,8 @@ import {
   Link as LinkIcon,
   Key,
   Camera,
-  IdCard
+  IdCard,
+  Monitor
 } from "lucide-react";
 
 const TIMEZONES = [
