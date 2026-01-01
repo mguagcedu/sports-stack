@@ -321,6 +321,45 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_definitions: {
+        Row: {
+          badge_key: string
+          category: string | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          icon: string | null
+          id: string
+          is_assignable: boolean | null
+          is_auto_awarded: boolean | null
+          sport_code: string | null
+        }
+        Insert: {
+          badge_key: string
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          icon?: string | null
+          id?: string
+          is_assignable?: boolean | null
+          is_auto_awarded?: boolean | null
+          sport_code?: string | null
+        }
+        Update: {
+          badge_key?: string
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          icon?: string | null
+          id?: string
+          is_assignable?: boolean | null
+          is_auto_awarded?: boolean | null
+          sport_code?: string | null
+        }
+        Relationships: []
+      }
       compliance_events: {
         Row: {
           affected_user_id: string | null
@@ -1953,6 +1992,108 @@ export type Database = {
           },
         ]
       }
+      game_day_roster_entries: {
+        Row: {
+          created_at: string | null
+          depth_order: number | null
+          game_day_roster_id: string
+          id: string
+          is_starter: boolean | null
+          line_group_override: string | null
+          notes: string | null
+          position_override: string | null
+          status: string | null
+          team_member_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          depth_order?: number | null
+          game_day_roster_id: string
+          id?: string
+          is_starter?: boolean | null
+          line_group_override?: string | null
+          notes?: string | null
+          position_override?: string | null
+          status?: string | null
+          team_member_id: string
+        }
+        Update: {
+          created_at?: string | null
+          depth_order?: number | null
+          game_day_roster_id?: string
+          id?: string
+          is_starter?: boolean | null
+          line_group_override?: string | null
+          notes?: string | null
+          position_override?: string | null
+          status?: string | null
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_day_roster_entries_game_day_roster_id_fkey"
+            columns: ["game_day_roster_id"]
+            isOneToOne: false
+            referencedRelation: "game_day_rosters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_day_roster_entries_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_day_rosters: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          notes: string | null
+          published_at: string | null
+          published_by_user_id: string | null
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          notes?: string | null
+          published_at?: string | null
+          published_by_user_id?: string | null
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          notes?: string | null
+          published_at?: string | null
+          published_by_user_id?: string | null
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_day_rosters_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_day_rosters_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geo_fence_settings: {
         Row: {
           away_game_auto_complete_hours: number
@@ -2190,8 +2331,10 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by_user_id: string | null
+          description: string | null
           display_name: string
           id: string
+          is_custom: boolean | null
           is_default: boolean | null
           line_key: string
           season_id: string | null
@@ -2203,8 +2346,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by_user_id?: string | null
+          description?: string | null
           display_name: string
           id?: string
+          is_custom?: boolean | null
           is_default?: boolean | null
           line_key: string
           season_id?: string | null
@@ -2216,8 +2361,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by_user_id?: string | null
+          description?: string | null
           display_name?: string
           id?: string
+          is_custom?: boolean | null
           is_default?: boolean | null
           line_key?: string
           season_id?: string | null
@@ -2542,6 +2689,204 @@ export type Database = {
           },
         ]
       }
+      player_badges: {
+        Row: {
+          awarded_at: string | null
+          awarded_by_user_id: string | null
+          badge_definition_id: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          team_member_id: string
+        }
+        Insert: {
+          awarded_at?: string | null
+          awarded_by_user_id?: string | null
+          badge_definition_id: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          team_member_id: string
+        }
+        Update: {
+          awarded_at?: string | null
+          awarded_by_user_id?: string | null
+          badge_definition_id?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_badges_badge_definition_id_fkey"
+            columns: ["badge_definition_id"]
+            isOneToOne: false
+            referencedRelation: "badge_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_badges_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_disciplines: {
+        Row: {
+          bench_duration: string | null
+          consequence_type: string | null
+          created_at: string | null
+          description: string
+          discipline_type: string
+          games_suspended: number | null
+          id: string
+          incident_date: string
+          issued_by_user_id: string | null
+          notes: string | null
+          notify_parents: boolean | null
+          notify_player: boolean | null
+          notify_team: boolean | null
+          served_date: string | null
+          severity: string
+          status: string
+          team_id: string
+          team_member_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          bench_duration?: string | null
+          consequence_type?: string | null
+          created_at?: string | null
+          description: string
+          discipline_type: string
+          games_suspended?: number | null
+          id?: string
+          incident_date?: string
+          issued_by_user_id?: string | null
+          notes?: string | null
+          notify_parents?: boolean | null
+          notify_player?: boolean | null
+          notify_team?: boolean | null
+          served_date?: string | null
+          severity?: string
+          status?: string
+          team_id: string
+          team_member_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          bench_duration?: string | null
+          consequence_type?: string | null
+          created_at?: string | null
+          description?: string
+          discipline_type?: string
+          games_suspended?: number | null
+          id?: string
+          incident_date?: string
+          issued_by_user_id?: string | null
+          notes?: string | null
+          notify_parents?: boolean | null
+          notify_player?: boolean | null
+          notify_team?: boolean | null
+          served_date?: string | null
+          severity?: string
+          status?: string
+          team_id?: string
+          team_member_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_disciplines_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_disciplines_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_injuries: {
+        Row: {
+          actual_return_date: string | null
+          body_part: string | null
+          cleared_by_user_id: string | null
+          created_at: string | null
+          estimated_return_date: string | null
+          id: string
+          injury_date: string
+          injury_description: string | null
+          injury_type: string
+          is_on_ir: boolean | null
+          notes: string | null
+          reported_by_user_id: string | null
+          status: string
+          team_id: string
+          team_member_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_return_date?: string | null
+          body_part?: string | null
+          cleared_by_user_id?: string | null
+          created_at?: string | null
+          estimated_return_date?: string | null
+          id?: string
+          injury_date?: string
+          injury_description?: string | null
+          injury_type: string
+          is_on_ir?: boolean | null
+          notes?: string | null
+          reported_by_user_id?: string | null
+          status?: string
+          team_id: string
+          team_member_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_return_date?: string | null
+          body_part?: string | null
+          cleared_by_user_id?: string | null
+          created_at?: string | null
+          estimated_return_date?: string | null
+          id?: string
+          injury_date?: string
+          injury_description?: string | null
+          injury_type?: string
+          is_on_ir?: boolean | null
+          notes?: string | null
+          reported_by_user_id?: string | null
+          status?: string
+          team_id?: string
+          team_member_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_injuries_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_injuries_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_practice_notes: {
         Row: {
           created_at: string
@@ -2674,6 +3019,8 @@ export type Database = {
         Row: {
           avatar_updated_at: string | null
           avatar_url: string | null
+          birth_date: string | null
+          birthday_notification_enabled: boolean | null
           card_photo_url: string | null
           created_at: string
           email: string | null
@@ -2687,6 +3034,8 @@ export type Database = {
         Insert: {
           avatar_updated_at?: string | null
           avatar_url?: string | null
+          birth_date?: string | null
+          birthday_notification_enabled?: boolean | null
           card_photo_url?: string | null
           created_at?: string
           email?: string | null
@@ -2700,6 +3049,8 @@ export type Database = {
         Update: {
           avatar_updated_at?: string | null
           avatar_url?: string | null
+          birth_date?: string | null
+          birthday_notification_enabled?: boolean | null
           card_photo_url?: string | null
           created_at?: string
           email?: string | null
@@ -3068,6 +3419,33 @@ export type Database = {
           name?: string
           start_date?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sport_bench_rules: {
+        Row: {
+          bench_duration_key: string
+          created_at: string | null
+          display_name: string
+          id: string
+          sort_order: number | null
+          sport_code: string
+        }
+        Insert: {
+          bench_duration_key: string
+          created_at?: string | null
+          display_name: string
+          id?: string
+          sort_order?: number | null
+          sport_code: string
+        }
+        Update: {
+          bench_duration_key?: string
+          created_at?: string | null
+          display_name?: string
+          id?: string
+          sort_order?: number | null
+          sport_code?: string
         }
         Relationships: []
       }
@@ -3669,6 +4047,68 @@ export type Database = {
           },
           {
             foreignKeyName: "team_memberships_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_notifications: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_read: boolean | null
+          is_sent: boolean | null
+          message: string
+          notification_type: string
+          priority: string | null
+          read_at: string | null
+          recipient_role: string | null
+          recipient_user_id: string | null
+          reference_id: string | null
+          reference_type: string | null
+          team_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          message: string
+          notification_type: string
+          priority?: string | null
+          read_at?: string | null
+          recipient_role?: string | null
+          recipient_user_id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          team_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          message?: string
+          notification_type?: string
+          priority?: string | null
+          read_at?: string | null
+          recipient_role?: string | null
+          recipient_user_id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          team_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_notifications_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"

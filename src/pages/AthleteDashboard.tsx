@@ -11,16 +11,19 @@ import {
   Users,
   Clock,
   MapPin,
-  Activity,
   Target,
   Medal,
   IdCard,
   Star,
-  Package
+  Package,
+  FileText,
+  Ticket,
+  ExternalLink
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AccessRequestCard } from '@/components/access/AccessRequestCard';
+import { SportsCard } from '@/components/sports-cards';
 
 export default function AthleteDashboard() {
   const { user } = useAuth();
@@ -52,10 +55,11 @@ export default function AthleteDashboard() {
         .select(`
           *,
           teams(
-            id, name, level, gender,
+            id, name, level, gender, sport_key, school_id,
             sports(name, icon),
             seasons(name),
-            organizations(name)
+            organizations(name),
+            schools(id, district_id, finalforms_enabled, finalforms_portal_url, gofan_enabled, gofan_school_url)
           )
         `)
         .eq('user_id', user.id)
@@ -66,6 +70,49 @@ export default function AthleteDashboard() {
     },
     enabled: !!user
   });
+
+  // Fetch athlete data for the first team
+  const firstTeam = myTeams?.[0];
+  const { data: athleteData } = useQuery({
+    queryKey: ['athlete-data', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('athletes')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
+  // Build card data for preview
+  const myCardData = firstTeam && profile ? {
+    id: firstTeam.id,
+    firstName: profile.first_name || 'Player',
+    lastName: profile.last_name || '',
+    photoUrl: profile.card_photo_url || profile.photo_url || profile.avatar_url || null,
+    teamName: firstTeam.teams?.name || 'Team',
+    sportKey: firstTeam.teams?.sport_key || '',
+    sportName: firstTeam.teams?.sports?.name || 'Sport',
+    seasonLabel: '2025-26',
+    jerseyNumber: firstTeam.jersey_number ? parseInt(firstTeam.jersey_number) : undefined,
+    positions: firstTeam.position ? [{ id: '1', position_key: firstTeam.position, display_name: firstTeam.position, is_primary: true }] : [],
+    lineGroups: [],
+    gradYear: athleteData?.grad_year || null,
+    height: athleteData?.height || null,
+    weight: athleteData?.weight || null,
+    role: 'player' as const,
+    badges: firstTeam.is_captain ? [{ key: 'captain', label: 'Captain' }] : [],
+    backgroundStyle: 'classic' as const,
+  } : null;
+
+  // Check for GoFan/FinalForms integrations
+  const schoolSettings = firstTeam?.teams?.schools;
+  const hasFinalForms = schoolSettings?.finalforms_enabled && schoolSettings?.finalforms_portal_url;
+  const hasGoFan = schoolSettings?.gofan_enabled && schoolSettings?.gofan_school_url;
 
   // Fetch athlete's ratings
   const { data: ratings } = useQuery({
@@ -317,22 +364,100 @@ export default function AthleteDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IdCard className="h-5 w-5 text-primary" />
-              Your Sports Cards
+              Your Sports Card
             </CardTitle>
-            <CardDescription>View and share your personalized trading cards</CardDescription>
+            <CardDescription>View and share your personalized trading card</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground">
-                {myTeams?.length || 0} card{myTeams?.length !== 1 ? 's' : ''} available
-              </p>
-              <Button onClick={() => navigate('/sports-cards')}>
-                <IdCard className="h-4 w-4 mr-2" />
-                View Cards
-              </Button>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              {/* Card Preview */}
+              {myCardData && (
+                <div 
+                  className="cursor-pointer transform hover:scale-105 transition-transform"
+                  onClick={() => navigate('/sports-cards')}
+                >
+                  <SportsCard data={myCardData} size="small" showDetails={false} />
+                </div>
+              )}
+              <div className="flex-1 space-y-3">
+                <p className="text-muted-foreground">
+                  {myTeams?.length || 0} card{myTeams?.length !== 1 ? 's' : ''} available
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={() => navigate('/sports-cards')}>
+                    <IdCard className="h-4 w-4 mr-2" />
+                    View All Cards
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate('/settings')}>
+                    Edit Card Photo
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Compliance & Ticketing */}
+        {(hasFinalForms || hasGoFan) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Forms & Tickets
+              </CardTitle>
+              <CardDescription>Quick access to eligibility and ticketing</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {hasFinalForms && (
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex-col items-start gap-2"
+                    asChild
+                  >
+                    <a 
+                      href={schoolSettings.finalforms_portal_url!} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      <div className="flex items-center gap-2 text-primary">
+                        <FileText className="h-5 w-5" />
+                        <span className="font-semibold">Forms & Eligibility</span>
+                        <ExternalLink className="h-4 w-4 ml-auto" />
+                      </div>
+                      <span className="text-sm text-muted-foreground font-normal">
+                        Complete required forms on FinalForms
+                      </span>
+                    </a>
+                  </Button>
+                )}
+
+                {hasGoFan && (
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex-col items-start gap-2"
+                    asChild
+                  >
+                    <a 
+                      href={schoolSettings.gofan_school_url!} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      <div className="flex items-center gap-2 text-primary">
+                        <Ticket className="h-5 w-5" />
+                        <span className="font-semibold">Buy Tickets</span>
+                        <ExternalLink className="h-4 w-4 ml-auto" />
+                      </div>
+                      <span className="text-sm text-muted-foreground font-normal">
+                        Purchase game tickets on GoFan
+                      </span>
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Achievements */}
         <Card>
