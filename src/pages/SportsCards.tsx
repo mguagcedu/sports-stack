@@ -6,12 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { SportsCard, TeamView, PackRevealModal, RevealCard, TeamMemberForLayout, SportsCardData } from '@/components/sports-cards';
-import { Play, Users, CreditCard } from 'lucide-react';
+import { CardEditDialog } from '@/components/sports-cards/CardEditDialog';
+import { Play, Users, CreditCard, Eye, Edit } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SportsCards() {
+  const { user } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'team'>('cards');
   const [showReveal, setShowReveal] = useState(false);
+  const [editingCard, setEditingCard] = useState<{ card: SportsCardData; memberId: string } | null>(null);
+  const [viewingMyCard, setViewingMyCard] = useState(false);
 
   // Fetch teams
   const { data: teams = [] } = useQuery({
@@ -23,6 +28,37 @@ export default function SportsCards() {
         .order('name');
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Fetch current user's team membership to find "my card"
+  const { data: myMembership } = useQuery({
+    queryKey: ['my-team-membership', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('id, team_id, jersey_number, position, role, is_captain, teams(id, name, sport_key)')
+        .eq('user_id', user!.id)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch user's profile for my card
+  const { data: myProfile } = useQuery({
+    queryKey: ['my-profile', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user!.id)
+        .single();
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -48,7 +84,7 @@ export default function SportsCards() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, avatar_url')
+        .select('id, first_name, last_name, avatar_url, photo_url, card_photo_url')
         .in('id', userIds);
       if (error) throw error;
       return data || [];
@@ -72,6 +108,39 @@ export default function SportsCards() {
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
 
+  // Build "my card" data
+  const myCardData: SportsCardData | null = useMemo(() => {
+    if (!myMembership || !myProfile) return null;
+    const team = myMembership.teams;
+    if (!team) return null;
+
+    return {
+      id: myMembership.id,
+      firstName: myProfile.first_name || 'Unknown',
+      lastName: myProfile.last_name || '',
+      photoUrl: myProfile.card_photo_url || myProfile.photo_url || myProfile.avatar_url || null,
+      teamName: team.name,
+      sportKey: team.sport_key || '',
+      sportName: team.sport_key?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Sport',
+      seasonLabel: '2025-26',
+      jerseyNumber: myMembership.jersey_number ? parseInt(myMembership.jersey_number) : undefined,
+      positions: myMembership.position ? [{
+        id: myMembership.id,
+        position_key: myMembership.position,
+        display_name: myMembership.position,
+        is_primary: true,
+        depth_order: 1,
+      }] : [],
+      lineGroups: [],
+      gradYear: null,
+      height: null,
+      weight: null,
+      role: myMembership.role === 'athlete' ? 'player' : myMembership.role === 'coach' ? 'coach' : 'staff',
+      badges: myMembership.is_captain ? [{ key: 'captain', label: 'Captain' }] : [],
+      backgroundStyle: 'classic' as const,
+    };
+  }, [myMembership, myProfile]);
+
   // Build card data for each team member
   const cardData: SportsCardData[] = useMemo(() => {
     if (!selectedTeam) return [];
@@ -80,7 +149,7 @@ export default function SportsCards() {
       const profile = profiles.find(p => p.id === m.user_id);
       const firstName = profile?.first_name || 'Unknown';
       const lastName = profile?.last_name || '';
-      const photoUrl = profile?.avatar_url || null;
+      const photoUrl = profile?.card_photo_url || profile?.photo_url || profile?.avatar_url || null;
 
       // Build position from the team_members.position field
       const memberPositions = m.position ? [{
@@ -135,59 +204,74 @@ export default function SportsCards() {
     }));
   }, [cardData]);
 
+  const handleCardClick = (card: SportsCardData) => {
+    setEditingCard({ card, memberId: card.id });
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Sports Cards</h1>
             <p className="text-muted-foreground">View and manage athlete cards for your teams</p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <Select value={selectedTeamId || ''} onValueChange={setSelectedTeamId}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Select a team" />
-              </SelectTrigger>
-              <SelectContent>
-                {teams.map(team => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {selectedTeamId && (
-              <>
-                <div className="flex rounded-lg border overflow-hidden">
-                  <Button
-                    variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('cards')}
-                    className="rounded-none"
-                  >
-                    <CreditCard className="h-4 w-4 mr-1" />
-                    Cards
-                  </Button>
-                  <Button
-                    variant={viewMode === 'team' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('team')}
-                    className="rounded-none"
-                  >
-                    <Users className="h-4 w-4 mr-1" />
-                    Team View
-                  </Button>
-                </div>
-
-                <Button onClick={() => setShowReveal(true)}>
-                  <Play className="h-4 w-4 mr-2" />
-                  Reveal Cards
-                </Button>
-              </>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Quick actions for my card */}
+            {myCardData && (
+              <Button variant="outline" onClick={() => setViewingMyCard(true)}>
+                <Eye className="h-4 w-4 mr-2" />
+                View My Card
+              </Button>
             )}
           </div>
+        </div>
+
+        {/* Team selector and view toggle */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <Select value={selectedTeamId || ''} onValueChange={setSelectedTeamId}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Select a team" />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map(team => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {selectedTeamId && (
+            <>
+              <div className="flex rounded-lg border overflow-hidden">
+                <Button
+                  variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('cards')}
+                  className="rounded-none"
+                >
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  Cards
+                </Button>
+                <Button
+                  variant={viewMode === 'team' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('team')}
+                  className="rounded-none"
+                >
+                  <Users className="h-4 w-4 mr-1" />
+                  Team View
+                </Button>
+              </div>
+
+              <Button onClick={() => setShowReveal(true)}>
+                <Play className="h-4 w-4 mr-2" />
+                Reveal Cards
+              </Button>
+            </>
+          )}
         </div>
 
         {!selectedTeamId ? (
@@ -215,7 +299,19 @@ export default function SportsCards() {
               </Card>
             ) : (
               cardData.map(card => (
-                <SportsCard key={card.id} data={card} size="medium" />
+                <div 
+                  key={card.id} 
+                  className="cursor-pointer group relative"
+                  onClick={() => handleCardClick(card)}
+                >
+                  <SportsCard data={card} size="medium" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                    <Button size="sm" variant="secondary">
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                </div>
               ))
             )}
           </div>
@@ -249,6 +345,24 @@ export default function SportsCards() {
           seasonLabel="2025-26"
           onComplete={() => setShowReveal(false)}
           onClose={() => setShowReveal(false)}
+        />
+      )}
+
+      {/* Card Edit Dialog */}
+      <CardEditDialog
+        card={editingCard?.card || null}
+        memberId={editingCard?.memberId || null}
+        open={!!editingCard}
+        onOpenChange={(open) => !open && setEditingCard(null)}
+      />
+
+      {/* View My Card Dialog */}
+      {myCardData && (
+        <CardEditDialog
+          card={myCardData}
+          memberId={myCardData.id}
+          open={viewingMyCard}
+          onOpenChange={setViewingMyCard}
         />
       )}
     </DashboardLayout>

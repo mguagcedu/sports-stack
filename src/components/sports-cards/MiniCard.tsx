@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { User } from 'lucide-react';
 
@@ -13,7 +14,7 @@ interface MiniCardProps {
   className?: string;
 }
 
-export function MiniCard({
+export const MiniCard = forwardRef<HTMLDivElement, MiniCardProps>(({
   firstName,
   lastName,
   photoUrl,
@@ -23,9 +24,10 @@ export function MiniCard({
   onClick,
   isActive = false,
   className,
-}: MiniCardProps) {
+}, ref) => {
   return (
     <div
+      ref={ref}
       onClick={onClick}
       className={cn(
         'flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all',
@@ -80,4 +82,6 @@ export function MiniCard({
       </div>
     </div>
   );
-}
+});
+
+MiniCard.displayName = 'MiniCard';

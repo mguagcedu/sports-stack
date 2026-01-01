@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ProfilePhotoUploader } from "@/components/profile/ProfilePhotoUploader";
 import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
@@ -24,7 +25,9 @@ import {
   Globe,
   Package,
   Link as LinkIcon,
-  Key
+  Key,
+  Camera,
+  IdCard
 } from "lucide-react";
 
 const TIMEZONES = [
@@ -244,70 +247,107 @@ export default function Settings() {
 
           {/* Profile Tab */}
           <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your personal details</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="first_name">First Name</Label>
-                    <Input
-                      id="first_name"
-                      value={profileForm.first_name}
-                      onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Photo Column */}
+              <Card className="md:col-span-1">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Camera className="h-5 w-5" />
+                    Photos
+                  </CardTitle>
+                  <CardDescription>Profile and sports card photos</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex flex-col items-center p-4 border rounded-lg bg-muted/30">
+                    <ProfilePhotoUploader
+                      currentPhotoUrl={profile?.photo_url || profile?.avatar_url}
+                      type="profile"
+                      size="lg"
                     />
+                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                      Main profile picture
+                    </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="last_name">Last Name</Label>
-                    <Input
-                      id="last_name"
-                      value={profileForm.last_name}
-                      onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
+                  
+                  <div className="flex flex-col items-center p-4 border rounded-lg bg-muted/30">
+                    <ProfilePhotoUploader
+                      currentPhotoUrl={profile?.card_photo_url || profile?.photo_url || profile?.avatar_url}
+                      type="card"
+                      size="lg"
                     />
+                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                      Sports card photo
+                    </p>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" value={user?.email || ""} disabled />
-                  <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={profileForm.phone}
-                    onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <h3 className="font-medium mb-2">Your Roles</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {roles.length > 0 ? (
-                      roles.map((userRole, index) => (
-                        <Badge key={index} variant="secondary">
-                          {userRole.role.replace(/_/g, ' ')}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-muted-foreground text-sm">No roles assigned</span>
-                    )}
-                  </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <Button
-                  onClick={() => updateProfileMutation.mutate(profileForm)}
-                  disabled={updateProfileMutation.isPending}
-                >
-                  {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardContent>
-            </Card>
+              {/* Info Column */}
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Profile Information</CardTitle>
+                  <CardDescription>Update your personal details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="first_name">First Name</Label>
+                      <Input
+                        id="first_name"
+                        value={profileForm.first_name}
+                        onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="last_name">Last Name</Label>
+                      <Input
+                        id="last_name"
+                        value={profileForm.last_name}
+                        onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" value={user?.email || ""} disabled />
+                    <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <h3 className="font-medium mb-2">Your Roles</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {roles.length > 0 ? (
+                        roles.map((userRole, index) => (
+                          <Badge key={index} variant="secondary">
+                            {userRole.role.replace(/_/g, ' ')}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No roles assigned</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() => updateProfileMutation.mutate(profileForm)}
+                    disabled={updateProfileMutation.isPending}
+                  >
+                    {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Preferences Tab */}
