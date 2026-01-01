@@ -295,12 +295,31 @@ export function SportTypeSelector({
                           >
                             <CardContent className="p-3">
                               <div className="flex items-center gap-3">
-                                <div
-                                  className={cn(
-                                    "w-2 h-full min-h-[40px] rounded-full",
-                                    MATURITY_COLORS[sport.maturity]
-                                  )}
-                                />
+                                {/* Sport image or maturity indicator */}
+                                {sport.image_url ? (
+                                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                                    <img 
+                                      src={sport.image_url} 
+                                      alt={sport.sport_name}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center ${MATURITY_COLORS[sport.maturity]}"><span class="text-white text-xs font-bold">${sport.sport_name.charAt(0)}</span></div>`;
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div
+                                    className={cn(
+                                      "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                                      MATURITY_COLORS[sport.maturity]
+                                    )}
+                                  >
+                                    <span className="text-white text-sm font-bold">
+                                      {sport.sport_name.charAt(0)}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium truncate">

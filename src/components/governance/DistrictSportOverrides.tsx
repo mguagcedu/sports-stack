@@ -32,8 +32,9 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Plus, Pencil, Trash2, Search, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Shield, Plus, Pencil, Trash2, Search, CheckCircle2, XCircle, Loader2, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BulkDistrictOverrideEditor } from "./BulkDistrictOverrideEditor";
 
 interface DistrictSportOverridesProps {
   districtId: string;
@@ -223,10 +224,13 @@ export function DistrictSportOverrides({ districtId, stateCode, className }: Dis
               Customize sanctioning status for sports in this district
             </CardDescription>
           </div>
-          <Button size="sm" onClick={openAdd}>
-            <Plus className="h-4 w-4 mr-1" />
-            Add Override
-          </Button>
+          <div className="flex gap-2">
+            <BulkDistrictOverrideEditor districtId={districtId} stateCode={stateCode} />
+            <Button size="sm" onClick={openAdd}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Override
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
