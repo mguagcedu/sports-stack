@@ -18,7 +18,8 @@ import {
   EquipmentLabelGenerator, 
   EquipmentSizeManager, 
   EquipmentHistory,
-  EquipmentReturnDialog 
+  EquipmentReturnDialog,
+  EquipmentAccessManager
 } from '@/components/equipment';
 import { 
   Package, 
@@ -34,7 +35,8 @@ import {
   Camera,
   Printer,
   Ruler,
-  History
+  History,
+  Shield
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -72,6 +74,7 @@ export default function Equipment() {
   const [isSizeOpen, setIsSizeOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
+  const [isAccessOpen, setIsAccessOpen] = useState(false);
   const [scanMode, setScanMode] = useState<'search' | 'add' | 'checkout'>('search');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedCheckoutId, setSelectedCheckoutId] = useState<string | null>(null);
@@ -360,6 +363,11 @@ export default function Equipment() {
             <h1 className="text-2xl font-bold">Equipment Inventory</h1>
             <p className="text-muted-foreground">Track and manage equipment handouts</p>
           </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsAccessOpen(true)}>
+              <Shield className="mr-2 h-4 w-4" />
+              Access
+            </Button>
           <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -467,6 +475,7 @@ export default function Equipment() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Stats */}
@@ -905,6 +914,12 @@ export default function Equipment() {
           itemName={checkouts?.find(c => c.id === selectedCheckoutId)?.equipment_items?.name}
           checkoutCondition={checkouts?.find(c => c.id === selectedCheckoutId)?.condition_on_checkout || undefined}
           isPending={returnMutation.isPending}
+        />
+
+        {/* Access Manager */}
+        <EquipmentAccessManager
+          open={isAccessOpen}
+          onClose={() => setIsAccessOpen(false)}
         />
       </div>
     </DashboardLayout>

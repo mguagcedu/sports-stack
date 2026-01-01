@@ -276,6 +276,63 @@ export type Database = {
           },
         ]
       }
+      equipment_access_requests: {
+        Row: {
+          approved_by_user_id: string | null
+          created_at: string | null
+          id: string
+          justification: string | null
+          requested_role: string
+          reviewed_at: string | null
+          school_id: string | null
+          status: string
+          team_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_by_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          justification?: string | null
+          requested_role?: string
+          reviewed_at?: string | null
+          school_id?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_by_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          justification?: string | null
+          requested_role?: string
+          reviewed_at?: string | null
+          school_id?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_access_requests_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_access_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipment_audit_log: {
         Row: {
           action_description: string | null
@@ -481,6 +538,63 @@ export type Database = {
             columns: ["team_member_id"]
             isOneToOne: false
             referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_delegations: {
+        Row: {
+          created_at: string | null
+          delegated_by_user_id: string
+          delegation_type: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          revoked_at: string | null
+          revoked_by_user_id: string | null
+          school_id: string | null
+          team_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          delegated_by_user_id: string
+          delegation_type?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          revoked_at?: string | null
+          revoked_by_user_id?: string | null
+          school_id?: string | null
+          team_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          delegated_by_user_id?: string
+          delegation_type?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          revoked_at?: string | null
+          revoked_by_user_id?: string | null
+          school_id?: string | null
+          team_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_delegations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_delegations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -2108,6 +2222,66 @@ export type Database = {
           user_agent?: string | null
           user_id?: string
           width?: number | null
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          compact_mode: boolean | null
+          created_at: string | null
+          date_format: string | null
+          email_equipment: boolean | null
+          email_events: boolean | null
+          email_payments: boolean | null
+          email_registrations: boolean | null
+          email_team_updates: boolean | null
+          id: string
+          language: string | null
+          notifications_email: boolean | null
+          notifications_push: boolean | null
+          notifications_sms: boolean | null
+          theme: string | null
+          timezone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          compact_mode?: boolean | null
+          created_at?: string | null
+          date_format?: string | null
+          email_equipment?: boolean | null
+          email_events?: boolean | null
+          email_payments?: boolean | null
+          email_registrations?: boolean | null
+          email_team_updates?: boolean | null
+          id?: string
+          language?: string | null
+          notifications_email?: boolean | null
+          notifications_push?: boolean | null
+          notifications_sms?: boolean | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          compact_mode?: boolean | null
+          created_at?: string | null
+          date_format?: string | null
+          email_equipment?: boolean | null
+          email_events?: boolean | null
+          email_payments?: boolean | null
+          email_registrations?: boolean | null
+          email_team_updates?: boolean | null
+          id?: string
+          language?: string | null
+          notifications_email?: boolean | null
+          notifications_push?: boolean | null
+          notifications_sms?: boolean | null
+          theme?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
