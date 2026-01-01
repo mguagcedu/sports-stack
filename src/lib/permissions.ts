@@ -23,7 +23,8 @@ export type PageKey =
   | 'import'
   | 'validation'
   | 'approvals'
-  | 'integrations';
+  | 'integrations'
+  | 'equipment';
 
 // Feature access permissions
 export type FeatureKey = 
@@ -84,8 +85,9 @@ const PAGE_PERMISSIONS: Record<PageKey, AppRole[]> = {
   governance: ['superadmin', 'system_admin', 'district_owner', 'district_admin'],
   import: ['superadmin', 'system_admin'],
   validation: ['superadmin', 'system_admin'],
-  approvals: ['superadmin', 'system_admin', 'org_admin'],
+  approvals: ['superadmin', 'system_admin', 'org_admin', 'coach', 'athletic_director'],
   integrations: ['superadmin', 'system_admin', 'district_owner', 'district_admin', 'school_owner', 'school_admin'],
+  equipment: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'coach', 'assistant_coach', 'team_manager'],
 };
 
 // Feature permissions matrix

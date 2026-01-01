@@ -40,6 +40,7 @@ const PAGE_LABELS: Record<PageKey, string> = {
   validation: 'Validation',
   approvals: 'Role Approvals',
   integrations: 'Integrations',
+  equipment: 'Equipment',
 };
 
 const FEATURE_LABELS: Record<FeatureKey, string> = {
