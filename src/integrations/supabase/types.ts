@@ -2447,6 +2447,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_approve_equipment_requests: {
+        Args: { _team_id?: string; _user_id: string }
+        Returns: boolean
+      }
+      can_delegate_equipment_access: {
+        Args: { _team_id?: string; _user_id: string }
+        Returns: boolean
+      }
       get_org_features: { Args: { _org_id: string }; Returns: string[] }
       get_user_context: {
         Args: { _user_id: string }
@@ -2470,6 +2478,10 @@ export type Database = {
           _roles: Database["public"]["Enums"]["app_role"][]
           _user_id: string
         }
+        Returns: boolean
+      }
+      has_equipment_access: {
+        Args: { _team_id?: string; _user_id: string }
         Returns: boolean
       }
       has_feature: {
@@ -2525,6 +2537,10 @@ export type Database = {
         | "trainer"
         | "scorekeeper"
         | "finance_clerk"
+        | "head_coach"
+        | "equipment_manager"
+        | "student_manager"
+        | "student_equipment_manager"
       eligibility_status_type: "unknown" | "pending" | "cleared" | "not_cleared"
       forms_provider_type: "none" | "finalforms" | "other"
       governing_body_type:
@@ -2709,6 +2725,10 @@ export const Constants = {
         "trainer",
         "scorekeeper",
         "finance_clerk",
+        "head_coach",
+        "equipment_manager",
+        "student_manager",
+        "student_equipment_manager",
       ],
       eligibility_status_type: ["unknown", "pending", "cleared", "not_cleared"],
       forms_provider_type: ["none", "finalforms", "other"],

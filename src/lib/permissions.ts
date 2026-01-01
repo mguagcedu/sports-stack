@@ -58,26 +58,27 @@ const ROLE_HIERARCHY: Partial<Record<AppRole, AppRole[]>> = {
   district_admin: ['district_viewer'],
   school_owner: ['school_admin', 'school_viewer'],
   school_admin: ['school_viewer'],
-  org_admin: ['athletic_director'],
-  athletic_director: ['coach'],
+  athletic_director: ['head_coach', 'coach'],
+  head_coach: ['coach', 'assistant_coach', 'team_manager', 'equipment_manager'],
   coach: ['assistant_coach', 'team_manager'],
+  equipment_manager: ['student_equipment_manager'],
 };
 
 // Page permissions matrix
 const PAGE_PERMISSIONS: Record<PageKey, AppRole[]> = {
   dashboard: ['superadmin', 'system_admin', 'org_admin', 'district_owner', 'district_admin', 'school_owner', 'school_admin', 'athletic_director'],
-  coach_dashboard: ['coach', 'assistant_coach', 'team_manager', 'trainer', 'scorekeeper'],
+  coach_dashboard: ['head_coach', 'coach', 'assistant_coach', 'team_manager', 'trainer', 'scorekeeper'],
   parent_dashboard: ['parent', 'guardian'],
   athlete_dashboard: ['athlete'],
   schools: ['superadmin', 'system_admin', 'district_owner', 'district_admin', 'district_viewer'],
   districts: ['superadmin', 'system_admin'],
   organizations: ['superadmin', 'system_admin', 'org_admin', 'district_owner', 'district_admin'],
-  teams: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'coach', 'assistant_coach', 'team_manager', 'school_admin'],
+  teams: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'head_coach', 'coach', 'assistant_coach', 'team_manager', 'school_admin'],
   users: ['superadmin', 'system_admin', 'org_admin'],
   sports: ['superadmin', 'system_admin'],
   seasons: ['superadmin', 'system_admin', 'org_admin'],
-  registrations: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'registrar', 'coach'],
-  events: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'coach', 'team_manager', 'gate_staff'],
+  registrations: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'registrar', 'head_coach', 'coach'],
+  events: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'head_coach', 'coach', 'team_manager', 'gate_staff'],
   payments: ['superadmin', 'system_admin', 'org_admin', 'finance_admin', 'finance_clerk'],
   reports: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'finance_admin'],
   audit_logs: ['superadmin', 'system_admin'],
@@ -85,9 +86,9 @@ const PAGE_PERMISSIONS: Record<PageKey, AppRole[]> = {
   governance: ['superadmin', 'system_admin', 'district_owner', 'district_admin'],
   import: ['superadmin', 'system_admin'],
   validation: ['superadmin', 'system_admin'],
-  approvals: ['superadmin', 'system_admin', 'org_admin', 'coach', 'athletic_director'],
+  approvals: ['superadmin', 'system_admin', 'org_admin', 'head_coach', 'coach', 'athletic_director', 'equipment_manager'],
   integrations: ['superadmin', 'system_admin', 'district_owner', 'district_admin', 'school_owner', 'school_admin'],
-  equipment: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'coach', 'assistant_coach', 'team_manager'],
+  equipment: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'head_coach', 'coach', 'assistant_coach', 'team_manager', 'equipment_manager', 'student_manager', 'student_equipment_manager'],
 };
 
 // Feature permissions matrix
@@ -97,9 +98,9 @@ const FEATURE_PERMISSIONS: Record<FeatureKey, AppRole[]> = {
   manage_schools: ['superadmin', 'system_admin', 'district_owner', 'district_admin'],
   manage_districts: ['superadmin', 'system_admin'],
   manage_organizations: ['superadmin', 'system_admin', 'org_admin'],
-  manage_teams: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'coach'],
-  manage_rosters: ['coach', 'assistant_coach', 'team_manager', 'athletic_director'],
-  manage_events: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'coach'],
+  manage_teams: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'head_coach', 'coach'],
+  manage_rosters: ['head_coach', 'coach', 'assistant_coach', 'team_manager', 'athletic_director'],
+  manage_events: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'head_coach', 'coach'],
   manage_registrations: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'registrar'],
   view_payments: ['superadmin', 'system_admin', 'org_admin', 'finance_admin', 'finance_clerk'],
   manage_payments: ['superadmin', 'system_admin', 'finance_admin'],
@@ -167,8 +168,13 @@ export function getDefaultDashboard(role: AppRole | null): string {
   }
   
   // Coach roles
-  if (['coach', 'assistant_coach', 'team_manager', 'trainer', 'scorekeeper'].includes(role)) {
+  if (['head_coach', 'coach', 'assistant_coach', 'team_manager', 'trainer', 'scorekeeper'].includes(role)) {
     return '/coach';
+  }
+  
+  // Equipment roles
+  if (['equipment_manager', 'student_manager', 'student_equipment_manager'].includes(role)) {
+    return '/equipment';
   }
   
   // Parent roles

@@ -47,9 +47,13 @@ const roleLabels: Record<AppRole, string> = {
   system_admin: 'System Admin',
   org_admin: 'Organization Admin',
   athletic_director: 'Athletic Director',
+  head_coach: 'Head Coach',
   coach: 'Coach',
   assistant_coach: 'Assistant Coach',
   team_manager: 'Team Manager',
+  equipment_manager: 'Equipment Manager',
+  student_manager: 'Student Manager',
+  student_equipment_manager: 'Student Equipment Manager',
   parent: 'Parent',
   athlete: 'Athlete',
   guardian: 'Guardian',
@@ -72,7 +76,8 @@ const roleLabels: Record<AppRole, string> = {
 const ALL_ROLES: AppRole[] = [
   'superadmin', 'system_admin', 'org_admin', 'district_owner', 'district_admin', 
   'district_viewer', 'school_owner', 'school_admin', 'school_viewer', 'athletic_director',
-  'coach', 'assistant_coach', 'team_manager', 'trainer', 'scorekeeper', 'parent',
+  'head_coach', 'coach', 'assistant_coach', 'team_manager', 'equipment_manager',
+  'student_manager', 'student_equipment_manager', 'trainer', 'scorekeeper', 'parent',
   'guardian', 'athlete', 'registrar', 'finance_admin', 'finance_clerk', 'gate_staff', 'viewer'
 ];
 
