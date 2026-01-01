@@ -2986,6 +2986,54 @@ export type Database = {
           },
         ]
       }
+      player_praises: {
+        Row: {
+          created_at: string | null
+          given_by_user_id: string | null
+          id: string
+          is_public: boolean | null
+          notes: string | null
+          praise_type: string
+          team_id: string
+          team_member_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          given_by_user_id?: string | null
+          id?: string
+          is_public?: boolean | null
+          notes?: string | null
+          praise_type: string
+          team_id: string
+          team_member_id: string
+        }
+        Update: {
+          created_at?: string | null
+          given_by_user_id?: string | null
+          id?: string
+          is_public?: boolean | null
+          notes?: string | null
+          praise_type?: string
+          team_id?: string
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_praises_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_praises_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_ratings: {
         Row: {
           areas_for_improvement: string | null

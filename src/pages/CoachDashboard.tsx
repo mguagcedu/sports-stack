@@ -31,7 +31,7 @@ import {
   Heart,
   Cake
 } from 'lucide-react';
-import { InjuryManager, DisciplineManager } from '@/components/roster';
+import { InjuryManager, DisciplineManager, PraiseManager } from '@/components/roster';
 import { GameDayRosterManager } from '@/components/game-day';
 import { format, isSameDay, addDays } from 'date-fns';
 
@@ -410,6 +410,10 @@ export default function CoachDashboard() {
                 <AlertTriangle className="h-4 w-4" />
                 Discipline
               </TabsTrigger>
+              <TabsTrigger value="praise" className="gap-2">
+                <Star className="h-4 w-4" />
+                Praise
+              </TabsTrigger>
               <TabsTrigger value="birthdays" className="gap-2">
                 <Cake className="h-4 w-4" />
                 Birthdays
@@ -564,6 +568,10 @@ export default function CoachDashboard() {
 
             <TabsContent value="discipline">
               <DisciplineManager teamId={selectedTeamId} sportCode="general" />
+            </TabsContent>
+
+            <TabsContent value="praise">
+              <PraiseManager teamId={selectedTeamId} />
             </TabsContent>
 
             <TabsContent value="birthdays">
