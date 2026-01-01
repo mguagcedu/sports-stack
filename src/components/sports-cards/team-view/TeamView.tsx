@@ -42,7 +42,7 @@ export function TeamView({
 }: TeamViewProps) {
   const queryClient = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeSide, setActiveSide] = useState<'offense' | 'defense'>('offense');
+  const [activeSide, setActiveSide] = useState<'offense' | 'defense' | 'special_teams'>('offense');
   const [state, setState] = useState<TeamViewState>({
     selectedTemplateId: null,
     selectedLineGroupId: null,
@@ -58,6 +58,7 @@ export function TeamView({
   // Track assignments per side
   const [offenseAssignments, setOffenseAssignments] = useState<SlotAssignment[]>([]);
   const [defenseAssignments, setDefenseAssignments] = useState<SlotAssignment[]>([]);
+  const [specialTeamsAssignments, setSpecialTeamsAssignments] = useState<SlotAssignment[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Get available templates for this sport
@@ -68,10 +69,20 @@ export function TeamView({
     templates.filter(t => t.side === 'offense' || !t.side), [templates]);
   const defenseTemplates = useMemo(() => 
     templates.filter(t => t.side === 'defense' || !t.side), [templates]);
+  const specialTeamsTemplates = useMemo(() => 
+    templates.filter(t => t.side === 'special_teams' || !t.side), [templates]);
 
   // Get current side's templates
-  const currentTemplates = activeSide === 'offense' ? offenseTemplates : defenseTemplates;
-  const currentAssignments = activeSide === 'offense' ? offenseAssignments : defenseAssignments;
+  const currentTemplates = activeSide === 'offense' 
+    ? offenseTemplates 
+    : activeSide === 'defense' 
+    ? defenseTemplates 
+    : specialTeamsTemplates;
+  const currentAssignments = activeSide === 'offense' 
+    ? offenseAssignments 
+    : activeSide === 'defense' 
+    ? defenseAssignments 
+    : specialTeamsAssignments;
   
   // Get the currently selected template
   const selectedTemplate = useMemo(() => {
@@ -117,7 +128,11 @@ export function TeamView({
 
   // Handle drag-and-drop
   const handleSlotDrop = useCallback((slotKey: string, memberId: string) => {
-    const setter = activeSide === 'offense' ? setOffenseAssignments : setDefenseAssignments;
+    const setter = activeSide === 'offense' 
+      ? setOffenseAssignments 
+      : activeSide === 'defense' 
+      ? setDefenseAssignments 
+      : setSpecialTeamsAssignments;
     setter(prev => {
       // Remove member from any existing slot
       const filtered = prev.filter(a => a.memberId !== memberId && a.slotKey !== slotKey);
@@ -127,7 +142,11 @@ export function TeamView({
   }, [activeSide]);
 
   const handleSlotRemove = useCallback((slotKey: string) => {
-    const setter = activeSide === 'offense' ? setOffenseAssignments : setDefenseAssignments;
+    const setter = activeSide === 'offense' 
+      ? setOffenseAssignments 
+      : activeSide === 'defense' 
+      ? setDefenseAssignments 
+      : setSpecialTeamsAssignments;
     setter(prev => prev.filter(a => a.slotKey !== slotKey));
     setHasChanges(true);
   }, [activeSide]);
@@ -135,8 +154,8 @@ export function TeamView({
   // Save depth chart mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Update depth_order and is_starter for all assigned members
-      const allAssignments = [...offenseAssignments, ...defenseAssignments];
+      // Update depth_order and is_starter for all assigned members (combine all sides)
+      const allAssignments = [...offenseAssignments, ...defenseAssignments, ...specialTeamsAssignments];
       const assignedMemberIds = new Set(allAssignments.map(a => a.memberId));
       
       // Get members with their depth order
@@ -165,7 +184,9 @@ export function TeamView({
   });
 
   // Check if sport has offense/defense sides
+  // Check if sport has offense/defense/special teams sides
   const hasSides = templates.some(t => t.side === 'offense' || t.side === 'defense');
+  const hasSpecialTeams = templates.some(t => t.side === 'special_teams');
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -180,12 +201,13 @@ export function TeamView({
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Offense/Defense tabs */}
+            {/* Offense/Defense/Special Teams tabs */}
             {hasSides && (
-              <Tabs value={activeSide} onValueChange={(v) => setActiveSide(v as 'offense' | 'defense')}>
+              <Tabs value={activeSide} onValueChange={(v) => setActiveSide(v as 'offense' | 'defense' | 'special_teams')}>
                 <TabsList>
                   <TabsTrigger value="offense">Offense</TabsTrigger>
                   <TabsTrigger value="defense">Defense</TabsTrigger>
+                  {hasSpecialTeams && <TabsTrigger value="special_teams">Special Teams</TabsTrigger>}
                 </TabsList>
               </Tabs>
             )}
