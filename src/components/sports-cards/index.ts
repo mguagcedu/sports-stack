@@ -7,3 +7,9 @@ export { PositionPill } from './PositionPill';
 export { LineGroupPill } from './LineGroupPill';
 export { RoleRibbon } from './RoleRibbon';
 export { PlayerSilhouette } from './PlayerSilhouette';
+
+// Reveal exports
+export * from './reveal';
+
+// Team view exports
+export * from './team-view';
