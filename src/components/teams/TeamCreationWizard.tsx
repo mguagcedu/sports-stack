@@ -24,9 +24,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Check, Sparkles, Edit } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Sparkles, Edit, AlertTriangle, Shield, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SportTypeSelector } from "@/components/governance/SportTypeSelector";
 
 interface TeamCreationWizardProps {
   open: boolean;
@@ -52,25 +54,30 @@ const LEVELS = [
   { value: "youth", label: "Youth" },
 ];
 
-const GENDERS = [
-  { value: "boys", label: "Boys" },
-  { value: "girls", label: "Girls" },
-  { value: "coed", label: "Co-ed" },
-];
+interface SportType {
+  sport_id: string;
+  sport_code: string;
+  sport_name: string;
+  season: string;
+  format: string;
+  gender: string;
+  maturity: string;
+  image_url: string | null;
+}
 
 export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardProps) {
   const [currentStep, setCurrentStep] = useState<Step>("organization");
   const [teamData, setTeamData] = useState({
     organization_id: "",
-    sport_id: "",
+    sport_code: "",
+    sport_name: "",
+    sport_gender: "",
     season_id: "",
     level: "varsity",
-    gender: "coed",
     max_roster_size: 25,
     name: "",
     useCustomName: false,
   });
-  const [showNameOptions, setShowNameOptions] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -83,19 +90,6 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
       const { data, error } = await supabase
         .from("organizations")
         .select("id, name, city, state")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: sports } = useQuery({
-    queryKey: ["sports-active"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sports")
-        .select("id, name, icon")
-        .eq("is_active", true)
         .order("name");
       if (error) throw error;
       return data;
@@ -116,34 +110,60 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
 
   // Derived data
   const selectedOrg = organizations?.find((o) => o.id === teamData.organization_id);
-  const selectedSport = sports?.find((s) => s.id === teamData.sport_id);
   const selectedSeason = seasons?.find((s) => s.id === teamData.season_id);
   const selectedLevel = LEVELS.find((l) => l.value === teamData.level);
-  const selectedGender = GENDERS.find((g) => g.value === teamData.gender);
+
+  // State code for sanctioning checks
+  const stateCode = selectedOrg?.state || undefined;
+
+  // Check sanctioning status for the selected sport in the org's state
+  const { data: sanctionStatus } = useQuery({
+    queryKey: ["sanction-status", stateCode, teamData.sport_code],
+    queryFn: async () => {
+      if (!stateCode || !teamData.sport_code) return null;
+      const { data, error } = await supabase
+        .from("state_sport_sanction")
+        .select("sanctioned, rules_url, last_verified_date")
+        .eq("state_code", stateCode)
+        .eq("sport_code", teamData.sport_code)
+        .single();
+      
+      if (error) return null;
+      return data;
+    },
+    enabled: !!stateCode && !!teamData.sport_code,
+  });
+
+  // Map gender from sport type
+  const mapGenderToTeam = (sportGender: string): string => {
+    if (sportGender === "Boys") return "boys";
+    if (sportGender === "Girls") return "girls";
+    return "coed";
+  };
 
   // Generate team name suggestions
   const nameSuggestions = useMemo(() => {
-    if (!selectedOrg || !selectedSport) return [];
+    if (!selectedOrg || !teamData.sport_name) return [];
     
     const orgName = selectedOrg.name;
-    const sportName = selectedSport.name;
-    const genderLabel = selectedGender?.label || "";
+    const sportName = teamData.sport_name;
+    const genderLabel = teamData.sport_gender || "Coed";
     const levelLabel = selectedLevel?.label || "";
     
-    // Extract short org name (e.g., "Lincoln High School" -> "Lincoln")
+    // Extract short org name
     const shortOrgName = orgName.split(" ")[0];
     
     return [
-      // Option 1: Full format - "Lincoln High School Boys Varsity Basketball"
+      // Full format
       `${orgName} ${genderLabel} ${levelLabel} ${sportName}`,
-      // Option 2: Short format - "Varsity Basketball"
+      // Level + Sport
       `${levelLabel} ${sportName}`,
-      // Option 3: Gender + Sport - "Boys Basketball"
+      // Gender + Sport
       `${genderLabel} ${sportName}`,
-      // Option 4: Short org + Sport - "Lincoln Basketball"
+      // Short org + Sport
       `${shortOrgName} ${sportName}`,
     ].filter((name) => name.trim());
-  }, [selectedOrg, selectedSport, selectedGender, selectedLevel]);
+  }, [selectedOrg, teamData.sport_name, teamData.sport_gender, selectedLevel]);
 
   const defaultTeamName = nameSuggestions[0] || "";
 
@@ -157,10 +177,9 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
         .insert({
           name: finalName,
           organization_id: teamData.organization_id || null,
-          sport_id: teamData.sport_id || null,
           season_id: teamData.season_id || null,
           level: teamData.level,
-          gender: teamData.gender,
+          gender: mapGenderToTeam(teamData.sport_gender),
           max_roster_size: teamData.max_roster_size,
         })
         .select()
@@ -184,15 +203,24 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
     setCurrentStep("organization");
     setTeamData({
       organization_id: "",
-      sport_id: "",
+      sport_code: "",
+      sport_name: "",
+      sport_gender: "",
       season_id: "",
       level: "varsity",
-      gender: "coed",
       max_roster_size: 25,
       name: "",
       useCustomName: false,
     });
-    setShowNameOptions(false);
+  };
+
+  const handleSportSelect = (sport: SportType) => {
+    setTeamData({
+      ...teamData,
+      sport_code: sport.sport_code,
+      sport_name: sport.sport_name,
+      sport_gender: sport.gender,
+    });
   };
 
   const canProceed = (): boolean => {
@@ -200,9 +228,9 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
       case "organization":
         return !!teamData.organization_id;
       case "sport":
-        return !!teamData.sport_id;
+        return !!teamData.sport_code;
       case "details":
-        return !!teamData.season_id && !!teamData.level && !!teamData.gender;
+        return !!teamData.season_id && !!teamData.level;
       case "name":
         return !teamData.useCustomName || !!teamData.name.trim();
       case "review":
@@ -228,7 +256,6 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
 
   const selectNameSuggestion = (name: string) => {
     setTeamData({ ...teamData, name, useCustomName: true });
-    setShowNameOptions(false);
   };
 
   const currentStepIndex = STEPS.indexOf(currentStep);
@@ -238,7 +265,7 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
       if (!isOpen) resetWizard();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Team</DialogTitle>
         </DialogHeader>
@@ -278,7 +305,7 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
         <p className="text-sm text-muted-foreground mb-4">{STEP_LABELS[currentStep]}</p>
 
         {/* Step Content */}
-        <div className="min-h-[200px]">
+        <div className="min-h-[250px]">
           {currentStep === "organization" && (
             <div className="space-y-4">
               <Label>Select Organization</Label>
@@ -313,29 +340,60 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
 
           {currentStep === "sport" && (
             <div className="space-y-4">
-              <Label>Select Sport</Label>
-              <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
-                {sports?.map((sport) => (
-                  <div
-                    key={sport.id}
-                    onClick={() => setTeamData({ ...teamData, sport_id: sport.id })}
-                    className={cn(
-                      "p-3 rounded-lg border cursor-pointer transition-colors text-center",
-                      teamData.sport_id === sport.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    {sport.icon && <span className="text-2xl mb-1 block">{sport.icon}</span>}
-                    <div className="font-medium">{sport.name}</div>
-                  </div>
-                ))}
-                {sports?.length === 0 && (
-                  <p className="text-muted-foreground text-center py-8 col-span-2">
-                    No sports configured. Add sports in Settings.
-                  </p>
-                )}
+              <div className="space-y-2">
+                <Label>Select Sport Type</Label>
+                <p className="text-sm text-muted-foreground">
+                  Choose from 67 sport types with season, gender, and format details
+                </p>
               </div>
+
+              <SportTypeSelector
+                value={teamData.sport_code}
+                onSelect={handleSportSelect}
+                stateCode={stateCode}
+                placeholder="Browse sports..."
+              />
+
+              {/* State Sanctioning Status */}
+              {teamData.sport_code && stateCode && (
+                <div className="pt-2">
+                  {sanctionStatus?.sanctioned === true ? (
+                    <Alert className="border-green-200 bg-green-50">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-800">
+                        <span className="font-medium">{teamData.sport_name}</span> is sanctioned in {stateCode}
+                        {sanctionStatus.rules_url && (
+                          <a href={sanctionStatus.rules_url} target="_blank" rel="noopener noreferrer" className="ml-2 underline">
+                            View Rules
+                          </a>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  ) : sanctionStatus?.sanctioned === false ? (
+                    <Alert className="border-amber-200 bg-amber-50">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-800">
+                        <span className="font-medium">{teamData.sport_name}</span> is not sanctioned in {stateCode}. 
+                        You can still create this team, but state playoffs may not be available.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <Alert className="border-muted">
+                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      <AlertDescription className="text-muted-foreground">
+                        Sanctioning status unknown for {stateCode}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+
+              {teamData.sport_code && (
+                <div className="pt-2 flex flex-wrap gap-2">
+                  <Badge variant="outline">{teamData.sport_gender}</Badge>
+                  <Badge variant="secondary">{teamData.sport_name}</Badge>
+                </div>
+              )}
             </div>
           )}
 
@@ -360,44 +418,23 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Level</Label>
-                  <Select
-                    value={teamData.level}
-                    onValueChange={(value) => setTeamData({ ...teamData, level: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LEVELS.map((level) => (
-                        <SelectItem key={level.value} value={level.value}>
-                          {level.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Gender</Label>
-                  <Select
-                    value={teamData.gender}
-                    onValueChange={(value) => setTeamData({ ...teamData, gender: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GENDERS.map((gender) => (
-                        <SelectItem key={gender.value} value={gender.value}>
-                          {gender.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label>Level</Label>
+                <Select
+                  value={teamData.level}
+                  onValueChange={(value) => setTeamData({ ...teamData, level: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEVELS.map((level) => (
+                      <SelectItem key={level.value} value={level.value}>
+                        {level.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -411,6 +448,13 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
                     setTeamData({ ...teamData, max_roster_size: parseInt(e.target.value) || 25 })
                   }
                 />
+              </div>
+
+              {/* Sport summary */}
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <div className="text-sm text-muted-foreground mb-1">Selected Sport</div>
+                <div className="font-medium">{teamData.sport_name}</div>
+                <div className="text-sm text-muted-foreground">{teamData.sport_gender}</div>
               </div>
             </div>
           )}
@@ -427,7 +471,7 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
                 </div>
               </div>
 
-              <Popover open={showNameOptions} onOpenChange={setShowNameOptions}>
+              <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-between">
                     <span className="flex items-center gap-2">
@@ -473,9 +517,25 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
                   <span className="text-muted-foreground">Organization</span>
                   <span className="font-medium">{selectedOrg?.name}</span>
                 </div>
-                <div className="p-3 flex justify-between">
+                <div className="p-3 flex justify-between items-center">
                   <span className="text-muted-foreground">Sport</span>
-                  <span className="font-medium">{selectedSport?.name}</span>
+                  <div className="text-right">
+                    <span className="font-medium">{teamData.sport_name}</span>
+                    {sanctionStatus?.sanctioned === true && (
+                      <Badge variant="outline" className="ml-2 text-green-700 border-green-300 bg-green-50">
+                        Sanctioned
+                      </Badge>
+                    )}
+                    {sanctionStatus?.sanctioned === false && (
+                      <Badge variant="outline" className="ml-2 text-amber-700 border-amber-300 bg-amber-50">
+                        Not Sanctioned
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="p-3 flex justify-between">
+                  <span className="text-muted-foreground">Gender</span>
+                  <span className="font-medium">{teamData.sport_gender}</span>
                 </div>
                 <div className="p-3 flex justify-between">
                   <span className="text-muted-foreground">Season</span>
@@ -484,10 +544,6 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
                 <div className="p-3 flex justify-between">
                   <span className="text-muted-foreground">Level</span>
                   <Badge variant="secondary">{selectedLevel?.label}</Badge>
-                </div>
-                <div className="p-3 flex justify-between">
-                  <span className="text-muted-foreground">Gender</span>
-                  <span className="font-medium capitalize">{selectedGender?.label}</span>
                 </div>
                 <div className="p-3 flex justify-between">
                   <span className="text-muted-foreground">Max Roster</span>
@@ -500,6 +556,15 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
                   </span>
                 </div>
               </div>
+
+              {sanctionStatus?.sanctioned === false && (
+                <Alert className="border-amber-200 bg-amber-50">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800">
+                    This sport is not sanctioned in {stateCode}. The team will be created, but state playoffs eligibility may be affected.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           )}
         </div>
