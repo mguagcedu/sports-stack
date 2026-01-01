@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -21,47 +21,30 @@ import {
   EquipmentReturnDialog,
   EquipmentAccessManager
 } from '@/components/equipment';
+import { AddEquipmentDialog } from '@/components/equipment/AddEquipmentDialog';
+import { 
+  EQUIPMENT_CATEGORIES,
+  CONDITIONS,
+  TRACKING_METHODS,
+  getCategoryLabel,
+  getSubcategoryLabel
+} from '@/lib/equipmentPresets';
 import { 
   Package, 
   Plus, 
   Search, 
   QrCode, 
-  BarChart3, 
   ArrowRightLeft,
   CheckCircle,
   AlertTriangle,
   Clock,
-  User,
   Camera,
   Printer,
   Ruler,
   History,
-  Shield
+  Shield,
+  ScanLine
 } from 'lucide-react';
-
-const CATEGORIES = [
-  { value: 'uniform', label: 'Uniforms' },
-  { value: 'protective', label: 'Protective Gear' },
-  { value: 'training', label: 'Training Equipment' },
-  { value: 'game_equipment', label: 'Game Equipment' },
-  { value: 'apparel', label: 'Apparel' },
-  { value: 'accessories', label: 'Accessories' },
-];
-
-const CONDITIONS = [
-  { value: 'new', label: 'New' },
-  { value: 'good', label: 'Good' },
-  { value: 'fair', label: 'Fair' },
-  { value: 'worn', label: 'Worn' },
-  { value: 'damaged', label: 'Damaged' },
-];
-
-const TRACKING_METHODS = [
-  { value: 'manual', label: 'Manual Entry' },
-  { value: 'qr', label: 'QR Code' },
-  { value: 'barcode', label: 'Barcode' },
-  { value: 'sticker', label: 'Sticker/Tag' },
-];
 
 export default function Equipment() {
   const { toast } = useToast();
@@ -78,16 +61,9 @@ export default function Equipment() {
   const [scanMode, setScanMode] = useState<'search' | 'add' | 'checkout'>('search');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedCheckoutId, setSelectedCheckoutId] = useState<string | null>(null);
-  const [newItem, setNewItem] = useState({
-    name: '',
-    description: '',
-    category: 'uniform',
-    sku: '',
-    barcode: '',
-    unit_cost: '',
-    total_quantity: '1',
-    reorder_threshold: '',
-  });
+  const [pendingBarcode, setPendingBarcode] = useState<string>('');
+  const [scanGunBuffer, setScanGunBuffer] = useState<string>('');
+  const [lastKeyTime, setLastKeyTime] = useState<number>(0);
   const [checkoutData, setCheckoutData] = useState({
     user_id: '',
     team_id: '',
@@ -181,19 +157,29 @@ export default function Equipment() {
 
   // Add item mutation
   const addItemMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (itemData: {
+      name: string;
+      description: string;
+      category: string;
+      subcategory: string;
+      sku: string;
+      barcode: string;
+      unit_cost: string;
+      total_quantity: string;
+      reorder_threshold: string;
+    }) => {
       const { data, error } = await supabase
         .from('equipment_items')
         .insert({
-          name: newItem.name,
-          description: newItem.description || null,
-          category: newItem.category,
-          sku: newItem.sku || null,
-          barcode: newItem.barcode || null,
-          unit_cost: newItem.unit_cost ? parseFloat(newItem.unit_cost) : null,
-          total_quantity: parseInt(newItem.total_quantity) || 1,
-          available_quantity: parseInt(newItem.total_quantity) || 1,
-          reorder_threshold: newItem.reorder_threshold ? parseInt(newItem.reorder_threshold) : null,
+          name: itemData.name,
+          description: itemData.description || null,
+          category: itemData.category,
+          sku: itemData.sku || null,
+          barcode: itemData.barcode || null,
+          unit_cost: itemData.unit_cost ? parseFloat(itemData.unit_cost) : null,
+          total_quantity: parseInt(itemData.total_quantity) || 1,
+          available_quantity: parseInt(itemData.total_quantity) || 1,
+          reorder_threshold: itemData.reorder_threshold ? parseInt(itemData.reorder_threshold) : null,
         })
         .select()
         .single();
@@ -203,16 +189,6 @@ export default function Equipment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment-items'] });
       setIsAddItemOpen(false);
-      setNewItem({
-        name: '',
-        description: '',
-        category: 'uniform',
-        sku: '',
-        barcode: '',
-        unit_cost: '',
-        total_quantity: '1',
-        reorder_threshold: '',
-      });
       toast({ title: 'Equipment item added successfully' });
     },
     onError: (error) => {
@@ -337,7 +313,7 @@ export default function Equipment() {
         });
       }
     } else if (scanMode === 'add') {
-      setNewItem((prev) => ({ ...prev, barcode: code }));
+      setPendingBarcode(code);
       toast({ title: 'Code Scanned', description: `Barcode set to: ${code}` });
     } else if (scanMode === 'checkout') {
       setCheckoutData((prev) => ({ ...prev, tracking_code: code }));
@@ -345,6 +321,33 @@ export default function Equipment() {
     }
     setIsScannerOpen(false);
   };
+
+  // Handle scan gun input (keyboard emulation)
+  const handleScanGunInput = useCallback((event: KeyboardEvent) => {
+    // Scan guns typically send data very fast followed by Enter
+    const now = Date.now();
+    
+    // If it's been more than 100ms since last keystroke, start fresh
+    if (now - lastKeyTime > 100) {
+      setScanGunBuffer('');
+    }
+    setLastKeyTime(now);
+    
+    if (event.key === 'Enter' && scanGunBuffer.length > 3) {
+      // Process the scanned barcode
+      event.preventDefault();
+      handleScanResult(scanGunBuffer);
+      setScanGunBuffer('');
+    } else if (event.key.length === 1) {
+      setScanGunBuffer(prev => prev + event.key);
+    }
+  }, [lastKeyTime, scanGunBuffer, items]);
+
+  // Listen for scan gun input when on this page
+  useEffect(() => {
+    window.addEventListener('keydown', handleScanGunInput);
+    return () => window.removeEventListener('keydown', handleScanGunInput);
+  }, [handleScanGunInput]);
 
   const openScanner = (mode: 'search' | 'add' | 'checkout') => {
     setScanMode(mode);
@@ -364,117 +367,18 @@ export default function Equipment() {
             <p className="text-muted-foreground">Track and manage equipment handouts</p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => openScanner('search')}>
+              <ScanLine className="mr-2 h-4 w-4" />
+              Scan
+            </Button>
             <Button variant="outline" onClick={() => setIsAccessOpen(true)}>
               <Shield className="mr-2 h-4 w-4" />
               Access
             </Button>
-          <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Equipment
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add Equipment Item</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Name *</Label>
-                  <Input
-                    value={newItem.name}
-                    onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                    placeholder="e.g., Football Jersey"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select
-                    value={newItem.category}
-                    onValueChange={(value) => setNewItem({ ...newItem, category: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>SKU</Label>
-                    <Input
-                      value={newItem.sku}
-                      onChange={(e) => setNewItem({ ...newItem, sku: e.target.value })}
-                      placeholder="Internal ID"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Barcode/QR</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newItem.barcode}
-                        onChange={(e) => setNewItem({ ...newItem, barcode: e.target.value })}
-                        placeholder="Scan code"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => openScanner('add')}
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Quantity</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={newItem.total_quantity}
-                      onChange={(e) => setNewItem({ ...newItem, total_quantity: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Unit Cost</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={newItem.unit_cost}
-                      onChange={(e) => setNewItem({ ...newItem, unit_cost: e.target.value })}
-                      placeholder="$0.00"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea
-                    value={newItem.description}
-                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                    placeholder="Optional description..."
-                    rows={2}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddItemOpen(false)}>Cancel</Button>
-                <Button 
-                  onClick={() => addItemMutation.mutate()}
-                  disabled={!newItem.name || addItemMutation.isPending}
-                >
-                  {addItemMutation.isPending ? 'Adding...' : 'Add Item'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            <Button onClick={() => setIsAddItemOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Equipment
+            </Button>
           </div>
         </div>
 
@@ -605,7 +509,7 @@ export default function Equipment() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {CATEGORIES.find(c => c.value === item.category)?.label || item.category}
+                              {getCategoryLabel(item.category)}
                             </Badge>
                           </TableCell>
                           <TableCell className="font-mono text-sm">{item.sku || '-'}</TableCell>
@@ -920,6 +824,15 @@ export default function Equipment() {
         <EquipmentAccessManager
           open={isAccessOpen}
           onClose={() => setIsAccessOpen(false)}
+        />
+
+        {/* Add Equipment Dialog */}
+        <AddEquipmentDialog
+          open={isAddItemOpen}
+          onOpenChange={setIsAddItemOpen}
+          onAdd={(itemData) => addItemMutation.mutate(itemData)}
+          onScanBarcode={() => openScanner('add')}
+          isPending={addItemMutation.isPending}
         />
       </div>
     </DashboardLayout>
