@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Image, Sparkles, Calendar, Loader2, X, Link as LinkIcon } from "lucide-react";
+import { Upload, Image, Sparkles, Calendar, Loader2, X, Link as LinkIcon, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ExtractedEvent {
@@ -43,13 +43,14 @@ interface ScheduleUploaderProps {
 
 export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: ScheduleUploaderProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [fileType, setFileType] = useState<'image' | 'document' | null>(null);
   const [scheduleUrl, setScheduleUrl] = useState("");
   const [manualText, setManualText] = useState("");
   const [extractedEvents, setExtractedEvents] = useState<ExtractedEvent[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
-  const [uploadMode, setUploadMode] = useState<"image" | "url" | "text">("image");
+  const [uploadMode, setUploadMode] = useState<"file" | "url" | "text">("file");
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -58,31 +59,71 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
-      setUploadedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setUploadedFile(file);
+      
+      // Determine file type
+      const isImage = file.type.startsWith('image/');
+      setFileType(isImage ? 'image' : 'document');
+      
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For documents, just show file info
+        setFilePreview(null);
+      }
     }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.heic']
+      'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.heic'],
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 20 * 1024 * 1024, // 20MB
   });
 
   const extractScheduleMutation = useMutation({
-    mutationFn: async (input: { imageBase64?: string; url?: string; text?: string }) => {
-      const { data, error } = await supabase.functions.invoke('extract-schedule', {
-        body: input
-      });
-      if (error) throw error;
-      return data;
+    mutationFn: async (input: { file?: File; url?: string; text?: string }) => {
+      if (input.file) {
+        // Use FormData for file upload
+        const formData = new FormData();
+        formData.append('file', input.file);
+        
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-schedule`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: formData,
+          }
+        );
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to extract schedule');
+        }
+        
+        return response.json();
+      } else {
+        // Use JSON for URL or text
+        const { data, error } = await supabase.functions.invoke('extract-schedule', {
+          body: { url: input.url, text: input.text }
+        });
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: (data) => {
       if (data.events && data.events.length > 0) {
@@ -94,7 +135,7 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
       } else {
         toast({ 
           title: "No events found", 
-          description: "Could not extract events from the provided schedule. Try adding more context.",
+          description: "Could not extract events from the provided schedule. Try adding more context or a clearer image.",
           variant: "destructive"
         });
       }
@@ -153,8 +194,8 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
   const handleExtract = async () => {
     setIsExtracting(true);
     try {
-      if (uploadMode === "image" && imagePreview) {
-        await extractScheduleMutation.mutateAsync({ imageBase64: imagePreview });
+      if (uploadMode === "file" && uploadedFile) {
+        await extractScheduleMutation.mutateAsync({ file: uploadedFile });
       } else if (uploadMode === "url" && scheduleUrl) {
         await extractScheduleMutation.mutateAsync({ url: scheduleUrl });
       } else if (uploadMode === "text" && manualText) {
@@ -173,12 +214,13 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
 
   const handleClose = () => {
     setIsOpen(false);
-    setUploadedImage(null);
-    setImagePreview(null);
+    setUploadedFile(null);
+    setFilePreview(null);
+    setFileType(null);
     setScheduleUrl("");
     setManualText("");
     setExtractedEvents([]);
-    setUploadMode("image");
+    setUploadMode("file");
   };
 
   const removeEvent = (index: number) => {
@@ -189,6 +231,15 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
     setExtractedEvents(prev => prev.map((event, i) => 
       i === index ? { ...event, [field]: value } : event
     ));
+  };
+
+  const getFileIcon = () => {
+    if (!uploadedFile) return null;
+    const ext = uploadedFile.name.split('.').pop()?.toLowerCase();
+    if (['pdf'].includes(ext || '')) return '📄';
+    if (['doc', 'docx'].includes(ext || '')) return '📝';
+    if (['xls', 'xlsx'].includes(ext || '')) return '📊';
+    return '📁';
   };
 
   return (
@@ -211,12 +262,12 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
           {/* Mode Selection */}
           <div className="flex gap-2">
             <Button
-              variant={uploadMode === "image" ? "default" : "outline"}
+              variant={uploadMode === "file" ? "default" : "outline"}
               size="sm"
-              onClick={() => setUploadMode("image")}
+              onClick={() => setUploadMode("file")}
             >
-              <Image className="mr-2 h-4 w-4" />
-              Upload Image
+              <FileText className="mr-2 h-4 w-4" />
+              Upload File
             </Button>
             <Button
               variant={uploadMode === "url" ? "default" : "outline"}
@@ -236,10 +287,10 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
             </Button>
           </div>
 
-          {/* Image Upload */}
-          {uploadMode === "image" && (
+          {/* File Upload */}
+          {uploadMode === "file" && (
             <div>
-              {!imagePreview ? (
+              {!uploadedFile ? (
                 <div
                   {...getRootProps()}
                   className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
@@ -250,27 +301,40 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
                   <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-sm text-muted-foreground">
                     {isDragActive 
-                      ? "Drop the schedule image here..." 
-                      : "Drag & drop a schedule image, or click to select"}
+                      ? "Drop the file here..." 
+                      : "Drag & drop a schedule file, or click to select"}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Supports PNG, JPG, WEBP up to 10MB
+                    Supports images (PNG, JPG), PDF, Word docs up to 20MB
                   </p>
                 </div>
               ) : (
-                <div className="relative">
-                  <img 
-                    src={imagePreview} 
-                    alt="Schedule preview" 
-                    className="max-h-64 mx-auto rounded-lg border"
-                  />
+                <div className="relative p-4 border rounded-lg">
+                  {fileType === 'image' && filePreview ? (
+                    <img 
+                      src={filePreview} 
+                      alt="Schedule preview" 
+                      className="max-h-64 mx-auto rounded-lg border"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                      <span className="text-4xl">{getFileIcon()}</span>
+                      <div>
+                        <p className="font-medium">{uploadedFile.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <Button
                     variant="destructive"
                     size="icon"
                     className="absolute top-2 right-2"
                     onClick={() => {
-                      setUploadedImage(null);
-                      setImagePreview(null);
+                      setUploadedFile(null);
+                      setFilePreview(null);
+                      setFileType(null);
                     }}
                   >
                     <X className="h-4 w-4" />
@@ -290,7 +354,7 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
                 placeholder="https://example.com/schedule.png or website URL"
               />
               <p className="text-xs text-muted-foreground">
-                Enter a direct image URL or a webpage containing the schedule
+                Enter a direct image URL, PDF link, or a webpage containing the schedule
               </p>
             </div>
           )}
@@ -314,7 +378,7 @@ export function ScheduleUploader({ organizationId, teamId, onEventsExtracted }: 
             onClick={handleExtract}
             disabled={
               isExtracting || 
-              (uploadMode === "image" && !imagePreview) ||
+              (uploadMode === "file" && !uploadedFile) ||
               (uploadMode === "url" && !scheduleUrl) ||
               (uploadMode === "text" && !manualText)
             }

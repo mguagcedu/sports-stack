@@ -101,6 +101,110 @@ export type Database = {
         }
         Relationships: []
       }
+      concession_items: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          current_inventory: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string | null
+          purchase_cost: number | null
+          reorder_threshold: number | null
+          sale_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          current_inventory?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id?: string | null
+          purchase_cost?: number | null
+          reorder_threshold?: number | null
+          sale_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          current_inventory?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string | null
+          purchase_cost?: number | null
+          reorder_threshold?: number | null
+          sale_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concession_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concession_transactions: {
+        Row: {
+          concession_item_id: string | null
+          created_at: string | null
+          event_id: string | null
+          id: string
+          notes: string | null
+          quantity: number
+          recorded_by_user_id: string | null
+          total_amount: number
+          transaction_type: string
+          unit_price: number
+        }
+        Insert: {
+          concession_item_id?: string | null
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity: number
+          recorded_by_user_id?: string | null
+          total_amount: number
+          transaction_type: string
+          unit_price: number
+        }
+        Update: {
+          concession_item_id?: string | null
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          recorded_by_user_id?: string | null
+          total_amount?: number
+          transaction_type?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concession_transactions_concession_item_id_fkey"
+            columns: ["concession_item_id"]
+            isOneToOne: false
+            referencedRelation: "concession_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concession_transactions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       district_sport_override: {
         Row: {
           created_at: string | null
@@ -1367,6 +1471,78 @@ export type Database = {
           },
         ]
       }
+      financial_ledger: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string | null
+          created_by_user_id: string | null
+          description: string | null
+          fiscal_year: string | null
+          id: string
+          is_income: boolean
+          notes: string | null
+          organization_id: string | null
+          reference_id: string | null
+          reference_type: string | null
+          subcategory: string | null
+          team_id: string | null
+          transaction_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string | null
+          created_by_user_id?: string | null
+          description?: string | null
+          fiscal_year?: string | null
+          id?: string
+          is_income?: boolean
+          notes?: string | null
+          organization_id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          subcategory?: string | null
+          team_id?: string | null
+          transaction_date?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string | null
+          created_by_user_id?: string | null
+          description?: string | null
+          fiscal_year?: string | null
+          id?: string
+          is_income?: boolean
+          notes?: string | null
+          organization_id?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          subcategory?: string | null
+          team_id?: string | null
+          transaction_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_ledger_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_ledger_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       governing_bodies: {
         Row: {
           created_at: string | null
@@ -2419,36 +2595,54 @@ export type Database = {
           created_at: string | null
           cross_team_rule: string | null
           deposit_amount: number | null
+          deposit_refund_method: string | null
           hours_per_event: number | null
           id: string
           is_active: boolean | null
           refund_policy: string | null
+          required_events: number | null
           required_volunteer_hours: number | null
+          reward_enabled: boolean | null
+          reward_threshold_events: number | null
+          reward_threshold_hours: number | null
           team_id: string
+          tracking_type: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           cross_team_rule?: string | null
           deposit_amount?: number | null
+          deposit_refund_method?: string | null
           hours_per_event?: number | null
           id?: string
           is_active?: boolean | null
           refund_policy?: string | null
+          required_events?: number | null
           required_volunteer_hours?: number | null
+          reward_enabled?: boolean | null
+          reward_threshold_events?: number | null
+          reward_threshold_hours?: number | null
           team_id: string
+          tracking_type?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           cross_team_rule?: string | null
           deposit_amount?: number | null
+          deposit_refund_method?: string | null
           hours_per_event?: number | null
           id?: string
           is_active?: boolean | null
           refund_policy?: string | null
+          required_events?: number | null
           required_volunteer_hours?: number | null
+          reward_enabled?: boolean | null
+          reward_threshold_events?: number | null
+          reward_threshold_hours?: number | null
           team_id?: string
+          tracking_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2878,16 +3072,57 @@ export type Database = {
           },
         ]
       }
+      volunteer_exclusions: {
+        Row: {
+          created_at: string | null
+          excluded_by_user_id: string | null
+          id: string
+          reason: string
+          team_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          excluded_by_user_id?: string | null
+          id?: string
+          reason: string
+          team_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          excluded_by_user_id?: string | null
+          id?: string
+          reason?: string
+          team_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_exclusions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       volunteer_fee_deposits: {
         Row: {
           amount: number
+          completed_events: number | null
           completed_hours: number | null
           created_at: string | null
           id: string
           notes: string | null
           payment_id: string | null
           refund_amount: number | null
+          refund_method: string | null
           refunded_at: string | null
+          required_events: number | null
           required_hours: number | null
           status: string
           team_id: string
@@ -2896,13 +3131,16 @@ export type Database = {
         }
         Insert: {
           amount: number
+          completed_events?: number | null
           completed_hours?: number | null
           created_at?: string | null
           id?: string
           notes?: string | null
           payment_id?: string | null
           refund_amount?: number | null
+          refund_method?: string | null
           refunded_at?: string | null
+          required_events?: number | null
           required_hours?: number | null
           status?: string
           team_id: string
@@ -2911,13 +3149,16 @@ export type Database = {
         }
         Update: {
           amount?: number
+          completed_events?: number | null
           completed_hours?: number | null
           created_at?: string | null
           id?: string
           notes?: string | null
           payment_id?: string | null
           refund_amount?: number | null
+          refund_method?: string | null
           refunded_at?: string | null
+          required_events?: number | null
           required_hours?: number | null
           status?: string
           team_id?: string
@@ -3046,6 +3287,106 @@ export type Database = {
           },
         ]
       }
+      volunteer_reward_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          events_required: number | null
+          hours_required: number | null
+          id: string
+          is_active: boolean | null
+          monetary_value: number | null
+          reward_name: string
+          reward_type: string
+          team_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          events_required?: number | null
+          hours_required?: number | null
+          id?: string
+          is_active?: boolean | null
+          monetary_value?: number | null
+          reward_name: string
+          reward_type: string
+          team_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          events_required?: number | null
+          hours_required?: number | null
+          id?: string
+          is_active?: boolean | null
+          monetary_value?: number | null
+          reward_name?: string
+          reward_type?: string
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_reward_templates_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_rewards: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          earned_at: string | null
+          expires_at: string | null
+          id: string
+          is_redeemed: boolean | null
+          monetary_value: number | null
+          redeemed_at: string | null
+          reward_name: string
+          reward_type: string
+          team_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          earned_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_redeemed?: boolean | null
+          monetary_value?: number | null
+          redeemed_at?: string | null
+          reward_name: string
+          reward_type: string
+          team_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          earned_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_redeemed?: boolean | null
+          monetary_value?: number | null
+          redeemed_at?: string | null
+          reward_name?: string
+          reward_type?: string
+          team_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_rewards_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       volunteer_signups: {
         Row: {
           check_in_code: string | null
@@ -3054,6 +3395,7 @@ export type Database = {
           check_out_time: string | null
           confirmed_by_user_id: string | null
           created_at: string | null
+          events_credited: number | null
           geo_check_in_lat: number | null
           geo_check_in_lng: number | null
           geo_check_out_lat: number | null
@@ -3074,6 +3416,7 @@ export type Database = {
           check_out_time?: string | null
           confirmed_by_user_id?: string | null
           created_at?: string | null
+          events_credited?: number | null
           geo_check_in_lat?: number | null
           geo_check_in_lng?: number | null
           geo_check_out_lat?: number | null
@@ -3094,6 +3437,7 @@ export type Database = {
           check_out_time?: string | null
           confirmed_by_user_id?: string | null
           created_at?: string | null
+          events_credited?: number | null
           geo_check_in_lat?: number | null
           geo_check_in_lng?: number | null
           geo_check_out_lat?: number | null
