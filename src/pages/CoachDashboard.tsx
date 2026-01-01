@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { getCurrentSeason, getCurrentSchoolYear, getSeasonYearLabel, SEASON_LABELS, SportSeasonType } from '@/lib/seasonUtils';
 import { 
   Users, 
   Calendar, 
@@ -20,7 +21,8 @@ import {
   Mail,
   Phone,
   Loader2,
-  Activity
+  Activity,
+  Info
 } from 'lucide-react';
 
 interface Sport {
@@ -31,15 +33,6 @@ interface Sport {
   gender: string | null;
 }
 
-interface Season {
-  id: string;
-  name: string;
-  start_date: string | null;
-  end_date: string | null;
-  is_active: boolean;
-  academic_year: string | null;
-}
-
 interface Team {
   id: string;
   name: string;
@@ -47,12 +40,21 @@ interface Team {
   gender: string | null;
   max_roster_size: number | null;
   is_active: boolean;
+  season: SportSeasonType | null;
+  school_year: number | null;
+  season_year_label: string | null;
 }
 
 export default function CoachDashboard() {
   const { user } = useAuth();
+  
+  // Smart defaults based on current date
+  const currentSeason = useMemo(() => getCurrentSeason(), []);
+  const currentSchoolYear = useMemo(() => getCurrentSchoolYear(), []);
+  
   const [selectedSportId, setSelectedSportId] = useState<string>('');
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
+  const [selectedSeason, setSelectedSeason] = useState<SportSeasonType | 'all'>(currentSeason);
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState<number>(currentSchoolYear);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
   // Fetch sports
@@ -69,22 +71,18 @@ export default function CoachDashboard() {
     }
   });
 
-  // Fetch seasons
-  const { data: seasons, isLoading: seasonsLoading } = useQuery({
-    queryKey: ['seasons'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('seasons')
-        .select('*')
-        .order('start_date', { ascending: false });
-      if (error) throw error;
-      return data as Season[];
-    }
-  });
+  // Available school years (previous 2, current, next 2)
+  const availableYears = useMemo(() => {
+    const years: number[] = [];
+    for (let i = 2; i > 0; i--) years.push(currentSchoolYear - i);
+    years.push(currentSchoolYear);
+    for (let i = 1; i <= 2; i++) years.push(currentSchoolYear + i);
+    return years;
+  }, [currentSchoolYear]);
 
-  // Fetch teams based on selected sport and season
+  // Fetch teams filtered by season and year
   const { data: teams, isLoading: teamsLoading } = useQuery({
-    queryKey: ['teams', selectedSportId, selectedSeasonId],
+    queryKey: ['teams', selectedSportId, selectedSeason, selectedSchoolYear],
     queryFn: async () => {
       let query = supabase
         .from('teams')
@@ -95,16 +93,25 @@ export default function CoachDashboard() {
       if (selectedSportId) {
         query = query.eq('sport_id', selectedSportId);
       }
-      if (selectedSeasonId) {
-        query = query.eq('season_id', selectedSeasonId);
+      if (selectedSeason !== 'all') {
+        query = query.eq('season', selectedSeason);
+      }
+      if (selectedSchoolYear) {
+        query = query.eq('school_year', selectedSchoolYear);
       }
       
       const { data, error } = await query;
       if (error) throw error;
       return data as Team[];
     },
-    enabled: !!selectedSportId || !!selectedSeasonId
   });
+
+  // Auto-select first team when list changes
+  useEffect(() => {
+    if (teams?.length && !teams.find(t => t.id === selectedTeamId)) {
+      setSelectedTeamId(teams[0].id);
+    }
+  }, [teams, selectedTeamId]);
 
   const selectedTeam = teams?.find(t => t.id === selectedTeamId);
 
@@ -137,24 +144,30 @@ export default function CoachDashboard() {
           </div>
         </div>
 
-        {/* Sport, Season, Team Selectors */}
+        {/* Season/Year Filter Bar with Helper Text */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="grid gap-4 md:grid-cols-3">
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              <Info className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>
+                Showing teams for the current season based on today's date. You can filter by different seasons or years.
+              </span>
+            </div>
+            <div className="grid gap-4 md:grid-cols-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Sport</label>
                 <Select 
-                  value={selectedSportId || "none"} 
+                  value={selectedSportId || "all"} 
                   onValueChange={(value) => {
-                    setSelectedSportId(value === "none" ? "" : value);
+                    setSelectedSportId(value === "all" ? "" : value);
                     setSelectedTeamId('');
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a sport" />
+                    <SelectValue placeholder="All sports" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Select a sport</SelectItem>
+                    <SelectItem value="all">All Sports</SelectItem>
                     {sports?.map((sport) => (
                       <SelectItem key={sport.id} value={sport.id}>
                         {sport.name} {sport.gender && `(${sport.gender})`}
@@ -167,20 +180,48 @@ export default function CoachDashboard() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Season</label>
                 <Select 
-                  value={selectedSeasonId || "none"} 
+                  value={selectedSeason} 
                   onValueChange={(value) => {
-                    setSelectedSeasonId(value === "none" ? "" : value);
+                    setSelectedSeason(value as SportSeasonType | 'all');
                     setSelectedTeamId('');
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a season" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Select a season</SelectItem>
-                    {seasons?.map((season) => (
-                      <SelectItem key={season.id} value={season.id}>
-                        {season.name} {season.is_active && '(Active)'}
+                    <SelectItem value="all">All Seasons</SelectItem>
+                    {(['fall', 'winter', 'spring', 'summer', 'year_round'] as SportSeasonType[]).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        <span className="flex items-center gap-2">
+                          {SEASON_LABELS[s]}
+                          {s === currentSeason && <Badge variant="default" className="text-xs h-5">Current</Badge>}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">School Year</label>
+                <Select 
+                  value={selectedSchoolYear.toString()} 
+                  onValueChange={(value) => {
+                    setSelectedSchoolYear(parseInt(value));
+                    setSelectedTeamId('');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        <span className="flex items-center gap-2">
+                          {getSeasonYearLabel(year)}
+                          {year === currentSchoolYear && <Badge variant="default" className="text-xs h-5">Current</Badge>}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -192,7 +233,6 @@ export default function CoachDashboard() {
                 <Select 
                   value={selectedTeamId || "none"} 
                   onValueChange={(value) => setSelectedTeamId(value === "none" ? "" : value)}
-                  disabled={!selectedSportId && !selectedSeasonId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a team" />

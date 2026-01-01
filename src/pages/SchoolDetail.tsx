@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistrictName } from '@/lib/formatters';
 import { StateAssociationLookup } from '@/components/governance/StateAssociationLookup';
 import { SchoolBrandingEditor, SchoolLogo } from '@/components/branding';
+import { SchoolSanctioningBodies } from '@/components/schools/SchoolSanctioningBodies';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
@@ -249,6 +251,7 @@ export default function SchoolDetail() {
         <Tabs defaultValue="details" className="w-full">
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="sanctioning">Sanctioning Bodies</TabsTrigger>
             <TabsTrigger value="branding">
               <Palette className="h-4 w-4 mr-1" />
               Branding
@@ -449,6 +452,16 @@ export default function SchoolDetail() {
             </CardContent>
           </Card>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="sanctioning" className="mt-6">
+            {school && (
+              <SchoolSanctioningBodies
+                schoolId={school.id}
+                stateCode={school.state}
+                primaryGoverningBodyId={school.primary_governing_body_id}
+              />
+            )}
           </TabsContent>
           
           <TabsContent value="branding" className="mt-6">

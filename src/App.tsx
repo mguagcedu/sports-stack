@@ -36,6 +36,7 @@ import AuditLogs from "./pages/AuditLogs";
 import JoinTeam from "./pages/JoinTeam";
 import Governance from "./pages/Governance";
 import SystemValidation from "./pages/SystemValidation";
+import Equipment from "./pages/Equipment";
 import Integrations from "./pages/Integrations";
 import NotFound from "./pages/NotFound";
 
