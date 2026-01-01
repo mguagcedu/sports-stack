@@ -19,7 +19,9 @@ import {
   EquipmentSizeManager, 
   EquipmentHistory,
   EquipmentReturnDialog,
-  EquipmentAccessManager
+  EquipmentAccessManager,
+  EquipmentCheckoutCart,
+  EquipmentPackageManager
 } from '@/components/equipment';
 import { AddEquipmentDialog } from '@/components/equipment/AddEquipmentDialog';
 import { 
@@ -58,6 +60,8 @@ export default function Equipment() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [isAccessOpen, setIsAccessOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isPackagesOpen, setIsPackagesOpen] = useState(false);
   const [scanMode, setScanMode] = useState<'search' | 'add' | 'checkout'>('search');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedCheckoutId, setSelectedCheckoutId] = useState<string | null>(null);
@@ -371,13 +375,21 @@ export default function Equipment() {
               <ScanLine className="mr-2 h-4 w-4" />
               Scan
             </Button>
+            <Button variant="outline" onClick={() => setIsPackagesOpen(true)}>
+              <Package className="mr-2 h-4 w-4" />
+              Packages
+            </Button>
             <Button variant="outline" onClick={() => setIsAccessOpen(true)}>
               <Shield className="mr-2 h-4 w-4" />
               Access
             </Button>
+            <Button variant="secondary" onClick={() => setIsCartOpen(true)}>
+              <ArrowRightLeft className="mr-2 h-4 w-4" />
+              Issue Equipment
+            </Button>
             <Button onClick={() => setIsAddItemOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Equipment
+              Add Item
             </Button>
           </div>
         </div>
@@ -833,6 +845,19 @@ export default function Equipment() {
           onAdd={(itemData) => addItemMutation.mutate(itemData)}
           onScanBarcode={() => openScanner('add')}
           isPending={addItemMutation.isPending}
+        />
+
+        {/* Equipment Checkout Cart */}
+        <EquipmentCheckoutCart
+          open={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          onScanBarcode={() => openScanner('checkout')}
+        />
+
+        {/* Package Manager */}
+        <EquipmentPackageManager
+          open={isPackagesOpen}
+          onClose={() => setIsPackagesOpen(false)}
         />
       </div>
     </DashboardLayout>
