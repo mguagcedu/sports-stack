@@ -13,14 +13,34 @@ import {
   MapPin,
   Activity,
   Target,
-  Medal
+  Medal,
+  IdCard,
+  Star,
+  Package
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { AccessRequestCard } from '@/components/access/AccessRequestCard';
 
 export default function AthleteDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Fetch athlete's profile
+  const { data: profile } = useQuery({
+    queryKey: ['athlete-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
 
   // Fetch athlete's teams
   const { data: myTeams } = useQuery({
@@ -47,6 +67,46 @@ export default function AthleteDashboard() {
     enabled: !!user
   });
 
+  // Fetch athlete's ratings
+  const { data: ratings } = useQuery({
+    queryKey: ['athlete-ratings', user?.id],
+    queryFn: async () => {
+      if (!user || !myTeams) return [];
+      const memberIds = myTeams.map(t => t.id);
+      if (memberIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('player_ratings')
+        .select('*')
+        .in('team_member_id', memberIds)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!myTeams && myTeams.length > 0
+  });
+
+  // Fetch achievements
+  const { data: achievements } = useQuery({
+    queryKey: ['athlete-achievements', user?.id],
+    queryFn: async () => {
+      if (!user || !myTeams) return [];
+      const memberIds = myTeams.map(t => t.id);
+      if (memberIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('player_achievements')
+        .select('*')
+        .in('team_member_id', memberIds)
+        .eq('is_public', true)
+        .order('achievement_date', { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!myTeams && myTeams.length > 0
+  });
+
   // Fetch upcoming events for athlete's teams
   const { data: upcomingEvents } = useQuery({
     queryKey: ['athlete-events', myTeams],
@@ -68,17 +128,26 @@ export default function AthleteDashboard() {
     enabled: !!myTeams && myTeams.length > 0
   });
 
+  // Get latest overall rating
+  const latestRating = ratings?.[0];
+
   return (
     <DashboardLayout title="Athlete Dashboard">
       <div className="space-y-6 animate-fade-in">
         {/* Welcome Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Hey{user?.email ? `, ${user.email.split('@')[0]}` : ''}! 💪
-          </h1>
-          <p className="text-muted-foreground">
-            Ready to crush it today? Here's your athletic overview.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Hey{profile?.first_name ? `, ${profile.first_name}` : ''}! 💪
+            </h1>
+            <p className="text-muted-foreground">
+              Ready to crush it today? Here's your athletic overview.
+            </p>
+          </div>
+          <Button onClick={() => navigate('/sports-cards')} variant="outline">
+            <IdCard className="h-4 w-4 mr-2" />
+            View My Card
+          </Button>
         </div>
 
         {/* Quick Stats */}
@@ -115,11 +184,11 @@ export default function AthleteDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-lg bg-orange-500/10">
-                  <Activity className="h-6 w-6 text-orange-500" />
+                  <Star className="h-6 w-6 text-orange-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">-</p>
-                  <p className="text-sm text-muted-foreground">Games Played</p>
+                  <p className="text-2xl font-bold">{latestRating?.overall_rating || '-'}</p>
+                  <p className="text-sm text-muted-foreground">Rating</p>
                 </div>
               </div>
             </CardContent>
@@ -132,7 +201,7 @@ export default function AthleteDashboard() {
                   <Trophy className="h-6 w-6 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">-</p>
+                  <p className="text-2xl font-bold">{achievements?.length || 0}</p>
                   <p className="text-sm text-muted-foreground">Achievements</p>
                 </div>
               </div>
@@ -243,7 +312,29 @@ export default function AthleteDashboard() {
           </Card>
         </div>
 
-        {/* Achievements Placeholder */}
+        {/* Sports Cards Quick Access */}
+        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IdCard className="h-5 w-5 text-primary" />
+              Your Sports Cards
+            </CardTitle>
+            <CardDescription>View and share your personalized trading cards</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <p className="text-muted-foreground">
+                {myTeams?.length || 0} card{myTeams?.length !== 1 ? 's' : ''} available
+              </p>
+              <Button onClick={() => navigate('/sports-cards')}>
+                <IdCard className="h-4 w-4 mr-2" />
+                View Cards
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Achievements */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -253,13 +344,40 @@ export default function AthleteDashboard() {
             <CardDescription>Track your progress and accomplishments</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Medal className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Achievements tracking coming soon!</p>
-              <p className="text-sm">Your stats and accomplishments will appear here.</p>
-            </div>
+            {achievements && achievements.length > 0 ? (
+              <div className="space-y-3">
+                {achievements.map((a) => (
+                  <div key={a.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                    <Trophy className="h-5 w-5 text-yellow-500 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{a.title}</span>
+                        <Badge variant="outline" className="text-xs">{a.achievement_type}</Badge>
+                      </div>
+                      {a.description && <p className="text-sm text-muted-foreground">{a.description}</p>}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{a.achievement_date}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Medal className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No achievements yet!</p>
+                <p className="text-sm">Keep working hard and they'll come.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {/* Equipment Access Request */}
+        <AccessRequestCard
+          title="Equipment Room Access"
+          description="Request access to check out and manage team equipment"
+          requiredRole="equipment_manager"
+          pageKey="/equipment"
+          icon={<Package className="h-5 w-5 text-muted-foreground" />}
+        />
       </div>
     </DashboardLayout>
   );

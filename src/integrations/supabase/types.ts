@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          created_at: string
+          id: string
+          justification: string | null
+          requested_page: string | null
+          requested_role: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          justification?: string | null
+          requested_page?: string | null
+          requested_role: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          justification?: string | null
+          requested_page?: string | null
+          requested_role?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       athlete_positions: {
         Row: {
           created_at: string | null
@@ -2630,33 +2672,42 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_updated_at: string | null
           avatar_url: string | null
+          card_photo_url: string | null
           created_at: string
           email: string | null
           first_name: string | null
           id: string
           last_name: string | null
           phone: string | null
+          photo_url: string | null
           updated_at: string
         }
         Insert: {
+          avatar_updated_at?: string | null
           avatar_url?: string | null
+          card_photo_url?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
           phone?: string | null
+          photo_url?: string | null
           updated_at?: string
         }
         Update: {
+          avatar_updated_at?: string | null
           avatar_url?: string | null
+          card_photo_url?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           phone?: string | null
+          photo_url?: string | null
           updated_at?: string
         }
         Relationships: []
