@@ -18,12 +18,33 @@ import {
   Package,
   FileText,
   Ticket,
-  ExternalLink
+  ExternalLink,
+  Award,
+  Crown,
+  Sparkles,
+  Shield,
+  Flame,
+  TrendingUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { AccessRequestCard } from '@/components/access/AccessRequestCard';
 import { SportsCard } from '@/components/sports-cards';
+
+// Icon map for badge icons
+const getBadgeIcon = (iconName: string | null): React.ReactNode => {
+  const iconMap: Record<string, React.ReactNode> = {
+    crown: <Crown className="h-4 w-4" />,
+    star: <Star className="h-4 w-4" />,
+    trophy: <Trophy className="h-4 w-4" />,
+    sparkles: <Sparkles className="h-4 w-4" />,
+    shield: <Shield className="h-4 w-4" />,
+    flame: <Flame className="h-4 w-4" />,
+    'trending-up': <TrendingUp className="h-4 w-4" />,
+    medal: <Medal className="h-4 w-4" />,
+  };
+  return iconMap[iconName || ''] || <Award className="h-4 w-4" />;
+};
 
 export default function AthleteDashboard() {
   const { user } = useAuth();
@@ -148,6 +169,28 @@ export default function AthleteDashboard() {
         .eq('is_public', true)
         .order('achievement_date', { ascending: false })
         .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!myTeams && myTeams.length > 0
+  });
+
+  // Fetch player badges (awards)
+  const { data: playerBadges } = useQuery({
+    queryKey: ['athlete-badges', user?.id],
+    queryFn: async () => {
+      if (!user || !myTeams) return [];
+      const memberIds = myTeams.map(t => t.id);
+      if (memberIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('player_badges')
+        .select(`
+          *,
+          badge_definitions(display_name, icon, category, description)
+        `)
+        .in('team_member_id', memberIds)
+        .order('awarded_at', { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -459,36 +502,65 @@ export default function AthleteDashboard() {
           </Card>
         )}
 
-        {/* Achievements */}
+        {/* Achievements & Badges */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Medal className="h-5 w-5 text-yellow-500" />
-              Achievements & Stats
+              Achievements & Awards
             </CardTitle>
-            <CardDescription>Track your progress and accomplishments</CardDescription>
+            <CardDescription>Your badges, achievements, and awards</CardDescription>
           </CardHeader>
-          <CardContent>
-            {achievements && achievements.length > 0 ? (
-              <div className="space-y-3">
-                {achievements.map((a) => (
-                  <div key={a.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                    <Trophy className="h-5 w-5 text-yellow-500 mt-0.5" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{a.title}</span>
-                        <Badge variant="outline" className="text-xs">{a.achievement_type}</Badge>
-                      </div>
-                      {a.description && <p className="text-sm text-muted-foreground">{a.description}</p>}
-                    </div>
-                    <span className="text-xs text-muted-foreground">{a.achievement_date}</span>
-                  </div>
-                ))}
+          <CardContent className="space-y-6">
+            {/* Player Badges Section */}
+            {playerBadges && playerBadges.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Award className="h-4 w-4 text-primary" />
+                  Awarded Badges
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {playerBadges.map((badge: any) => (
+                    <Badge 
+                      key={badge.id} 
+                      variant="secondary"
+                      className="flex items-center gap-1.5 px-3 py-1.5"
+                    >
+                      {getBadgeIcon(badge.badge_definitions?.icon)}
+                      <span>{badge.badge_definitions?.display_name}</span>
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            ) : (
+            )}
+
+            {/* Achievements Section */}
+            {achievements && achievements.length > 0 ? (
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-yellow-500" />
+                  Achievements
+                </h4>
+                <div className="space-y-3">
+                  {achievements.map((a) => (
+                    <div key={a.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                      <Trophy className="h-5 w-5 text-yellow-500 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{a.title}</span>
+                          <Badge variant="outline" className="text-xs">{a.achievement_type}</Badge>
+                        </div>
+                        {a.description && <p className="text-sm text-muted-foreground">{a.description}</p>}
+                      </div>
+                      <span className="text-xs text-muted-foreground">{a.achievement_date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : !playerBadges?.length && (
               <div className="text-center py-8 text-muted-foreground">
                 <Medal className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No achievements yet!</p>
+                <p>No achievements or badges yet!</p>
                 <p className="text-sm">Keep working hard and they'll come.</p>
               </div>
             )}
