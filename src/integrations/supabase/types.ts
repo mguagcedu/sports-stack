@@ -276,6 +276,96 @@ export type Database = {
           },
         ]
       }
+      equipment_audit_log: {
+        Row: {
+          action_description: string | null
+          action_type: string
+          checkout_id: string | null
+          created_at: string | null
+          equipment_item_id: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          performed_by_user_id: string | null
+        }
+        Insert: {
+          action_description?: string | null
+          action_type: string
+          checkout_id?: string | null
+          created_at?: string | null
+          equipment_item_id?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_by_user_id?: string | null
+        }
+        Update: {
+          action_description?: string | null
+          action_type?: string
+          checkout_id?: string | null
+          created_at?: string | null
+          equipment_item_id?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_audit_log_checkout_id_fkey"
+            columns: ["checkout_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_checkouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_audit_log_equipment_item_id_fkey"
+            columns: ["equipment_item_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_categories: {
+        Row: {
+          code: string
+          created_at: string | null
+          default_lifespan_years: number | null
+          description: string | null
+          has_sizes: boolean | null
+          icon: string | null
+          id: string
+          name: string
+          requires_inspection: boolean | null
+          sport_code: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          default_lifespan_years?: number | null
+          description?: string | null
+          has_sizes?: boolean | null
+          icon?: string | null
+          id?: string
+          name: string
+          requires_inspection?: boolean | null
+          sport_code?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          default_lifespan_years?: number | null
+          description?: string | null
+          has_sizes?: boolean | null
+          icon?: string | null
+          id?: string
+          name?: string
+          requires_inspection?: boolean | null
+          sport_code?: string | null
+        }
+        Relationships: []
+      }
       equipment_checkouts: {
         Row: {
           actual_return_date: string | null
@@ -287,9 +377,14 @@ export type Database = {
           equipment_item_id: string
           expected_return_date: string | null
           id: string
+          needs_refurbishment: boolean | null
           notes: string | null
           quantity: number
+          refurbishment_notes: string | null
+          return_notes: string | null
           return_received_by_user_id: string | null
+          reusable: boolean | null
+          size_id: string | null
           status: string
           team_id: string | null
           team_member_id: string | null
@@ -297,6 +392,9 @@ export type Database = {
           tracking_method: string | null
           updated_at: string | null
           user_id: string
+          wash_required: boolean | null
+          washed_at: string | null
+          washed_by_user_id: string | null
         }
         Insert: {
           actual_return_date?: string | null
@@ -308,9 +406,14 @@ export type Database = {
           equipment_item_id: string
           expected_return_date?: string | null
           id?: string
+          needs_refurbishment?: boolean | null
           notes?: string | null
           quantity?: number
+          refurbishment_notes?: string | null
+          return_notes?: string | null
           return_received_by_user_id?: string | null
+          reusable?: boolean | null
+          size_id?: string | null
           status?: string
           team_id?: string | null
           team_member_id?: string | null
@@ -318,6 +421,9 @@ export type Database = {
           tracking_method?: string | null
           updated_at?: string | null
           user_id: string
+          wash_required?: boolean | null
+          washed_at?: string | null
+          washed_by_user_id?: string | null
         }
         Update: {
           actual_return_date?: string | null
@@ -329,9 +435,14 @@ export type Database = {
           equipment_item_id?: string
           expected_return_date?: string | null
           id?: string
+          needs_refurbishment?: boolean | null
           notes?: string | null
           quantity?: number
+          refurbishment_notes?: string | null
+          return_notes?: string | null
           return_received_by_user_id?: string | null
+          reusable?: boolean | null
+          size_id?: string | null
           status?: string
           team_id?: string | null
           team_member_id?: string | null
@@ -339,6 +450,9 @@ export type Database = {
           tracking_method?: string | null
           updated_at?: string | null
           user_id?: string
+          wash_required?: boolean | null
+          washed_at?: string | null
+          washed_by_user_id?: string | null
         }
         Relationships: [
           {
@@ -346,6 +460,13 @@ export type Database = {
             columns: ["equipment_item_id"]
             isOneToOne: false
             referencedRelation: "equipment_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_checkouts_size_id_fkey"
+            columns: ["size_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_sizes"
             referencedColumns: ["id"]
           },
           {
@@ -369,58 +490,100 @@ export type Database = {
           available_quantity: number
           barcode: string | null
           category: string
+          code_type: string | null
+          condition_status: string | null
           created_at: string | null
           description: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
+          last_inspection_date: string | null
+          lifecycle_status: string | null
+          manufacturer: string | null
+          max_lifespan_years: number | null
+          model_number: string | null
           name: string
+          next_inspection_date: string | null
+          notes: string | null
           organization_id: string | null
+          purchase_date: string | null
           reorder_threshold: number | null
+          requires_washing: boolean | null
+          retirement_date: string | null
           school_id: string | null
+          serial_number: string | null
           sku: string | null
           sport_code: string | null
           total_quantity: number
           unit_cost: number | null
           updated_at: string | null
+          warranty_expiry: string | null
         }
         Insert: {
           available_quantity?: number
           barcode?: string | null
           category: string
+          code_type?: string | null
+          condition_status?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          last_inspection_date?: string | null
+          lifecycle_status?: string | null
+          manufacturer?: string | null
+          max_lifespan_years?: number | null
+          model_number?: string | null
           name: string
+          next_inspection_date?: string | null
+          notes?: string | null
           organization_id?: string | null
+          purchase_date?: string | null
           reorder_threshold?: number | null
+          requires_washing?: boolean | null
+          retirement_date?: string | null
           school_id?: string | null
+          serial_number?: string | null
           sku?: string | null
           sport_code?: string | null
           total_quantity?: number
           unit_cost?: number | null
           updated_at?: string | null
+          warranty_expiry?: string | null
         }
         Update: {
           available_quantity?: number
           barcode?: string | null
           category?: string
+          code_type?: string | null
+          condition_status?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          last_inspection_date?: string | null
+          lifecycle_status?: string | null
+          manufacturer?: string | null
+          max_lifespan_years?: number | null
+          model_number?: string | null
           name?: string
+          next_inspection_date?: string | null
+          notes?: string | null
           organization_id?: string | null
+          purchase_date?: string | null
           reorder_threshold?: number | null
+          requires_washing?: boolean | null
+          retirement_date?: string | null
           school_id?: string | null
+          serial_number?: string | null
           sku?: string | null
           sport_code?: string | null
           total_quantity?: number
           unit_cost?: number | null
           updated_at?: string | null
+          warranty_expiry?: string | null
         }
         Relationships: [
           {
