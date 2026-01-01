@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Users, Filter } from "lucide-react";
+import { Plus, Search, Users, Filter, Shield } from "lucide-react";
 import { TeamCreationWizard } from "@/components/teams/TeamCreationWizard";
 import { SanctionBadge } from "@/components/governance/SanctionBadge";
 
@@ -29,6 +29,7 @@ export default function Teams() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sportFilter, setSportFilter] = useState<string>("all");
   const [seasonFilter, setSeasonFilter] = useState<string>("all");
+  const [sanctionFilter, setSanctionFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const navigate = useNavigate();
@@ -76,12 +77,53 @@ export default function Teams() {
     },
   });
 
-  const filteredTeams = teams?.filter((team) => {
-    const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSport = sportFilter === "all" || team.sport_id === sportFilter;
-    const matchesSeason = seasonFilter === "all" || team.season_id === seasonFilter;
-    return matchesSearch && matchesSport && matchesSeason;
+  // Fetch all state sanctions for filtering
+  const { data: stateSanctions } = useQuery({
+    queryKey: ["all-state-sanctions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("state_sport_sanction")
+        .select("state_code, sport_code, sanctioned");
+      if (error) throw error;
+      const map = new Map<string, boolean>();
+      data.forEach((s) => {
+        map.set(`${s.state_code}-${s.sport_code}`, s.sanctioned ?? false);
+      });
+      return map;
+    },
   });
+
+  // Helper to get state and district for a team
+  const getTeamLocation = (team: any) => {
+    const state = team.organizations?.state || team.schools?.state;
+    const districtId = team.organizations?.district_id || team.schools?.district_id;
+    return { state, districtId };
+  };
+
+  const filteredTeams = useMemo(() => {
+    return teams?.filter((team) => {
+      const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSport = sportFilter === "all" || team.sport_id === sportFilter;
+      const matchesSeason = seasonFilter === "all" || team.season_id === seasonFilter;
+      
+      // Sanction filter
+      if (sanctionFilter !== "all" && stateSanctions) {
+        const { state } = getTeamLocation(team);
+        const sportCode = team.sports?.code;
+        if (state && sportCode) {
+          const key = `${state}-${sportCode}`;
+          const isSanctioned = stateSanctions.get(key);
+          if (sanctionFilter === "sanctioned" && isSanctioned !== true) return false;
+          if (sanctionFilter === "unsanctioned" && isSanctioned !== false) return false;
+          if (sanctionFilter === "unknown" && isSanctioned !== undefined) return false;
+        } else if (sanctionFilter !== "unknown") {
+          return false;
+        }
+      }
+      
+      return matchesSearch && matchesSport && matchesSeason;
+    });
+  }, [teams, searchTerm, sportFilter, seasonFilter, sanctionFilter, stateSanctions]);
 
   const getLevelBadgeVariant = (level: string | null) => {
     switch (level?.toLowerCase()) {
@@ -90,13 +132,6 @@ export default function Teams() {
       case "freshman": return "outline";
       default: return "outline";
     }
-  };
-
-  // Helper to get state and district for a team
-  const getTeamLocation = (team: any) => {
-    const state = team.organizations?.state || team.schools?.state;
-    const districtId = team.organizations?.district_id || team.schools?.district_id;
-    return { state, districtId };
   };
 
   return (
@@ -145,6 +180,18 @@ export default function Teams() {
               {seasons?.map((season) => (
                 <SelectItem key={season.id} value={season.id}>{season.name}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={sanctionFilter} onValueChange={setSanctionFilter}>
+            <SelectTrigger className="w-[180px]">
+              <Shield className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Sanction status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="sanctioned">Sanctioned</SelectItem>
+              <SelectItem value="unsanctioned">Not Sanctioned</SelectItem>
+              <SelectItem value="unknown">Unknown</SelectItem>
             </SelectContent>
           </Select>
         </div>

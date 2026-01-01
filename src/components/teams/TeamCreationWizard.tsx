@@ -97,16 +97,43 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
   });
 
   const { data: seasons } = useQuery({
-    queryKey: ["seasons"],
+    queryKey: ["seasons-with-dates"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("seasons")
-        .select("id, name, is_active")
+        .select("id, name, is_active, start_date, end_date, academic_year")
         .order("start_date", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
+
+  // Categorize seasons
+  const categorizedSeasons = useMemo(() => {
+    if (!seasons) return { current: [], future: [], past: [] };
+    const now = new Date();
+    const current: typeof seasons = [];
+    const future: typeof seasons = [];
+    const past: typeof seasons = [];
+    
+    seasons.forEach((season) => {
+      const startDate = season.start_date ? new Date(season.start_date) : null;
+      const endDate = season.end_date ? new Date(season.end_date) : null;
+      
+      if (season.is_active) {
+        current.push(season);
+      } else if (startDate && startDate > now) {
+        future.push(season);
+      } else if (endDate && endDate < now) {
+        past.push(season);
+      } else {
+        // Default to current if dates are unclear
+        current.push(season);
+      }
+    });
+    
+    return { current, future, past };
+  }, [seasons]);
 
   // Derived data
   const selectedOrg = organizations?.find((o) => o.id === teamData.organization_id);
@@ -409,13 +436,49 @@ export function TeamCreationWizard({ open, onOpenChange }: TeamCreationWizardPro
                     <SelectValue placeholder="Select season" />
                   </SelectTrigger>
                   <SelectContent>
-                    {seasons?.map((season) => (
-                      <SelectItem key={season.id} value={season.id}>
-                        {season.name} {season.is_active && <Badge variant="secondary" className="ml-2">Active</Badge>}
-                      </SelectItem>
-                    ))}
+                    {categorizedSeasons.current.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Current Season</div>
+                        {categorizedSeasons.current.map((season) => (
+                          <SelectItem key={season.id} value={season.id}>
+                            <span className="flex items-center gap-2">
+                              {season.name}
+                              {season.is_active && <Badge variant="default" className="text-xs h-5">Active</Badge>}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {categorizedSeasons.future.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">Future Seasons</div>
+                        {categorizedSeasons.future.map((season) => (
+                          <SelectItem key={season.id} value={season.id}>
+                            <span className="flex items-center gap-2">
+                              {season.name}
+                              <Badge variant="outline" className="text-xs h-5">Upcoming</Badge>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {categorizedSeasons.past.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">Past Seasons</div>
+                        {categorizedSeasons.past.map((season) => (
+                          <SelectItem key={season.id} value={season.id}>
+                            <span className="text-muted-foreground">{season.name}</span>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
+                {teamData.season_id && categorizedSeasons.future.some(s => s.id === teamData.season_id) && (
+                  <p className="text-xs text-muted-foreground">
+                    Creating a team for a future season allows you to plan ahead.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
