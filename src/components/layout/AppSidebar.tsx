@@ -15,6 +15,8 @@ import {
   ChevronDown,
   ClipboardList,
   Trophy,
+  UserCircle,
+  Dumbbell,
 } from 'lucide-react';
 import { NavLink as RouterNavLink, useNavigate } from 'react-router-dom';
 import {
@@ -41,30 +43,39 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles, AppRole } from '@/hooks/useUserRoles';
 import { cn } from '@/lib/utils';
+import { canAccessPage, PageKey } from '@/lib/permissions';
 
-const mainNavItems = [
-  { title: 'Dashboard', url: '/', icon: Home },
-  { title: 'Organizations', url: '/organizations', icon: Building2 },
-  { title: 'Teams', url: '/teams', icon: Users },
-  { title: 'Coach Dashboard', url: '/coach', icon: ClipboardList },
+interface NavItem {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  pageKey: PageKey;
+}
+
+const mainNavItems: NavItem[] = [
+  { title: 'Dashboard', url: '/', icon: Home, pageKey: 'dashboard' },
+  { title: 'Organizations', url: '/organizations', icon: Building2, pageKey: 'organizations' },
+  { title: 'Teams', url: '/teams', icon: Users, pageKey: 'teams' },
+  { title: 'Coach Dashboard', url: '/coach', icon: ClipboardList, pageKey: 'coach_dashboard' },
+  { title: 'Parent Dashboard', url: '/parent', icon: UserCircle, pageKey: 'parent_dashboard' },
+  { title: 'Athlete Dashboard', url: '/athlete', icon: Dumbbell, pageKey: 'athlete_dashboard' },
 ];
 
-const managementNavItems = [
-  { title: 'Registrations', url: '/registrations', icon: FileText },
-  { title: 'Payments', url: '/payments', icon: CreditCard },
-  { title: 'Events & Tickets', url: '/events', icon: Ticket },
-  { title: 'Messages', url: '/messages', icon: MessageSquare },
+const managementNavItems: NavItem[] = [
+  { title: 'Registrations', url: '/registrations', icon: FileText, pageKey: 'registrations' },
+  { title: 'Payments', url: '/payments', icon: CreditCard, pageKey: 'payments' },
+  { title: 'Events & Tickets', url: '/events', icon: Ticket, pageKey: 'events' },
 ];
 
-const adminNavItems = [
-  { title: 'School Database', url: '/schools', icon: GraduationCap },
-  { title: 'Districts', url: '/districts', icon: Building2 },
-  { title: 'Governance', url: '/governance', icon: Trophy },
-  { title: 'Import Data', url: '/import', icon: Database },
-  { title: 'User Management', url: '/users', icon: Users },
-  { title: 'Permissions', url: '/permissions', icon: Shield },
-  { title: 'Reports', url: '/reports', icon: BarChart3 },
-  { title: 'Audit Logs', url: '/audit-logs', icon: Database },
+const adminNavItems: NavItem[] = [
+  { title: 'School Database', url: '/schools', icon: GraduationCap, pageKey: 'schools' },
+  { title: 'Districts', url: '/districts', icon: Building2, pageKey: 'districts' },
+  { title: 'Governance', url: '/governance', icon: Trophy, pageKey: 'governance' },
+  { title: 'Import Data', url: '/import', icon: Database, pageKey: 'import' },
+  { title: 'User Management', url: '/users', icon: Users, pageKey: 'users' },
+  { title: 'Permissions', url: '/permissions', icon: Shield, pageKey: 'settings' },
+  { title: 'Reports', url: '/reports', icon: BarChart3, pageKey: 'reports' },
+  { title: 'Audit Logs', url: '/audit-logs', icon: Database, pageKey: 'audit_logs' },
 ];
 
 const roleLabels: Record<AppRole, string> = {
@@ -97,7 +108,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { user, signOut } = useAuth();
-  const { activeRole, isAdmin } = useUserRoles();
+  const { activeRole } = useUserRoles();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -109,6 +120,17 @@ export function AppSidebar() {
     if (!user?.email) return 'U';
     return user.email.charAt(0).toUpperCase();
   };
+
+  // Filter navigation items based on role permissions
+  const filteredMainNav = mainNavItems.filter(item => 
+    canAccessPage(activeRole, item.pageKey)
+  );
+  const filteredManagementNav = managementNavItems.filter(item => 
+    canAccessPage(activeRole, item.pageKey)
+  );
+  const filteredAdminNav = adminNavItems.filter(item => 
+    canAccessPage(activeRole, item.pageKey)
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -127,69 +149,73 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <RouterNavLink 
-                      to={item.url} 
-                      end={item.url === '/'}
-                      className={({ isActive }) => 
-                        cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground transition-colors",
-                          isActive 
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
-                            : "hover:bg-sidebar-accent/50"
-                        )
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </RouterNavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {filteredMainNav.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Main</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredMainNav.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <RouterNavLink 
+                        to={item.url} 
+                        end={item.url === '/'}
+                        className={({ isActive }) => 
+                          cn(
+                            "flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground transition-colors",
+                            isActive 
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                              : "hover:bg-sidebar-accent/50"
+                          )
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </RouterNavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Management</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {managementNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <RouterNavLink 
-                      to={item.url}
-                      className={({ isActive }) => 
-                        cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground transition-colors",
-                          isActive 
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
-                            : "hover:bg-sidebar-accent/50"
-                        )
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </RouterNavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {filteredManagementNav.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredManagementNav.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <RouterNavLink 
+                        to={item.url}
+                        className={({ isActive }) => 
+                          cn(
+                            "flex items-center gap-3 rounded-md px-3 py-2 text-sidebar-foreground transition-colors",
+                            isActive 
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+                              : "hover:bg-sidebar-accent/50"
+                          )
+                        }
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </RouterNavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        {isAdmin() && (
+        {filteredAdminNav.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>Administration</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {adminNavItems.map((item) => (
+                {filteredAdminNav.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <RouterNavLink 

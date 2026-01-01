@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { getDefaultDashboard } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +19,7 @@ const nameSchema = z.string().max(100).optional();
 export default function Auth() {
   const navigate = useNavigate();
   const { user, signIn, signUp, signInWithGoogle, loading: authLoading } = useAuth();
+  const { activeRole, loading: rolesLoading } = useUserRoles();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -26,10 +29,11 @@ export default function Auth() {
   const [lastName, setLastName] = useState('');
 
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (user && !rolesLoading) {
+      const destination = getDefaultDashboard(activeRole);
+      navigate(destination);
     }
-  }, [user, navigate]);
+  }, [user, activeRole, rolesLoading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
