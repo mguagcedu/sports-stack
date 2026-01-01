@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Camera, Package, Plus, Check, ChevronRight } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Camera, Package, Plus, ChevronRight, QrCode, Barcode } from 'lucide-react';
 import { 
   EQUIPMENT_CATEGORIES, 
   EQUIPMENT_PRESETS,
@@ -28,12 +28,35 @@ interface AddEquipmentDialogProps {
     sku: string;
     barcode: string;
     unit_cost: string;
+    our_cost: string;
+    retail_price: string;
+    assigned_value: string;
     total_quantity: string;
     reorder_threshold: string;
+    code_type: string;
+    is_returnable: boolean;
+    non_returnable_reason: string;
+    received_date: string;
+    recertification_interval_months: string;
   }) => void;
   onScanBarcode: () => void;
   isPending?: boolean;
 }
+
+const CODE_TYPES = [
+  { value: 'qr', label: 'QR Code', icon: QrCode },
+  { value: 'code128', label: 'Barcode (Code 128)', icon: Barcode },
+  { value: 'code39', label: 'Barcode (Code 39)', icon: Barcode },
+];
+
+// Generate auto-SKU based on category
+const generateSKU = (category: string, subcategory: string) => {
+  const catPrefix = category.substring(0, 3).toUpperCase();
+  const subPrefix = subcategory ? subcategory.substring(0, 2).toUpperCase() : 'XX';
+  const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
+  const random = Math.random().toString(36).substring(2, 4).toUpperCase();
+  return `${catPrefix}-${subPrefix}-${timestamp}${random}`;
+};
 
 export function AddEquipmentDialog({ 
   open, 
@@ -45,6 +68,7 @@ export function AddEquipmentDialog({
   const [selectedPreset, setSelectedPreset] = useState<EquipmentPreset | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('uniforms');
   const [showCustomForm, setShowCustomForm] = useState(false);
+  const [autoGenerateSKU, setAutoGenerateSKU] = useState(true);
   
   const [newItem, setNewItem] = useState({
     name: '',
@@ -54,34 +78,63 @@ export function AddEquipmentDialog({
     sku: '',
     barcode: '',
     unit_cost: '',
+    our_cost: '',
+    retail_price: '',
+    assigned_value: '',
     total_quantity: '1',
     reorder_threshold: '',
+    code_type: 'qr',
+    is_returnable: true,
+    non_returnable_reason: '',
+    received_date: new Date().toISOString().split('T')[0],
+    recertification_interval_months: '',
   });
+
+  // Auto-generate SKU when category/subcategory changes
+  useEffect(() => {
+    if (autoGenerateSKU && showCustomForm) {
+      setNewItem(prev => ({
+        ...prev,
+        sku: generateSKU(prev.category, prev.subcategory)
+      }));
+    }
+  }, [newItem.category, newItem.subcategory, autoGenerateSKU, showCustomForm]);
 
   const handleSelectPreset = (preset: EquipmentPreset) => {
     setSelectedPreset(preset);
+    const autoSKU = generateSKU(preset.category, preset.subcategory);
     setNewItem({
       ...newItem,
       name: preset.name,
       description: preset.description || '',
       category: preset.category,
       subcategory: preset.subcategory,
+      sku: autoGenerateSKU ? autoSKU : '',
     });
     setShowCustomForm(true);
   };
 
   const handleAddCustom = () => {
     setSelectedPreset(null);
+    const autoSKU = generateSKU(selectedCategory, '');
     setNewItem({
       name: '',
       description: '',
       category: selectedCategory,
       subcategory: '',
-      sku: '',
+      sku: autoGenerateSKU ? autoSKU : '',
       barcode: '',
       unit_cost: '',
+      our_cost: '',
+      retail_price: '',
+      assigned_value: '',
       total_quantity: '1',
       reorder_threshold: '',
+      code_type: 'qr',
+      is_returnable: true,
+      non_returnable_reason: '',
+      received_date: new Date().toISOString().split('T')[0],
+      recertification_interval_months: '',
     });
     setShowCustomForm(true);
   };
@@ -106,8 +159,16 @@ export function AddEquipmentDialog({
       sku: '',
       barcode: '',
       unit_cost: '',
+      our_cost: '',
+      retail_price: '',
+      assigned_value: '',
       total_quantity: '1',
       reorder_threshold: '',
+      code_type: 'qr',
+      is_returnable: true,
+      non_returnable_reason: '',
+      received_date: new Date().toISOString().split('T')[0],
+      recertification_interval_months: '',
     });
     onOpenChange(false);
   };
@@ -118,7 +179,7 @@ export function AddEquipmentDialog({
   if (showCustomForm) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedPreset && (
@@ -130,6 +191,7 @@ export function AddEquipmentDialog({
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Basic Info */}
             <div className="space-y-2">
               <Label>Name *</Label>
               <Input
@@ -174,17 +236,37 @@ export function AddEquipmentDialog({
               </div>
             </div>
 
+            {/* SKU and Barcode */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>SKU</Label>
+                <div className="flex items-center justify-between">
+                  <Label>SKU / Internal ID</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Auto</span>
+                    <Switch 
+                      checked={autoGenerateSKU} 
+                      onCheckedChange={(checked) => {
+                        setAutoGenerateSKU(checked);
+                        if (checked) {
+                          setNewItem(prev => ({
+                            ...prev,
+                            sku: generateSKU(prev.category, prev.subcategory)
+                          }));
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
                 <Input
                   value={newItem.sku}
                   onChange={(e) => setNewItem({ ...newItem, sku: e.target.value })}
-                  placeholder="Internal ID"
+                  placeholder="Auto-generated"
+                  disabled={autoGenerateSKU}
+                  className="font-mono"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Barcode/QR</Label>
+                <Label>Barcode Value</Label>
                 <div className="flex gap-2">
                   <Input
                     value={newItem.barcode}
@@ -204,7 +286,31 @@ export function AddEquipmentDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            {/* Code Type Selection */}
+            <div className="space-y-2">
+              <Label>Label/Code Type</Label>
+              <div className="flex gap-2">
+                {CODE_TYPES.map((type) => (
+                  <Button
+                    key={type.value}
+                    type="button"
+                    variant={newItem.code_type === type.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewItem({ ...newItem, code_type: type.value })}
+                    className="flex-1"
+                  >
+                    <type.icon className="h-4 w-4 mr-1" />
+                    {type.label.split(' ')[0]}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Select the code type for labels/scanning. QR codes work best for mobile scanning.
+              </p>
+            </div>
+
+            {/* Quantity and Costs */}
+            <div className="grid grid-cols-4 gap-3">
               <div className="space-y-2">
                 <Label>Quantity</Label>
                 <Input
@@ -215,12 +321,22 @@ export function AddEquipmentDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Unit Cost</Label>
+                <Label>Our Cost</Label>
                 <Input
                   type="number"
                   step="0.01"
-                  value={newItem.unit_cost}
-                  onChange={(e) => setNewItem({ ...newItem, unit_cost: e.target.value })}
+                  value={newItem.our_cost}
+                  onChange={(e) => setNewItem({ ...newItem, our_cost: e.target.value })}
+                  placeholder="$0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Retail Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={newItem.retail_price}
+                  onChange={(e) => setNewItem({ ...newItem, retail_price: e.target.value })}
                   placeholder="$0.00"
                 />
               </div>
@@ -231,9 +347,79 @@ export function AddEquipmentDialog({
                   min="0"
                   value={newItem.reorder_threshold}
                   onChange={(e) => setNewItem({ ...newItem, reorder_threshold: e.target.value })}
-                  placeholder="Alert at"
+                  placeholder="Alert"
                 />
               </div>
+            </div>
+
+            {/* Received Date and Recertification */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Received Date</Label>
+                <Input
+                  type="date"
+                  value={newItem.received_date}
+                  onChange={(e) => setNewItem({ ...newItem, received_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Recertification Interval</Label>
+                <Select
+                  value={newItem.recertification_interval_months}
+                  onValueChange={(value) => setNewItem({ ...newItem, recertification_interval_months: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Not required" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Not required</SelectItem>
+                    <SelectItem value="6">Every 6 months</SelectItem>
+                    <SelectItem value="12">Annually</SelectItem>
+                    <SelectItem value="24">Every 2 years</SelectItem>
+                    <SelectItem value="36">Every 3 years</SelectItem>
+                    <SelectItem value="60">Every 5 years</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Returnable Toggle */}
+            <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Returnable Item</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Turn off for items given to players (e.g., game socks)
+                  </p>
+                </div>
+                <Switch 
+                  checked={newItem.is_returnable} 
+                  onCheckedChange={(checked) => setNewItem({ ...newItem, is_returnable: checked })}
+                />
+              </div>
+              {!newItem.is_returnable && (
+                <div className="space-y-2">
+                  <Label>Reason (for financial reports)</Label>
+                  <Select
+                    value={newItem.non_returnable_reason}
+                    onValueChange={(value) => setNewItem({ ...newItem, non_returnable_reason: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select reason..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="given_to_player">Given to player after season</SelectItem>
+                      <SelectItem value="consumable">Consumable item</SelectItem>
+                      <SelectItem value="hygiene">Hygiene/sanitary reasons</SelectItem>
+                      <SelectItem value="personalized">Personalized/custom item</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This item will be tracked as an expense and not expected back.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -354,10 +540,4 @@ export function AddEquipmentDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-// Export a function to update barcode from external scanner
-export function useExternalBarcodeInput(setNewItem: React.Dispatch<React.SetStateAction<any>>) {
-  // This can be extended to listen for keyboard input from scan guns
-  // Scan guns typically act as keyboard input, sending the barcode followed by Enter
 }

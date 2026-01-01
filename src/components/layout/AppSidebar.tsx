@@ -21,6 +21,7 @@ import {
   Plug,
   Package,
   HeartHandshake,
+  DollarSign,
 } from 'lucide-react';
 import { NavLink as RouterNavLink, useNavigate } from 'react-router-dom';
 import {
@@ -71,6 +72,7 @@ const managementNavItems: NavItem[] = [
   { title: 'Events & Tickets', url: '/events', icon: Ticket, pageKey: 'events' },
   { title: 'Equipment', url: '/equipment', icon: Package, pageKey: 'equipment' },
   { title: 'Volunteering', url: '/volunteering', icon: HeartHandshake, pageKey: 'events' },
+  { title: 'Finances', url: '/finances', icon: DollarSign, pageKey: 'payments' },
 ];
 
 const adminNavItems: NavItem[] = [
