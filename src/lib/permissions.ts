@@ -82,7 +82,7 @@ const PAGE_PERMISSIONS: Record<PageKey, AppRole[]> = {
   payments: ['superadmin', 'system_admin', 'org_admin', 'finance_admin', 'finance_clerk'],
   reports: ['superadmin', 'system_admin', 'org_admin', 'athletic_director', 'finance_admin'],
   audit_logs: ['superadmin', 'system_admin'],
-  settings: ['superadmin', 'system_admin', 'org_admin'],
+  settings: ['superadmin', 'system_admin', 'org_admin', 'district_owner', 'district_admin', 'school_owner', 'school_admin', 'athletic_director', 'head_coach', 'coach', 'assistant_coach', 'team_manager', 'trainer', 'scorekeeper', 'equipment_manager', 'student_manager', 'student_equipment_manager', 'parent', 'guardian', 'athlete', 'finance_admin', 'finance_clerk', 'gate_staff', 'registrar', 'district_viewer', 'school_viewer'],
   governance: ['superadmin', 'system_admin', 'district_owner', 'district_admin'],
   import: ['superadmin', 'system_admin'],
   validation: ['superadmin', 'system_admin'],

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { createNotification } from '@/hooks/useNotifications';
 import { 
   ShieldAlert, 
   AlertTriangle, 
@@ -142,35 +143,20 @@ export function DisciplineManager({ teamId, sportCode }: DisciplineManagerProps)
         });
       if (error) throw error;
 
-      // Create notifications
-      const notifications = [];
-      
       // Get the team member's user_id
-      const member = teamMembers.find(m => m.id === selectedMemberId);
+      const member = teamMembers.find((m: any) => m.id === selectedMemberId) as any;
       
+      // Send personal notification to player
       if (notifyPlayer && member?.user_id) {
-        notifications.push({
-          team_id: teamId,
-          recipient_user_id: member.user_id,
-          notification_type: 'discipline',
-          title: 'Discipline Notice',
-          message: `You have received a ${severity} discipline notice for ${disciplineType.replace('_', ' ')}`,
-          priority: severity === 'severe' || severity === 'critical' ? 'high' : 'normal',
+        const consequenceLabel = CONSEQUENCE_TYPES.find(c => c.value === consequenceType)?.label || 'Action';
+        await createNotification({
+          user_id: member.user_id,
+          title: '⚠️ Discipline Notice',
+          message: `You have received a discipline notice: ${consequenceLabel} for ${DISCIPLINE_TYPES.find(t => t.value === disciplineType)?.label || disciplineType}`,
+          type: severity === 'severe' || severity === 'critical' ? 'error' : 'warning',
+          category: 'discipline',
+          reference_type: 'discipline',
         });
-      }
-
-      if (notifyTeam && severity !== 'minor') {
-        notifications.push({
-          team_id: teamId,
-          notification_type: 'discipline',
-          title: 'Team Discipline Notice',
-          message: `A team discipline action has been taken`,
-          priority: 'normal',
-        });
-      }
-
-      if (notifications.length > 0) {
-        await supabase.from('team_notifications').insert(notifications);
       }
     },
     onSuccess: () => {

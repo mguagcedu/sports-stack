@@ -2429,6 +2429,48 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          read_at: string | null
+          reference_id: string | null
+          reference_type: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          read_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          read_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           address: string | null
@@ -3023,6 +3065,7 @@ export type Database = {
           birthday_notification_enabled: boolean | null
           card_photo_url: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
           first_name: string | null
           id: string
@@ -3038,6 +3081,7 @@ export type Database = {
           birthday_notification_enabled?: boolean | null
           card_photo_url?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           first_name?: string | null
           id: string
@@ -3053,6 +3097,7 @@ export type Database = {
           birthday_notification_enabled?: boolean | null
           card_photo_url?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
           first_name?: string | null
           id?: string

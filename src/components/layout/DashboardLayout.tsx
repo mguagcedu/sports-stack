@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/s
 import { AppSidebar } from './AppSidebar';
 import { RoleSwitcher } from './RoleSwitcher';
 import { NotificationBell } from './NotificationBell';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -54,6 +55,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               </BreadcrumbList>
             </Breadcrumb>
             <div className="flex-1" />
+            <NotificationCenter />
             <NotificationBell />
             <RoleSwitcher />
           </header>
