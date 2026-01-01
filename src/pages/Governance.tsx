@@ -46,10 +46,36 @@ import {
   Loader2,
   RefreshCw,
   Lock,
+  Globe,
+  MapPin,
+  Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { cn } from "@/lib/utils";
+
+interface GoverningBody {
+  id: string;
+  name: string;
+  short_name: string | null;
+  type: string;
+  state_code: string | null;
+  website_url: string | null;
+  is_seeded: boolean;
+  is_active: boolean;
+}
+
+const GOVERNING_BODY_TYPE_LABELS: Record<string, string> = {
+  state_primary: 'State Primary (NFHS)',
+  state_private: 'Private Schools',
+  city_public: 'City Public League',
+  independent_schools: 'Independent Schools',
+  prep_conference: 'Prep Conference',
+  charter: 'Charter Schools',
+  national: 'National',
+  multi_state: 'Multi-State',
+  other: 'Other',
+};
 
 interface SportType {
   sport_id: string;
@@ -126,6 +152,21 @@ export default function Governance() {
     },
   });
 
+  // Fetch governing bodies (sanctioning bodies)
+  const { data: governingBodies, isLoading: loadingGoverningBodies } = useQuery({
+    queryKey: ["governing-bodies"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("governing_bodies")
+        .select("*")
+        .order("type")
+        .order("state_code")
+        .order("name");
+      if (error) throw error;
+      return data as GoverningBody[];
+    },
+  });
+
   // Fetch sanctions with filters
   const { data: sanctions, isLoading: loadingSanctions } = useQuery({
     queryKey: ["state-sanctions", stateFilter, sportFilter, sanctionStatusFilter],
@@ -187,10 +228,23 @@ export default function Governance() {
     assoc.association_abbrev.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredGoverningBodies = governingBodies?.filter((body) =>
+    body.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (body.short_name && body.short_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (body.state_code && body.state_code.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   const getSanctionIcon = (sanctioned: boolean | null) => {
     if (sanctioned === true) return <CheckCircle2 className="h-4 w-4 text-green-600" />;
     if (sanctioned === false) return <XCircle className="h-4 w-4 text-red-500" />;
     return <HelpCircle className="h-4 w-4 text-gray-400" />;
+  };
+
+  const getGoverningBodyIcon = (type: string) => {
+    if (type === 'national' || type === 'multi_state') return <Globe className="h-4 w-4 text-blue-500" />;
+    if (type === 'state_primary') return <MapPin className="h-4 w-4 text-green-600" />;
+    if (type === 'city_public') return <Landmark className="h-4 w-4 text-purple-500" />;
+    return <Building2 className="h-4 w-4 text-muted-foreground" />;
   };
 
   return (
@@ -204,13 +258,17 @@ export default function Governance() {
               <Trophy className="h-4 w-4" />
               Sports ({sportTypes?.length || 0})
             </TabsTrigger>
+            <TabsTrigger value="sanctioning" className="gap-2">
+              <Landmark className="h-4 w-4" />
+              Sanctioning Bodies ({governingBodies?.length || 0})
+            </TabsTrigger>
             <TabsTrigger value="associations" className="gap-2">
               <Building2 className="h-4 w-4" />
-              Associations ({associations?.length || 0})
+              State Associations ({associations?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="sanctions" className="gap-2">
               <Shield className="h-4 w-4" />
-              Sanctioning
+              Sport Sanctions
             </TabsTrigger>
           </TabsList>
 
@@ -274,6 +332,97 @@ export default function Governance() {
                           <TableCell>{sport.gender}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{sport.maturity}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sanctioning Bodies Tab */}
+        <TabsContent value="sanctioning">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sanctioning Bodies</CardTitle>
+              <CardDescription>
+                Athletic associations, leagues, and governing bodies. Also known as: Athletic Association, Activities Association, League.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingGoverningBodies ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <ScrollArea className="h-[500px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Abbreviation</TableHead>
+                        <TableHead>State/Region</TableHead>
+                        <TableHead>Website</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredGoverningBodies?.map((body) => (
+                        <TableRow key={body.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getGoverningBodyIcon(body.type)}
+                              <span className="text-xs text-muted-foreground">
+                                {GOVERNING_BODY_TYPE_LABELS[body.type] || body.type}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium max-w-[250px]">
+                            {body.name}
+                          </TableCell>
+                          <TableCell>
+                            {body.short_name && (
+                              <Badge variant="outline">{body.short_name}</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {body.state_code ? (
+                              <Badge variant="secondary" className="font-mono">
+                                {body.state_code}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">National</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {body.website_url && (
+                              <a
+                                href={body.website_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline inline-flex items-center gap-1 text-sm"
+                              >
+                                Visit <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {body.is_active ? (
+                                <Badge className="bg-green-100 text-green-800">Active</Badge>
+                              ) : (
+                                <Badge variant="outline">Inactive</Badge>
+                              )}
+                              {body.is_seeded && (
+                                <Badge variant="secondary" className="text-xs">Seeded</Badge>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
