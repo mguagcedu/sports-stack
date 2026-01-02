@@ -4117,6 +4117,7 @@ export type Database = {
         Row: {
           accent_color: string | null
           address: string | null
+          branding_locked: boolean | null
           charter_status: string | null
           city: string | null
           county: string | null
@@ -4124,6 +4125,7 @@ export type Database = {
           district_id: string | null
           finalforms_enabled: boolean | null
           finalforms_portal_url: string | null
+          full_extracted_palette: string[] | null
           gofan_enabled: boolean | null
           gofan_school_url: string | null
           id: string
@@ -4139,11 +4141,14 @@ export type Database = {
           phone: string | null
           primary_color: string | null
           primary_governing_body_id: string | null
+          primary1_hex: string | null
+          primary2_hex: string | null
           school_type: string | null
           school_year: string | null
           secondary_color: string | null
           state: string | null
           sy_status: string | null
+          tertiary_hex_list: string[] | null
           text_on_primary: string | null
           theme_source: string | null
           title1_status: string | null
@@ -4155,6 +4160,7 @@ export type Database = {
         Insert: {
           accent_color?: string | null
           address?: string | null
+          branding_locked?: boolean | null
           charter_status?: string | null
           city?: string | null
           county?: string | null
@@ -4162,6 +4168,7 @@ export type Database = {
           district_id?: string | null
           finalforms_enabled?: boolean | null
           finalforms_portal_url?: string | null
+          full_extracted_palette?: string[] | null
           gofan_enabled?: boolean | null
           gofan_school_url?: string | null
           id?: string
@@ -4177,11 +4184,14 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           primary_governing_body_id?: string | null
+          primary1_hex?: string | null
+          primary2_hex?: string | null
           school_type?: string | null
           school_year?: string | null
           secondary_color?: string | null
           state?: string | null
           sy_status?: string | null
+          tertiary_hex_list?: string[] | null
           text_on_primary?: string | null
           theme_source?: string | null
           title1_status?: string | null
@@ -4193,6 +4203,7 @@ export type Database = {
         Update: {
           accent_color?: string | null
           address?: string | null
+          branding_locked?: boolean | null
           charter_status?: string | null
           city?: string | null
           county?: string | null
@@ -4200,6 +4211,7 @@ export type Database = {
           district_id?: string | null
           finalforms_enabled?: boolean | null
           finalforms_portal_url?: string | null
+          full_extracted_palette?: string[] | null
           gofan_enabled?: boolean | null
           gofan_school_url?: string | null
           id?: string
@@ -4215,11 +4227,14 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           primary_governing_body_id?: string | null
+          primary1_hex?: string | null
+          primary2_hex?: string | null
           school_type?: string | null
           school_year?: string | null
           secondary_color?: string | null
           state?: string | null
           sy_status?: string | null
+          tertiary_hex_list?: string[] | null
           text_on_primary?: string | null
           theme_source?: string | null
           title1_status?: string | null
@@ -4412,6 +4427,59 @@ export type Database = {
           sport_code?: string
         }
         Relationships: []
+      }
+      sport_branding: {
+        Row: {
+          created_at: string | null
+          full_extracted_palette: string[] | null
+          id: string
+          is_locked: boolean | null
+          logo_url: string | null
+          primary1_hex: string | null
+          primary2_hex: string | null
+          school_id: string | null
+          sport_code: string
+          tertiary_hex_list: string[] | null
+          updated_at: string | null
+          updated_by_user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_extracted_palette?: string[] | null
+          id?: string
+          is_locked?: boolean | null
+          logo_url?: string | null
+          primary1_hex?: string | null
+          primary2_hex?: string | null
+          school_id?: string | null
+          sport_code: string
+          tertiary_hex_list?: string[] | null
+          updated_at?: string | null
+          updated_by_user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_extracted_palette?: string[] | null
+          id?: string
+          is_locked?: boolean | null
+          logo_url?: string | null
+          primary1_hex?: string | null
+          primary2_hex?: string | null
+          school_id?: string | null
+          sport_code?: string
+          tertiary_hex_list?: string[] | null
+          updated_at?: string | null
+          updated_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sport_branding_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sport_layout_templates: {
         Row: {
@@ -4777,6 +4845,53 @@ export type Database = {
           tier?: Database["public"]["Enums"]["subscription_tier"]
         }
         Relationships: []
+      }
+      team_branding: {
+        Row: {
+          created_at: string | null
+          full_extracted_palette: string[] | null
+          id: string
+          logo_url: string | null
+          primary1_hex: string | null
+          primary2_hex: string | null
+          team_id: string | null
+          tertiary_hex_list: string[] | null
+          updated_at: string | null
+          updated_by_user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_extracted_palette?: string[] | null
+          id?: string
+          logo_url?: string | null
+          primary1_hex?: string | null
+          primary2_hex?: string | null
+          team_id?: string | null
+          tertiary_hex_list?: string[] | null
+          updated_at?: string | null
+          updated_by_user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_extracted_palette?: string[] | null
+          id?: string
+          logo_url?: string | null
+          primary1_hex?: string | null
+          primary2_hex?: string | null
+          team_id?: string | null
+          tertiary_hex_list?: string[] | null
+          updated_at?: string | null
+          updated_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_branding_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_invitations: {
         Row: {
