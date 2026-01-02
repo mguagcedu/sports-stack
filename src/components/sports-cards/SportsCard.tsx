@@ -138,9 +138,18 @@ export function SportsCard({
         )}
       </div>
 
+      {/* Badges overlay - positioned above info section */}
+      {showDetails && data.badges.length > 0 && (
+        <div className="absolute bottom-20 right-2 flex flex-col gap-1 items-end z-10">
+          {data.badges.slice(0, 3).map(badge => (
+            <CardBadge key={badge.key} badge={badge} size="small" />
+          ))}
+        </div>
+      )}
+
       {/* Info section */}
       <div className={cn(
-        'bg-black/60 backdrop-blur-sm',
+        'bg-black/60 backdrop-blur-sm relative z-0',
         isMini ? 'px-1 py-1' : isSmall ? 'px-2 py-2' : 'px-3 py-3'
       )}>
         {/* Name */}
@@ -190,22 +199,13 @@ export function SportsCard({
                 ))}
               </div>
             )}
-
-            {/* Badges */}
-            {data.badges.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {data.badges.slice(0, 3).map(badge => (
-                  <CardBadge key={badge.key} badge={badge} size="small" />
-                ))}
-              </div>
-            )}
           </>
         )}
       </div>
 
       {/* School logo watermark */}
       {data.schoolLogo && !isMini && (
-        <div className="absolute bottom-12 right-2 opacity-20">
+        <div className="absolute bottom-20 right-2 opacity-20">
           <img 
             src={data.schoolLogo} 
             alt={data.schoolName} 

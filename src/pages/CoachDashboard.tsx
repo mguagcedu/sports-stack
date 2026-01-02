@@ -157,12 +157,13 @@ export default function CoachDashboard() {
     },
   });
 
-  // Calculate upcoming birthdays
-  const upcomingBirthdays = useMemo(() => {
+  // Calculate upcoming birthdays - expand to weekly, monthly, and calendar view
+  const { upcomingBirthdays, monthlyBirthdays, allBirthdays } = useMemo(() => {
     const today = new Date();
     const nextWeek = addDays(today, 7);
+    const nextMonth = addDays(today, 30);
     
-    return rosterProfiles
+    const allWithDates = rosterProfiles
       .filter(p => p.date_of_birth)
       .map(p => {
         const dob = new Date(p.date_of_birth!);
@@ -175,10 +176,16 @@ export default function CoachDashboard() {
           nextBirthday: birthdayThisYear,
           isToday: isSameDay(birthdayThisYear, today),
           isThisWeek: birthdayThisYear >= today && birthdayThisYear <= nextWeek,
+          isThisMonth: birthdayThisYear >= today && birthdayThisYear <= nextMonth,
         };
       })
-      .filter(p => p.isThisWeek)
       .sort((a, b) => a.nextBirthday.getTime() - b.nextBirthday.getTime());
+
+    return {
+      upcomingBirthdays: allWithDates.filter(p => p.isThisWeek),
+      monthlyBirthdays: allWithDates.filter(p => p.isThisMonth),
+      allBirthdays: allWithDates,
+    };
   }, [rosterProfiles]);
 
   // Build roster with profile data
@@ -589,16 +596,24 @@ export default function CoachDashboard() {
                     <Cake className="h-5 w-5 text-pink-500" />
                     Team Birthdays
                   </CardTitle>
-                  <CardDescription>Upcoming birthdays this week</CardDescription>
+                  <CardDescription>
+                    {upcomingBirthdays.length > 0 
+                      ? `${upcomingBirthdays.length} birthday(s) this week`
+                      : monthlyBirthdays.length > 0
+                      ? `${monthlyBirthdays.length} birthday(s) coming up this month`
+                      : `${allBirthdays.length} birthdays on the team`}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {upcomingBirthdays.length === 0 ? (
+                  {allBirthdays.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Cake className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No upcoming birthdays this week</p>
+                      <p>No birthdays on file</p>
+                      <p className="text-sm">Birthdays will be added from registration data</p>
                     </div>
-                  ) : (
+                  ) : upcomingBirthdays.length > 0 ? (
                     <div className="space-y-3">
+                      <h4 className="font-medium text-sm text-muted-foreground">This Week</h4>
                       {upcomingBirthdays.map((person) => (
                         <div 
                           key={person.id} 
@@ -626,6 +641,61 @@ export default function CoachDashboard() {
                           )}
                         </div>
                       ))}
+                    </div>
+                  ) : monthlyBirthdays.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm text-muted-foreground">Coming Up This Month</h4>
+                      {monthlyBirthdays.map((person) => (
+                        <div 
+                          key={person.id} 
+                          className="flex items-center justify-between p-4 rounded-lg border"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-muted">
+                              <Cake className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {person.first_name} {person.last_name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(person.nextBirthday, 'EEEE, MMMM d')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="text-center py-4 text-muted-foreground">
+                        <Cake className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>No birthdays this month</p>
+                      </div>
+                      <h4 className="font-medium text-sm text-muted-foreground">Upcoming Birthdays</h4>
+                      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                        {allBirthdays.slice(0, 6).map((person) => (
+                          <div 
+                            key={person.id} 
+                            className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30"
+                          >
+                            <Cake className="h-4 w-4 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {person.first_name} {person.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(person.nextBirthday, 'MMM d, yyyy')}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {allBirthdays.length > 6 && (
+                        <p className="text-xs text-center text-muted-foreground">
+                          +{allBirthdays.length - 6} more birthdays
+                        </p>
+                      )}
                     </div>
                   )}
                 </CardContent>
