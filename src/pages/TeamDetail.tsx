@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -18,6 +19,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -78,6 +81,13 @@ export default function TeamDetail() {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isEditMemberOpen, setIsEditMemberOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [bulkDeleteConfirmText, setBulkDeleteConfirmText] = useState("");
   const [newMember, setNewMember] = useState({
     user_id: "",
     role: "athlete",
@@ -192,10 +202,56 @@ export default function TeamDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-members", id] });
+      setMemberToDelete(null);
+      setDeleteConfirmText("");
       toast({ title: "Member removed" });
     },
     onError: (error) => {
       toast({ title: "Error removing member", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const bulkRemoveMembersMutation = useMutation({
+    mutationFn: async (memberIds: string[]) => {
+      const { error } = await supabase
+        .from("team_members")
+        .delete()
+        .in("id", memberIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-members", id] });
+      setSelectedMembers([]);
+      setIsBulkDeleteOpen(false);
+      setBulkDeleteConfirmText("");
+      toast({ title: `${selectedMembers.length} members removed` });
+    },
+    onError: (error) => {
+      toast({ title: "Error removing members", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: async (member: { id: string; role: string; jersey_number: string | null; position: string | null; is_captain: boolean }) => {
+      const { error } = await supabase
+        .from("team_members")
+        .update({
+          role: member.role,
+          jersey_number: member.jersey_number,
+          position: member.position,
+          is_captain: member.is_captain,
+        })
+        .eq("id", member.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-members", id] });
+      setIsEditMemberOpen(false);
+      setEditingMember(null);
+      toast({ title: "Member updated" });
+    },
+    onError: (error) => {
+      toast({ title: "Error updating member", description: error.message, variant: "destructive" });
     },
   });
 
@@ -461,21 +517,67 @@ export default function TeamDetail() {
               </div>
             ) : (
               <div className="space-y-6">
+                {/* Bulk Actions Bar */}
+                {selectedMembers.length > 0 && (
+                  <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
+                    <span className="text-sm font-medium">{selectedMembers.length} selected</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedMembers([])}
+                    >
+                      Clear Selection
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setIsBulkDeleteOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Selected
+                    </Button>
+                  </div>
+                )}
+                
                 {staff.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-2">Staff</h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={staff.every(m => selectedMembers.includes(m.id))}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedMembers([...selectedMembers, ...staff.map(m => m.id)]);
+                                } else {
+                                  setSelectedMembers(selectedMembers.filter(id => !staff.find(m => m.id === id)));
+                                }
+                              }}
+                            />
+                          </TableHead>
                           <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Role</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
+                          <TableHead className="w-[100px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {staff.map((member) => (
                           <TableRow key={member.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedMembers.includes(member.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedMembers([...selectedMembers, member.id]);
+                                  } else {
+                                    setSelectedMembers(selectedMembers.filter(id => id !== member.id));
+                                  }
+                                }}
+                              />
+                            </TableCell>
                             <TableCell className="font-medium">
                               {member.profile?.first_name} {member.profile?.last_name}
                             </TableCell>
@@ -486,13 +588,25 @@ export default function TeamDetail() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeMemberMutation.mutate(member.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setEditingMember(member);
+                                    setIsEditMemberOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setMemberToDelete(member)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -506,16 +620,40 @@ export default function TeamDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-[40px]">
+                            <Checkbox
+                              checked={athletes.every(m => selectedMembers.includes(m.id))}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedMembers([...selectedMembers, ...athletes.map(m => m.id)]);
+                                } else {
+                                  setSelectedMembers(selectedMembers.filter(id => !athletes.find(m => m.id === id)));
+                                }
+                              }}
+                            />
+                          </TableHead>
                           <TableHead className="w-[80px]">#</TableHead>
                           <TableHead>Name</TableHead>
                           <TableHead>Position</TableHead>
                           <TableHead>Email</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
+                          <TableHead className="w-[100px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {athletes.map((member) => (
                           <TableRow key={member.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedMembers.includes(member.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedMembers([...selectedMembers, member.id]);
+                                  } else {
+                                    setSelectedMembers(selectedMembers.filter(id => id !== member.id));
+                                  }
+                                }}
+                              />
+                            </TableCell>
                             <TableCell className="font-bold">{member.jersey_number || "-"}</TableCell>
                             <TableCell className="font-medium">
                               {member.profile?.first_name} {member.profile?.last_name}
@@ -524,13 +662,25 @@ export default function TeamDetail() {
                             <TableCell>{member.position || "-"}</TableCell>
                             <TableCell>{member.profile?.email}</TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeMemberMutation.mutate(member.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setEditingMember(member);
+                                    setIsEditMemberOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setMemberToDelete(member)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -542,6 +692,152 @@ export default function TeamDetail() {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit Member Dialog */}
+        <Dialog open={isEditMemberOpen} onOpenChange={setIsEditMemberOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Team Member</DialogTitle>
+              <DialogDescription>
+                Update member details
+              </DialogDescription>
+            </DialogHeader>
+            {editingMember && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input 
+                    value={`${editingMember.profile?.first_name || ''} ${editingMember.profile?.last_name || ''}`} 
+                    disabled 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select
+                    value={editingMember.role}
+                    onValueChange={(value) => setEditingMember({ ...editingMember, role: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="athlete">Athlete</SelectItem>
+                      <SelectItem value="coach">Head Coach</SelectItem>
+                      <SelectItem value="assistant_coach">Assistant Coach</SelectItem>
+                      <SelectItem value="team_manager">Team Manager</SelectItem>
+                      <SelectItem value="trainer">Trainer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Jersey #</Label>
+                    <Input
+                      value={editingMember.jersey_number || ''}
+                      onChange={(e) => setEditingMember({ ...editingMember, jersey_number: e.target.value })}
+                      placeholder="e.g., 23"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Position</Label>
+                    <Input
+                      value={editingMember.position || ''}
+                      onChange={(e) => setEditingMember({ ...editingMember, position: e.target.value })}
+                      placeholder="e.g., Guard"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="is-captain"
+                    checked={editingMember.is_captain || false}
+                    onCheckedChange={(checked) => setEditingMember({ ...editingMember, is_captain: !!checked })}
+                  />
+                  <Label htmlFor="is-captain">Team Captain</Label>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditMemberOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={() => editingMember && updateMemberMutation.mutate({
+                  id: editingMember.id,
+                  role: editingMember.role,
+                  jersey_number: editingMember.jersey_number,
+                  position: editingMember.position,
+                  is_captain: editingMember.is_captain || false,
+                })}
+                disabled={updateMemberMutation.isPending}
+              >
+                {updateMemberMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Single Delete Confirmation Dialog */}
+        <Dialog open={!!memberToDelete} onOpenChange={(open) => !open && setMemberToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. Type <strong>DELETE</strong> to confirm.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p>
+                You are about to remove <strong>{memberToDelete?.profile?.first_name} {memberToDelete?.profile?.last_name}</strong> from the team.
+              </p>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE to confirm"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMemberToDelete(null)}>Cancel</Button>
+              <Button 
+                variant="destructive"
+                disabled={deleteConfirmText !== "DELETE" || removeMemberMutation.isPending}
+                onClick={() => memberToDelete && removeMemberMutation.mutate(memberToDelete.id)}
+              >
+                {removeMemberMutation.isPending ? "Removing..." : "Remove Member"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Delete Confirmation Dialog */}
+        <Dialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Bulk Deletion</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. Type <strong>DELETE</strong> to confirm.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p>
+                You are about to remove <strong>{selectedMembers.length}</strong> members from the team.
+              </p>
+              <Input
+                value={bulkDeleteConfirmText}
+                onChange={(e) => setBulkDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE to confirm"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsBulkDeleteOpen(false)}>Cancel</Button>
+              <Button 
+                variant="destructive"
+                disabled={bulkDeleteConfirmText !== "DELETE" || bulkRemoveMembersMutation.isPending}
+                onClick={() => bulkRemoveMembersMutation.mutate(selectedMembers)}
+              >
+                {bulkRemoveMembersMutation.isPending ? "Removing..." : `Remove ${selectedMembers.length} Members`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

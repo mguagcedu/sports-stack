@@ -17,6 +17,7 @@ import PendingApprovals from "./pages/PendingApprovals";
 import Schools from "./pages/Schools";
 import SchoolDetail from "./pages/SchoolDetail";
 import Organizations from "./pages/Organizations";
+import OrganizationDetail from "./pages/OrganizationDetail";
 import Districts from "./pages/Districts";
 import DistrictDetail from "./pages/DistrictDetail";
 import ImportData from "./pages/ImportData";
@@ -115,6 +116,11 @@ const App = () => (
             <Route path="/organizations" element={
               <ProtectedRoute pageKey="organizations">
                 <Organizations />
+              </ProtectedRoute>
+            } />
+            <Route path="/organizations/:id" element={
+              <ProtectedRoute pageKey="organizations">
+                <OrganizationDetail />
               </ProtectedRoute>
             } />
             
