@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -20,7 +20,6 @@ import { useToast } from "@/hooks/use-toast";
 import { FileText, Ticket, ExternalLink, Info, AlertCircle, Save, Loader2, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { GoFanConnectWizard, FinalFormsLinks, IntegrationDisclaimer } from "@/components/integrations";
-import { INTEGRATION_DISCLAIMER } from "@/lib/integrations";
 
 interface School {
   id: string;
@@ -46,12 +45,16 @@ export default function Integrations() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
+  const PAGE_SIZE = 100;
+
   const [selectedEntityType, setSelectedEntityType] = useState<"school" | "district">("school");
   const [selectedEntityId, setSelectedEntityId] = useState<string>("");
   const [isGoFanWizardOpen, setIsGoFanWizardOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [searchLimit, setSearchLimit] = useState(PAGE_SIZE);
+
   // Form state
   const [finalformsUrl, setFinalformsUrl] = useState("");
   const [gofanUrl, setGofanUrl] = useState("");
@@ -59,63 +62,89 @@ export default function Integrations() {
   const [gofanEnabled, setGofanEnabled] = useState(false);
   const [urlError, setUrlError] = useState<string | null>(null);
 
-  // Fetch schools
-  const { data: schools, isLoading: schoolsLoading } = useQuery({
-    queryKey: ["schools-integrations"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("schools")
-        .select("id, name, state, finalforms_portal_url, gofan_school_url, finalforms_enabled, gofan_enabled")
-        .order("name");
-      if (error) throw error;
-      return data as School[];
-    },
-  });
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(searchQuery.trim()), 250);
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
 
-  // Fetch districts
-  const { data: districts, isLoading: districtsLoading } = useQuery({
-    queryKey: ["districts-integrations"],
+  useEffect(() => {
+    setSearchLimit(PAGE_SIZE);
+  }, [debouncedQuery, selectedEntityType]);
+
+  const {
+    data: searchResults,
+    isLoading: searchLoading,
+    error: searchError,
+  } = useQuery({
+    queryKey: ["integrations-entity-search", selectedEntityType, debouncedQuery, searchLimit],
+    enabled: debouncedQuery.length > 0,
     queryFn: async () => {
+      const q = debouncedQuery.replace(/,/g, " ").trim();
+      if (!q) return [];
+
+      if (selectedEntityType === "school") {
+        const { data, error } = await supabase
+          .from("schools")
+          .select("id, name, state, finalforms_portal_url, gofan_school_url, finalforms_enabled, gofan_enabled")
+          .or(`name.ilike.%${q}%,state.ilike.%${q}%`)
+          .order("name")
+          .limit(searchLimit);
+
+        if (error) throw error;
+        return data as School[];
+      }
+
       const { data, error } = await supabase
         .from("districts")
         .select("id, name, state, finalforms_portal_url, gofan_school_url, finalforms_enabled, gofan_enabled")
-        .order("name");
+        .or(`name.ilike.%${q}%,state.ilike.%${q}%`)
+        .order("name")
+        .limit(searchLimit);
+
       if (error) throw error;
       return data as District[];
     },
   });
 
-  // Get the currently selected entity
-  const selectedEntity = selectedEntityType === "school" 
-    ? schools?.find(s => s.id === selectedEntityId)
-    : districts?.find(d => d.id === selectedEntityId);
+  const { data: selectedEntity, isLoading: selectedEntityLoading } = useQuery({
+    queryKey: ["integrations-entity", selectedEntityType, selectedEntityId],
+    enabled: !!selectedEntityId,
+    queryFn: async () => {
+      const table = selectedEntityType === "school" ? "schools" : "districts";
+      const { data, error } = await supabase
+        .from(table)
+        .select("id, name, state, finalforms_portal_url, gofan_school_url, finalforms_enabled, gofan_enabled")
+        .eq("id", selectedEntityId)
+        .maybeSingle();
 
-  // Update form when entity changes
+      if (error) throw error;
+      return data as School | District | null;
+    },
+  });
+
+  useEffect(() => {
+    if (!selectedEntity) return;
+
+    setFinalformsUrl(selectedEntity.finalforms_portal_url || "");
+    setGofanUrl(selectedEntity.gofan_school_url || "");
+    setFinalformsEnabled(selectedEntity.finalforms_enabled || false);
+    setGofanEnabled(selectedEntity.gofan_enabled || false);
+  }, [selectedEntity]);
+
   const handleEntityChange = (id: string) => {
     setSelectedEntityId(id);
     setUrlError(null);
-    
-    const entity = selectedEntityType === "school"
-      ? schools?.find(s => s.id === id)
-      : districts?.find(d => d.id === id);
-    
-    if (entity) {
-      setFinalformsUrl(entity.finalforms_portal_url || "");
-      setGofanUrl(entity.gofan_school_url || "");
-      setFinalformsEnabled(entity.finalforms_enabled || false);
-      setGofanEnabled(entity.gofan_enabled || false);
-    }
   };
 
   // Validate URL format
   const validateUrl = (url: string, type: "finalforms" | "gofan"): boolean => {
     if (!url) return true; // Empty is ok
-    
+
     if (!url.startsWith("https://")) {
       setUrlError(`${type === "finalforms" ? "FinalForms" : "GoFan"} URL must start with https://`);
       return false;
     }
-    
+
     setUrlError(null);
     return true;
   };
@@ -126,7 +155,7 @@ export default function Integrations() {
       if (!validateUrl(finalformsUrl, "finalforms") || !validateUrl(gofanUrl, "gofan")) {
         throw new Error("Invalid URL format");
       }
-      
+
       const { error } = await supabase
         .from("schools")
         .update({
@@ -136,11 +165,12 @@ export default function Integrations() {
           gofan_enabled: gofanEnabled,
         })
         .eq("id", selectedEntityId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["schools-integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["integrations-entity"] });
+      queryClient.invalidateQueries({ queryKey: ["integrations-entity-search"] });
       toast({ title: "Integration settings saved" });
     },
     onError: (error) => {
@@ -154,7 +184,7 @@ export default function Integrations() {
       if (!validateUrl(finalformsUrl, "finalforms") || !validateUrl(gofanUrl, "gofan")) {
         throw new Error("Invalid URL format");
       }
-      
+
       const { error } = await supabase
         .from("districts")
         .update({
@@ -164,11 +194,12 @@ export default function Integrations() {
           gofan_enabled: gofanEnabled,
         })
         .eq("id", selectedEntityId);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["districts-integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["integrations-entity"] });
+      queryClient.invalidateQueries({ queryKey: ["integrations-entity-search"] });
       toast({ title: "Integration settings saved" });
     },
     onError: (error) => {
@@ -185,7 +216,7 @@ export default function Integrations() {
   };
 
   const isSaving = saveSchoolMutation.isPending || saveDistrictMutation.isPending;
-  const isLoading = schoolsLoading || districtsLoading;
+  const isLoading = selectedEntityLoading;
 
   return (
     <DashboardLayout title="Integrations">
@@ -244,70 +275,56 @@ export default function Integrations() {
               </div>
             </div>
             
-            {/* Filtered results list */}
-            {searchQuery && (
+            {/* Search results list */}
+            {searchQuery.trim() && (
               <div className="border rounded-lg max-h-64 overflow-y-auto">
-                {selectedEntityType === "school" ? (
-                  (() => {
-                    const filtered = schools?.filter(s => 
-                      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      (s.state?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-                    ) || [];
-                    return filtered.length > 0 ? (
-                      <>
-                        <div className="px-4 py-2 bg-muted/50 text-sm text-muted-foreground border-b">
-                          {filtered.length} school{filtered.length !== 1 ? 's' : ''} found
-                        </div>
-                        {filtered.map((school) => (
-                          <button
-                            key={school.id}
-                            className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === school.id ? 'bg-primary/10 border-primary' : ''}`}
-                            onClick={() => {
-                              handleEntityChange(school.id);
-                              setSearchQuery("");
-                            }}
-                          >
-                            <div className="font-medium">{school.name}</div>
-                            <div className="text-sm text-muted-foreground">{school.state || 'No state'}</div>
-                          </button>
-                        ))}
-                      </>
-                    ) : (
-                      <div className="p-4 text-center text-muted-foreground">No schools found</div>
-                    );
-                  })()
+                {searchLoading ? (
+                  <div className="p-4 text-center text-muted-foreground">Searching…</div>
+                ) : searchError ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    Search failed. Please try again.
+                  </div>
+                ) : (searchResults?.length || 0) > 0 ? (
+                  <>
+                    <div className="px-4 py-2 bg-muted/50 text-sm text-muted-foreground border-b">
+                      Showing {searchResults?.length}
+                      {searchResults && searchResults.length === searchLimit ? "+" : ""} result
+                      {searchResults && searchResults.length !== 1 ? "s" : ""}
+                    </div>
+
+                    {searchResults?.map((entity) => (
+                      <button
+                        key={entity.id}
+                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === entity.id ? 'bg-primary/10 border-primary' : ''}`}
+                        onClick={() => {
+                          handleEntityChange(entity.id);
+                          setSearchQuery("");
+                        }}
+                      >
+                        <div className="font-medium">{entity.name}</div>
+                        <div className="text-sm text-muted-foreground">{entity.state || 'No state'}</div>
+                      </button>
+                    ))}
+
+                    {searchResults && searchResults.length === searchLimit && (
+                      <div className="p-2 border-t">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setSearchLimit((s) => s + PAGE_SIZE)}
+                        >
+                          Load more
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  (() => {
-                    const filtered = districts?.filter(d => 
-                      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      d.state.toLowerCase().includes(searchQuery.toLowerCase())
-                    ) || [];
-                    return filtered.length > 0 ? (
-                      <>
-                        <div className="px-4 py-2 bg-muted/50 text-sm text-muted-foreground border-b">
-                          {filtered.length} district{filtered.length !== 1 ? 's' : ''} found
-                        </div>
-                        {filtered.map((district) => (
-                          <button
-                            key={district.id}
-                            className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === district.id ? 'bg-primary/10 border-primary' : ''}`}
-                            onClick={() => {
-                              handleEntityChange(district.id);
-                              setSearchQuery("");
-                            }}
-                          >
-                            <div className="font-medium">{district.name}</div>
-                            <div className="text-sm text-muted-foreground">{district.state}</div>
-                          </button>
-                        ))}
-                      </>
-                    ) : (
-                      <div className="p-4 text-center text-muted-foreground">No districts found</div>
-                    );
-                  })()
+                  <div className="p-4 text-center text-muted-foreground">No results found</div>
                 )}
               </div>
             )}
+
             
             {/* Selected entity display */}
             {selectedEntity && !searchQuery && (
