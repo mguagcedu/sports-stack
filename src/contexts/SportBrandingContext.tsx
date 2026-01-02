@@ -85,33 +85,15 @@ export function SportBrandingProvider({ children }: SportBrandingProviderProps) 
 
     setIsLoading(true);
     try {
-      // Get user's team memberships
-      const { data: memberships, error: membershipError } = await supabase
+      // Get user's team memberships using raw query to avoid TS deep type issues
+      const membershipResult = await (supabase as any)
         .from('team_members')
-        .select(`
-          id,
-          team_id,
-          teams:team_id (
-            id,
-            name,
-            sport_code,
-            school_id,
-            schools:school_id (
-              id,
-              name,
-              logo_url,
-              primary_color,
-              secondary_color,
-              primary1_hex,
-              primary2_hex,
-              tertiary_hex_list
-            )
-          )
-        `)
+        .select('id, team_id')
         .eq('user_id', user.id)
         .eq('is_active', true);
 
-      if (membershipError) throw membershipError;
+      const memberships = membershipResult.data as Array<{ id: string; team_id: string }> | null;
+      if (membershipResult.error) throw membershipResult.error;
 
       if (!memberships || memberships.length === 0) {
         setSportContexts([]);
@@ -119,14 +101,37 @@ export function SportBrandingProvider({ children }: SportBrandingProviderProps) 
         return;
       }
 
+      // Fetch teams separately - use sport_key which is the correct column name
+      const membershipTeamIds = memberships.map(m => m.team_id);
+      const { data: teams } = await supabase
+        .from('teams')
+        .select('id, name, sport_key, school_id')
+        .in('id', membershipTeamIds);
+
+      if (!teams || teams.length === 0) {
+        setSportContexts([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch schools separately
+      const schoolIds = teams.map(t => t.school_id).filter(Boolean) as string[];
+      const { data: schools } = await supabase
+        .from('schools')
+        .select('id, name, logo_url, primary_color, secondary_color')
+        .in('id', schoolIds);
+
+      const schoolMap = new Map(schools?.map(s => [s.id, s]) || []);
+      const teamMap = new Map(teams.map(t => [t.id, { ...t, school: schoolMap.get(t.school_id || '') }]));
+
       // Get unique sport codes and their teams
-      const sportTeamMap = new Map<string, typeof memberships[0][]>();
+      const sportTeamMap = new Map<string, Array<{ teamId: string; team: any }>>();
       for (const m of memberships) {
-        const team = m.teams as any;
-        if (team?.sport_code) {
-          const existing = sportTeamMap.get(team.sport_code) || [];
-          existing.push(m);
-          sportTeamMap.set(team.sport_code, existing);
+        const team = teamMap.get(m.team_id);
+        if (team?.sport_key) {
+          const existing = sportTeamMap.get(team.sport_key) || [];
+          existing.push({ teamId: m.team_id, team });
+          sportTeamMap.set(team.sport_key, existing);
         }
       }
 
@@ -144,11 +149,11 @@ export function SportBrandingProvider({ children }: SportBrandingProviderProps) 
       });
 
       // Fetch team branding for all teams
-      const teamIds = memberships.map(m => m.team_id);
+      const allTeamIds = memberships.map(m => m.team_id);
       const { data: teamBrandings } = await supabase
         .from('team_branding')
         .select('*')
-        .in('team_id', teamIds);
+        .in('team_id', allTeamIds);
 
       const teamBrandingMap = new Map<string, any>();
       teamBrandings?.forEach(tb => {
@@ -161,8 +166,8 @@ export function SportBrandingProvider({ children }: SportBrandingProviderProps) 
       for (const [sportCode, teamMemberships] of sportTeamMap) {
         // Use the first team for this sport (could be enhanced to let user pick)
         const primaryMembership = teamMemberships[0];
-        const team = primaryMembership.teams as any;
-        const school = team?.schools as any;
+        const team = primaryMembership.team;
+        const school = team?.school;
 
         // Determine branding using hierarchy: Team > Sport > School > Default
         let branding = { ...defaultBranding };

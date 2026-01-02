@@ -8,6 +8,7 @@ export { LineGroupPill } from './LineGroupPill';
 export { RoleRibbon } from './RoleRibbon';
 export { PlayerSilhouette } from './PlayerSilhouette';
 export { CardEditDialog } from './CardEditDialog';
+export { SportFlipCard, SportCardsGrid } from './SportFlipCard';
 
 // Reveal exports
 export * from './reveal';
