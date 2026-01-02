@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { type, data } = await req.json();
+    const body = await req.json();
+    const { type, data, action, teamId, sportCode } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -21,6 +23,127 @@ serve(async (req) => {
     let systemPrompt = "";
     let userPrompt = "";
 
+    // Handle roster suggestion generation
+    if (action === "generate_roster_suggestions") {
+      console.log("Generating roster suggestions for team:", teamId);
+      
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      // Fetch team members
+      const { data: members, error: membersError } = await supabase
+        .from("team_members")
+        .select(`
+          id, jersey_number, position, role,
+          profiles(first_name, last_name),
+          athletes(height, weight, grad_year, dominant_hand)
+        `)
+        .eq("team_id", teamId)
+        .eq("role", "athlete");
+
+      if (membersError) {
+        console.error("Error fetching members:", membersError);
+        throw membersError;
+      }
+
+      // Fetch available positions for the sport
+      const { data: positions, error: posError } = await supabase
+        .from("sport_positions")
+        .select("id, position_key, display_name")
+        .eq("sport_code", sportCode || "general");
+
+      if (posError) {
+        console.error("Error fetching positions:", posError);
+      }
+
+      systemPrompt = `You are an AI sports analytics assistant helping coaches optimize their roster. 
+Analyze the team roster and suggest optimal position assignments based on player attributes.
+Return a JSON array of suggestions with this structure:
+[{
+  "team_member_id": "uuid",
+  "suggestion_type": "position",
+  "suggested_position_id": "uuid or null",
+  "suggested_line_group": "string or null",
+  "confidence_score": 0.0-1.0,
+  "reasoning": "Brief explanation"
+}]
+Only return the JSON array, no other text.`;
+
+      userPrompt = `Team members:
+${JSON.stringify(members, null, 2)}
+
+Available positions:
+${JSON.stringify(positions || [], null, 2)}
+
+Analyze these players and suggest optimal position assignments. Consider physical attributes, experience, and team balance. Generate 3-5 high-confidence suggestions.`;
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI gateway error:", response.status, errorText);
+        throw new Error(`AI gateway error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const content = result.choices?.[0]?.message?.content || "[]";
+      
+      // Parse the suggestions
+      let suggestions = [];
+      try {
+        // Extract JSON from the response
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          suggestions = JSON.parse(jsonMatch[0]);
+        }
+      } catch (parseError) {
+        console.error("Error parsing AI response:", parseError);
+        suggestions = [];
+      }
+
+      // Insert suggestions into database
+      if (suggestions.length > 0) {
+        const insertData = suggestions.map((s: any) => ({
+          team_id: teamId,
+          team_member_id: s.team_member_id,
+          suggestion_type: s.suggestion_type || "position",
+          suggested_position_id: s.suggested_position_id || null,
+          suggested_line_group: s.suggested_line_group || null,
+          confidence_score: s.confidence_score || 0.7,
+          reasoning: s.reasoning || "AI generated suggestion",
+          status: "pending",
+        }));
+
+        const { error: insertError } = await supabase
+          .from("ai_roster_suggestions")
+          .insert(insertData);
+
+        if (insertError) {
+          console.error("Error inserting suggestions:", insertError);
+        }
+      }
+
+      return new Response(JSON.stringify({ suggestions, count: suggestions.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Original role analysis logic
     switch (type) {
       case "analyze_request":
         systemPrompt = `You are an AI assistant helping administrators review role requests in a school athletics management system. 
