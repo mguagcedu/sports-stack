@@ -8,6 +8,7 @@ import { SchoolBrandingProvider } from "@/contexts/SchoolBrandingContext";
 import { ProtectedRoute, PublicOnlyRoute } from "@/components/guards/ProtectedRoute";
 import { AIChatbot } from "@/components/chat/AIChatbot";
 import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
+import { ErrorBoundary } from "@/components/errors/ErrorBoundary";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
@@ -42,18 +43,20 @@ import Integrations from "./pages/Integrations";
 import Volunteering from "./pages/Volunteering";
 import FinancialLedger from "./pages/FinancialLedger";
 import SportsCards from "./pages/SportsCards";
+import Fundraising from "./pages/Fundraising";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <SchoolBrandingProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <ImpersonationBanner />
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <SchoolBrandingProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <ImpersonationBanner />
         <BrowserRouter>
           <Routes>
             {/* Public landing page */}
@@ -227,6 +230,11 @@ const App = () => (
                 <FinancialLedger />
               </ProtectedRoute>
             } />
+            <Route path="/fundraising" element={
+              <ProtectedRoute pageKey="payments">
+                <Fundraising />
+              </ProtectedRoute>
+            } />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
@@ -235,8 +243,9 @@ const App = () => (
           <AIChatbot />
         </TooltipProvider>
       </SchoolBrandingProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

@@ -439,6 +439,101 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_donations: {
+        Row: {
+          amount: number
+          campaign_id: string
+          created_at: string
+          donor_email: string | null
+          donor_name: string | null
+          donor_user_id: string | null
+          id: string
+          is_anonymous: boolean | null
+          message: string | null
+          payment_reference: string | null
+          payment_status: string | null
+        }
+        Insert: {
+          amount: number
+          campaign_id: string
+          created_at?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          donor_user_id?: string | null
+          id?: string
+          is_anonymous?: boolean | null
+          message?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string
+          created_at?: string
+          donor_email?: string | null
+          donor_name?: string | null
+          donor_user_id?: string | null
+          id?: string
+          is_anonymous?: boolean | null
+          message?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "fundraising_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_sponsors: {
+        Row: {
+          campaign_id: string
+          contribution_amount: number | null
+          created_at: string
+          id: string
+          logo_placement: string | null
+          sponsor_id: string
+          sponsorship_level: string | null
+        }
+        Insert: {
+          campaign_id: string
+          contribution_amount?: number | null
+          created_at?: string
+          id?: string
+          logo_placement?: string | null
+          sponsor_id: string
+          sponsorship_level?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          contribution_amount?: number | null
+          created_at?: string
+          id?: string
+          logo_placement?: string | null
+          sponsor_id?: string
+          sponsorship_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_sponsors_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "fundraising_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_sponsors_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "sponsors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_events: {
         Row: {
           affected_user_id: string | null
@@ -2274,6 +2369,88 @@ export type Database = {
           },
           {
             foreignKeyName: "form_submissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fundraising_campaigns: {
+        Row: {
+          campaign_type: string | null
+          created_at: string
+          created_by_user_id: string | null
+          current_amount: number
+          description: string | null
+          end_date: string | null
+          goal_amount: number
+          id: string
+          image_url: string | null
+          is_public: boolean | null
+          name: string
+          organization_id: string | null
+          school_id: string | null
+          start_date: string | null
+          status: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          campaign_type?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          current_amount?: number
+          description?: string | null
+          end_date?: string | null
+          goal_amount?: number
+          id?: string
+          image_url?: string | null
+          is_public?: boolean | null
+          name: string
+          organization_id?: string | null
+          school_id?: string | null
+          start_date?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          campaign_type?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          current_amount?: number
+          description?: string | null
+          end_date?: string | null
+          goal_amount?: number
+          id?: string
+          image_url?: string | null
+          is_public?: boolean | null
+          name?: string
+          organization_id?: string | null
+          school_id?: string | null
+          start_date?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fundraising_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fundraising_campaigns_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fundraising_campaigns_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -4139,6 +4316,75 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      sponsors: {
+        Row: {
+          annual_commitment: number | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          notes: string | null
+          organization_id: string | null
+          school_id: string | null
+          tier: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          annual_commitment?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          notes?: string | null
+          organization_id?: string | null
+          school_id?: string | null
+          tier?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          annual_commitment?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string | null
+          school_id?: string | null
+          tier?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsors_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sport_bench_rules: {
         Row: {
