@@ -14,6 +14,7 @@ import {
   Link as LinkIcon 
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { FinalFormsLinks } from '@/components/integrations';
 
 interface IntegrationStatusCardProps {
   schoolId?: string;
@@ -105,6 +106,21 @@ export function IntegrationStatusCard({ schoolId, districtId, showConfigLink }: 
             )}
           </div>
         </div>
+
+        {/* FinalForms Quick Access */}
+        {hasFinalForms && settings && (
+          <div className="pt-2">
+            <FinalFormsLinks
+              config={{
+                stateCode: 'OH', // Default, should come from school/district
+                districtName: settings.name || '',
+                subdomainOverride: settings.finalforms_portal_url?.replace('https://', '').split('.finalforms.com')[0] || null,
+              }}
+              enabled={true}
+              compact
+            />
+          </div>
+        )}
 
         {/* GoFan Status */}
         <div className="flex items-center justify-between p-4 rounded-lg border">
