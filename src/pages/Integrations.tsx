@@ -19,6 +19,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Ticket, ExternalLink, Info, AlertCircle, Save, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { GoFanConnectWizard, FinalFormsLinks, IntegrationDisclaimer } from "@/components/integrations";
+import { INTEGRATION_DISCLAIMER } from "@/lib/integrations";
 
 interface School {
   id: string;
@@ -47,6 +49,7 @@ export default function Integrations() {
   
   const [selectedEntityType, setSelectedEntityType] = useState<"school" | "district">("school");
   const [selectedEntityId, setSelectedEntityId] = useState<string>("");
+  const [isGoFanWizardOpen, setIsGoFanWizardOpen] = useState(false);
   
   // Form state
   const [finalformsUrl, setFinalformsUrl] = useState("");
@@ -313,6 +316,21 @@ export default function Integrations() {
                       Coaches will use this link to verify athlete eligibility directly in FinalForms.
                     </AlertDescription>
                   </Alert>
+
+                  {finalformsEnabled && selectedEntity && (
+                    <div className="pt-4 border-t">
+                      <Label className="mb-3 block">Preview Links</Label>
+                      <FinalFormsLinks
+                        config={{
+                          stateCode: selectedEntity.state || "",
+                          districtName: selectedEntity.name,
+                          subdomainOverride: finalformsUrl?.replace("https://", "").replace(".finalforms.com", "") || null,
+                        }}
+                        enabled={finalformsEnabled}
+                        compact
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -365,6 +383,23 @@ export default function Integrations() {
                       configured on the Events page.
                     </AlertDescription>
                   </Alert>
+
+                  {gofanEnabled && selectedEntity && (
+                    <div className="pt-4 border-t">
+                      <Label className="mb-3 block">Connect Your School</Label>
+                      <Button variant="outline" onClick={() => setIsGoFanWizardOpen(true)}>
+                        Find School on GoFan
+                      </Button>
+                      <GoFanConnectWizard
+                        open={isGoFanWizardOpen}
+                        onOpenChange={setIsGoFanWizardOpen}
+                        stateCode={selectedEntity.state || ""}
+                        onConnect={(schoolId, _url) => {
+                          setGofanUrl(`https://gofan.co/app/school/${schoolId}`);
+                        }}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -407,6 +442,9 @@ export default function Integrations() {
             </CardContent>
           </Card>
         )}
+
+        {/* Legal Disclaimer */}
+        <IntegrationDisclaimer />
       </div>
     </DashboardLayout>
   );

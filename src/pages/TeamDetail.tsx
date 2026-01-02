@@ -42,11 +42,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Users, Building, Calendar, Trophy, Edit, UserPlus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Users, Building, Calendar, Trophy, Edit, UserPlus, Sparkles } from "lucide-react";
 import { CoachDelegationDialog } from "@/components/teams/CoachDelegationDialog";
 import { SanctionBadge } from "@/components/governance/SanctionBadge";
 import { SchoolLogo } from "@/components/branding/SchoolLogo";
 import { SportIcon } from "@/components/branding/SportIcon";
+import { AIRosterSuggestions } from "@/components/ai/AIRosterSuggestions";
 
 
 interface Profile {
@@ -365,6 +366,9 @@ export default function TeamDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* AI Roster Suggestions */}
+        <AIRosterSuggestions teamId={id!} />
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

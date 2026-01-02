@@ -30,9 +30,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Calendar, MapPin, Ticket, Clock } from "lucide-react";
+import { Plus, Search, Calendar, MapPin, Ticket, Clock, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { ScheduleUploader } from "@/components/events/ScheduleUploader";
+import { GoFanTicketButton } from "@/components/integrations";
 
 interface EventWithTeams {
   id: string;
@@ -49,6 +50,8 @@ interface EventWithTeams {
   max_capacity: number | null;
   tickets_sold: number | null;
   is_cancelled: boolean | null;
+  gofan_event_url: string | null;
+  ticketing_provider: string | null;
   organizations?: { name: string };
   home_team_name?: string;
   away_team_name?: string;
@@ -488,7 +491,19 @@ export default function Events() {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      {event.ticket_price > 0 ? (
+                      {event.gofan_event_url || event.ticketing_provider === 'gofan' ? (
+                        <div className="space-y-1">
+                          {event.ticket_price > 0 && (
+                            <div className="font-medium">${event.ticket_price}</div>
+                          )}
+                          <GoFanTicketButton
+                            eventTicketUrl={event.gofan_event_url}
+                            enabled={!!event.gofan_event_url || event.ticketing_provider === 'gofan'}
+                            size="sm"
+                            showBadge={false}
+                          />
+                        </div>
+                      ) : event.ticket_price > 0 ? (
                         <div>
                           <div className="font-medium">${event.ticket_price}</div>
                           <div className="text-xs text-muted-foreground">

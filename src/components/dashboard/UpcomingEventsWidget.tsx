@@ -32,7 +32,7 @@ export function UpcomingEventsWidget({
         .from('events')
         .select(`
           *,
-          organizations(name, gofan_enabled, gofan_school_id, gofan_school_url_override)
+          organizations(name)
         `)
         .gte('start_time', new Date().toISOString())
         .eq('is_cancelled', false)
@@ -114,8 +114,7 @@ export function UpcomingEventsWidget({
           <div className="space-y-3">
             {events.map((event) => {
               const eventDate = new Date(event.start_time);
-              const org = event.organizations;
-              const gofanEnabled = org?.gofan_enabled && showTickets;
+              const hasGoFanTicket = !!event.gofan_event_url && showTickets;
 
               return (
                 <div 
@@ -149,12 +148,10 @@ export function UpcomingEventsWidget({
                       )}
                     </div>
                   </div>
-                  {gofanEnabled && event.event_type === 'game' && (
+                  {hasGoFanTicket && event.event_type === 'game' && (
                     <div onClick={(e) => e.stopPropagation()}>
                       <GoFanTicketButton
                         eventTicketUrl={event.gofan_event_url}
-                        schoolGoFanUrl={org?.gofan_school_url_override}
-                        schoolGoFanId={org?.gofan_school_id}
                         size="sm"
                         variant="outline"
                         showBadge={false}

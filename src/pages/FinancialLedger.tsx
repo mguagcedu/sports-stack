@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -18,13 +19,16 @@ import {
   ShoppingBag,
   Gift,
   PiggyBank,
-  FileText
+  FileText,
+  Download
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { convertToCSV, downloadCSV, generateFilename } from '@/lib/csvExport';
 
 export default function FinancialLedger() {
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const { toast } = useToast();
 
   // Fetch teams for filter
   const { data: teams } = useQuery({
@@ -167,6 +171,37 @@ export default function FinancialLedger() {
   const totalExpenses = (equipmentData?.totalCost || 0) + (equipmentData?.refurbCosts || 0) + (concessionData?.purchases || 0);
   const netBalance = totalIncome - totalExpenses;
 
+  const handleExportSummary = () => {
+    const summaryData = [
+      { category: 'Total Income', amount: totalIncome, notes: 'Revenue + Concessions + Forfeited Deposits' },
+      { category: 'Total Expenses', amount: totalExpenses, notes: 'Equipment Cost + Refurbishment + Concession Purchases' },
+      { category: 'Net Balance', amount: netBalance, notes: 'Income - Expenses' },
+      { category: 'Equipment Retail Value', amount: equipmentData?.totalRetailValue || 0, notes: 'Current inventory value' },
+      { category: 'Equipment Cost Basis', amount: equipmentData?.totalCost || 0, notes: 'Purchase cost' },
+      { category: 'Refurbishment Costs', amount: equipmentData?.refurbCosts || 0, notes: 'Maintenance and repair' },
+      { category: 'Registration Revenue', amount: revenueData?.registration || 0, notes: 'From athlete registrations' },
+      { category: 'Fundraising Revenue', amount: revenueData?.fundraising || 0, notes: 'Fundraising campaigns' },
+      { category: 'Donations', amount: revenueData?.donation || 0, notes: 'Direct donations' },
+      { category: 'Ticketing Revenue', amount: revenueData?.ticketing || 0, notes: 'Event ticket sales' },
+      { category: 'Concession Sales', amount: concessionData?.sales || 0, notes: 'Concession stand income' },
+      { category: 'Concession Purchases', amount: concessionData?.purchases || 0, notes: 'Inventory costs' },
+      { category: 'Concession Profit', amount: concessionData?.profit || 0, notes: 'Net concession income' },
+      { category: 'Deposits Held', amount: depositData?.held || 0, notes: 'Volunteer deposits in escrow' },
+      { category: 'Deposits Refunded', amount: depositData?.refunded || 0, notes: 'Returned to volunteers' },
+      { category: 'Deposits Forfeited', amount: depositData?.forfeited || 0, notes: 'Retained as revenue' },
+    ];
+
+    const columns = [
+      { key: 'category', header: 'Category' },
+      { key: 'amount', header: 'Amount ($)', transform: (v: number) => v.toFixed(2) },
+      { key: 'notes', header: 'Notes' },
+    ];
+
+    const csv = convertToCSV(summaryData, columns);
+    downloadCSV(csv, generateFilename('financial-summary'));
+    toast({ title: 'Report exported', description: 'Financial summary has been downloaded.' });
+  };
+
   return (
     <DashboardLayout title="Financial Ledger">
       <div className="space-y-6">
@@ -175,8 +210,8 @@ export default function FinancialLedger() {
             <h1 className="text-2xl font-bold">Financial Ledger</h1>
             <p className="text-muted-foreground">Comprehensive financial tracking and reporting</p>
           </div>
-          <Button variant="outline">
-            <FileText className="mr-2 h-4 w-4" />
+          <Button variant="outline" onClick={handleExportSummary}>
+            <Download className="mr-2 h-4 w-4" />
             Export Report
           </Button>
         </div>
