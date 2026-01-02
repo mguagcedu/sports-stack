@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Building2, Plus, Search, MapPin, Loader2, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { DistrictSearchCombobox, District } from '@/components/organizations/DistrictSearchCombobox';
 import { SchoolSearchCombobox, School } from '@/components/organizations/SchoolSearchCombobox';
 
@@ -48,6 +49,7 @@ const TIER_COLORS: Record<SubscriptionTier, string> = {
 };
 
 export default function Organizations() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -119,7 +121,7 @@ export default function Organizations() {
     queryFn: async () => {
       let query = supabase
         .from('organizations')
-        .select('*')
+        .select('*, teams(id)')
         .order('name');
 
       if (searchQuery) {
@@ -128,7 +130,7 @@ export default function Organizations() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Organization[];
+      return data as (Organization & { teams: { id: string }[] })[];
     }
   });
 
@@ -394,10 +396,15 @@ export default function Organizations() {
                     )}
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Users className="h-3 w-3" />
-                      0 teams
+                      {(org as any).teams?.length || 0} teams
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-4"
+                    onClick={() => navigate(`/organizations/${org.id}`)}
+                  >
                     View Details
                   </Button>
                 </CardContent>

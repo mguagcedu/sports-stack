@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Ticket, ExternalLink, Info, AlertCircle, Save, Loader2 } from "lucide-react";
+import { FileText, Ticket, ExternalLink, Info, AlertCircle, Save, Loader2, Search } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { GoFanConnectWizard, FinalFormsLinks, IntegrationDisclaimer } from "@/components/integrations";
 import { INTEGRATION_DISCLAIMER } from "@/lib/integrations";
@@ -50,6 +50,7 @@ export default function Integrations() {
   const [selectedEntityType, setSelectedEntityType] = useState<"school" | "district">("school");
   const [selectedEntityId, setSelectedEntityId] = useState<string>("");
   const [isGoFanWizardOpen, setIsGoFanWizardOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Form state
   const [finalformsUrl, setFinalformsUrl] = useState("");
@@ -204,7 +205,7 @@ export default function Integrations() {
               Choose a school or district to configure integrations
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Entity Type</Label>
@@ -213,6 +214,7 @@ export default function Integrations() {
                   onValueChange={(v: "school" | "district") => {
                     setSelectedEntityType(v);
                     setSelectedEntityId("");
+                    setSearchQuery("");
                     setFinalformsUrl("");
                     setGofanUrl("");
                     setFinalformsEnabled(false);
@@ -229,29 +231,71 @@ export default function Integrations() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>{selectedEntityType === "school" ? "School" : "District"}</Label>
-                <Select value={selectedEntityId} onValueChange={handleEntityChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Select a ${selectedEntityType}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedEntityType === "school" ? (
-                      schools?.map((school) => (
-                        <SelectItem key={school.id} value={school.id}>
-                          {school.name} {school.state && `(${school.state})`}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      districts?.map((district) => (
-                        <SelectItem key={district.id} value={district.id}>
-                          {district.name} ({district.state})
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <Label>Search {selectedEntityType === "school" ? "Schools" : "Districts"}</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={`Search ${selectedEntityType}s by name...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </div>
+            
+            {/* Filtered results list */}
+            {searchQuery && (
+              <div className="border rounded-lg max-h-64 overflow-y-auto">
+                {selectedEntityType === "school" ? (
+                  schools?.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .slice(0, 50)
+                    .map((school) => (
+                      <button
+                        key={school.id}
+                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === school.id ? 'bg-primary/10 border-primary' : ''}`}
+                        onClick={() => {
+                          handleEntityChange(school.id);
+                          setSearchQuery("");
+                        }}
+                      >
+                        <div className="font-medium">{school.name}</div>
+                        <div className="text-sm text-muted-foreground">{school.state || 'No state'}</div>
+                      </button>
+                    ))
+                ) : (
+                  districts?.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .slice(0, 50)
+                    .map((district) => (
+                      <button
+                        key={district.id}
+                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === district.id ? 'bg-primary/10 border-primary' : ''}`}
+                        onClick={() => {
+                          handleEntityChange(district.id);
+                          setSearchQuery("");
+                        }}
+                      >
+                        <div className="font-medium">{district.name}</div>
+                        <div className="text-sm text-muted-foreground">{district.state}</div>
+                      </button>
+                    ))
+                )}
+                {((selectedEntityType === "school" && schools?.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0) ||
+                  (selectedEntityType === "district" && districts?.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0)) && (
+                  <div className="p-4 text-center text-muted-foreground">No results found</div>
+                )}
+              </div>
+            )}
+            
+            {/* Selected entity display */}
+            {selectedEntity && !searchQuery && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Selected:</strong> {selectedEntity.name} ({selectedEntity.state})
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
 

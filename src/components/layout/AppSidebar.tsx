@@ -75,6 +75,7 @@ const managementNavItems: NavItem[] = [
   { title: 'Equipment', url: '/equipment', icon: Package, pageKey: 'equipment' },
   { title: 'Volunteering', url: '/volunteering', icon: HeartHandshake, pageKey: 'events' },
   { title: 'Finances', url: '/finances', icon: DollarSign, pageKey: 'payments' },
+  { title: 'Fundraising', url: '/fundraising', icon: HeartHandshake, pageKey: 'payments' },
 ];
 
 const adminNavItems: NavItem[] = [
