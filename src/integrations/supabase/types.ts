@@ -56,6 +56,76 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_roster_suggestions: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          id: string
+          reasoning: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          status: string | null
+          suggested_line_group: string | null
+          suggested_position_id: string | null
+          suggestion_type: string
+          team_id: string
+          team_member_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          reasoning?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string | null
+          suggested_line_group?: string | null
+          suggested_position_id?: string | null
+          suggestion_type: string
+          team_id: string
+          team_member_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          reasoning?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          status?: string | null
+          suggested_line_group?: string | null
+          suggested_position_id?: string | null
+          suggestion_type?: string
+          team_id?: string
+          team_member_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_roster_suggestions_suggested_position_id_fkey"
+            columns: ["suggested_position_id"]
+            isOneToOne: false
+            referencedRelation: "sport_positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_roster_suggestions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_roster_suggestions_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_positions: {
         Row: {
           created_at: string | null
@@ -2514,6 +2584,63 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          integration_type: string
+          ip_address: string | null
+          new_values: Json | null
+          old_values: Json | null
+          organization_id: string | null
+          school_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          integration_type: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          organization_id?: string | null
+          school_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          integration_type?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          organization_id?: string | null
+          school_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_audit_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_audit_log_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jersey_numbers: {
         Row: {
           created_at: string | null
@@ -2789,6 +2916,11 @@ export type Database = {
           city: string | null
           created_at: string
           district_id: string | null
+          finalforms_enabled: boolean | null
+          finalforms_subdomain_override: string | null
+          gofan_enabled: boolean | null
+          gofan_school_id: string | null
+          gofan_school_url_override: string | null
           id: string
           logo_url: string | null
           management_mode: string | null
@@ -2808,6 +2940,11 @@ export type Database = {
           city?: string | null
           created_at?: string
           district_id?: string | null
+          finalforms_enabled?: boolean | null
+          finalforms_subdomain_override?: string | null
+          gofan_enabled?: boolean | null
+          gofan_school_id?: string | null
+          gofan_school_url_override?: string | null
           id?: string
           logo_url?: string | null
           management_mode?: string | null
@@ -2827,6 +2964,11 @@ export type Database = {
           city?: string | null
           created_at?: string
           district_id?: string | null
+          finalforms_enabled?: boolean | null
+          finalforms_subdomain_override?: string | null
+          gofan_enabled?: boolean | null
+          gofan_school_id?: string | null
+          gofan_school_url_override?: string | null
           id?: string
           logo_url?: string | null
           management_mode?: string | null
