@@ -248,41 +248,63 @@ export default function Integrations() {
             {searchQuery && (
               <div className="border rounded-lg max-h-64 overflow-y-auto">
                 {selectedEntityType === "school" ? (
-                  schools?.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .slice(0, 50)
-                    .map((school) => (
-                      <button
-                        key={school.id}
-                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === school.id ? 'bg-primary/10 border-primary' : ''}`}
-                        onClick={() => {
-                          handleEntityChange(school.id);
-                          setSearchQuery("");
-                        }}
-                      >
-                        <div className="font-medium">{school.name}</div>
-                        <div className="text-sm text-muted-foreground">{school.state || 'No state'}</div>
-                      </button>
-                    ))
+                  (() => {
+                    const filtered = schools?.filter(s => 
+                      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (s.state?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+                    ) || [];
+                    return filtered.length > 0 ? (
+                      <>
+                        <div className="px-4 py-2 bg-muted/50 text-sm text-muted-foreground border-b">
+                          {filtered.length} school{filtered.length !== 1 ? 's' : ''} found
+                        </div>
+                        {filtered.map((school) => (
+                          <button
+                            key={school.id}
+                            className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === school.id ? 'bg-primary/10 border-primary' : ''}`}
+                            onClick={() => {
+                              handleEntityChange(school.id);
+                              setSearchQuery("");
+                            }}
+                          >
+                            <div className="font-medium">{school.name}</div>
+                            <div className="text-sm text-muted-foreground">{school.state || 'No state'}</div>
+                          </button>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="p-4 text-center text-muted-foreground">No schools found</div>
+                    );
+                  })()
                 ) : (
-                  districts?.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .slice(0, 50)
-                    .map((district) => (
-                      <button
-                        key={district.id}
-                        className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === district.id ? 'bg-primary/10 border-primary' : ''}`}
-                        onClick={() => {
-                          handleEntityChange(district.id);
-                          setSearchQuery("");
-                        }}
-                      >
-                        <div className="font-medium">{district.name}</div>
-                        <div className="text-sm text-muted-foreground">{district.state}</div>
-                      </button>
-                    ))
-                )}
-                {((selectedEntityType === "school" && schools?.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0) ||
-                  (selectedEntityType === "district" && districts?.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0)) && (
-                  <div className="p-4 text-center text-muted-foreground">No results found</div>
+                  (() => {
+                    const filtered = districts?.filter(d => 
+                      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      d.state.toLowerCase().includes(searchQuery.toLowerCase())
+                    ) || [];
+                    return filtered.length > 0 ? (
+                      <>
+                        <div className="px-4 py-2 bg-muted/50 text-sm text-muted-foreground border-b">
+                          {filtered.length} district{filtered.length !== 1 ? 's' : ''} found
+                        </div>
+                        {filtered.map((district) => (
+                          <button
+                            key={district.id}
+                            className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors border-b last:border-b-0 ${selectedEntityId === district.id ? 'bg-primary/10 border-primary' : ''}`}
+                            onClick={() => {
+                              handleEntityChange(district.id);
+                              setSearchQuery("");
+                            }}
+                          >
+                            <div className="font-medium">{district.name}</div>
+                            <div className="text-sm text-muted-foreground">{district.state}</div>
+                          </button>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="p-4 text-center text-muted-foreground">No districts found</div>
+                    );
+                  })()
                 )}
               </div>
             )}
