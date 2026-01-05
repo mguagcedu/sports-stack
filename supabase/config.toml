@@ -4,7 +4,7 @@ project_id = "ffnpobdcqcagjmlddvga"
 verify_jwt = false
 
 [functions.chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.import-schools]
 verify_jwt = false
@@ -16,7 +16,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.clear-schools]
-verify_jwt = false
+verify_jwt = true
 
 [functions.import-sanction-data]
 verify_jwt = false
@@ -25,10 +25,22 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.ai-role-assistant]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-schedule]
-verify_jwt = false
+verify_jwt = true
 
 [functions.extract-registration-data]
-verify_jwt = false
+verify_jwt = true
+
+[functions.impersonate]
+verify_jwt = true
+
+[functions.signed-url]
+verify_jwt = true
+
+[functions.upload-document]
+verify_jwt = true
+
+[functions.upload-photo]
+verify_jwt = true

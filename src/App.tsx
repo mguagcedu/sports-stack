@@ -10,6 +10,7 @@ import { AIChatbot } from "@/components/chat/AIChatbot";
 import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import { ErrorBoundary } from "@/components/errors/ErrorBoundary";
 import { NativeInitializer } from "@/components/native/NativeInitializer";
+import { SecurityProvider } from "@/components/security/SecurityProvider";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
@@ -56,11 +57,12 @@ const App = () => (
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <SchoolBrandingProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <ImpersonationBanner />
-          <BrowserRouter>
+            <SecurityProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <ImpersonationBanner />
+            <BrowserRouter>
             <Routes>
             {/* Public landing page */}
             <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
@@ -247,9 +249,10 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-          </BrowserRouter>
-          <AIChatbot />
-        </TooltipProvider>
+            </BrowserRouter>
+            <AIChatbot />
+          </TooltipProvider>
+        </SecurityProvider>
       </SchoolBrandingProvider>
         </AuthProvider>
       </QueryClientProvider>

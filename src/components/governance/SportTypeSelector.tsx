@@ -303,8 +303,20 @@ export function SportTypeSelector({
                                       alt={sport.sport_name}
                                       className="w-full h-full object-cover"
                                       onError={(e) => {
-                                        e.currentTarget.style.display = 'none';
-                                        e.currentTarget.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center ${MATURITY_COLORS[sport.maturity]}"><span class="text-white text-xs font-bold">${sport.sport_name.charAt(0)}</span></div>`;
+                                        const target = e.currentTarget;
+                                        target.style.display = 'none';
+                                        const parent = target.parentElement;
+                                        if (parent) {
+                                          // Create fallback using safe DOM methods instead of innerHTML
+                                          const fallback = document.createElement('div');
+                                          fallback.className = `w-full h-full flex items-center justify-center ${MATURITY_COLORS[sport.maturity] || 'bg-gray-500'}`;
+                                          const span = document.createElement('span');
+                                          span.className = 'text-white text-xs font-bold';
+                                          // Use textContent to prevent XSS
+                                          span.textContent = sport.sport_name?.charAt(0)?.toUpperCase() || '?';
+                                          fallback.appendChild(span);
+                                          parent.appendChild(fallback);
+                                        }
                                       }}
                                     />
                                   </div>

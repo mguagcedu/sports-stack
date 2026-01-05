@@ -9,12 +9,28 @@ export interface PasswordRequirements {
 }
 
 export const defaultPasswordRequirements: PasswordRequirements = {
-  minLength: 8,
+  minLength: 12,
   requireUppercase: true,
   requireLowercase: true,
   requireNumber: true,
-  requireSpecial: false,
+  requireSpecial: true,
 };
+
+// Common password patterns to reject
+const COMMON_PATTERNS = [
+  /^password/i,
+  /^123456/,
+  /^qwerty/i,
+  /^admin/i,
+  /^letmein/i,
+  /^welcome/i,
+  /^monkey/i,
+  /^dragon/i,
+];
+
+export function isCommonPassword(password: string): boolean {
+  return COMMON_PATTERNS.some(pattern => pattern.test(password));
+}
 
 export function createPasswordSchema(requirements: PasswordRequirements = defaultPasswordRequirements) {
   return z.string()
