@@ -5,7 +5,9 @@ import { AppSidebar } from './AppSidebar';
 import { RoleSwitcher } from './RoleSwitcher';
 import { NotificationBell } from './NotificationBell';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { MobileDashboardLayout } from './MobileDashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList } from '@/components/ui/breadcrumb';
@@ -18,6 +20,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -37,6 +40,16 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     return null;
   }
 
+  // Use mobile layout on mobile devices
+  if (isMobile) {
+    return (
+      <MobileDashboardLayout title={title}>
+        {children}
+      </MobileDashboardLayout>
+    );
+  }
+
+  // Desktop layout with sidebar
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">

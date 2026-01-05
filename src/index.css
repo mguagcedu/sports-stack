@@ -10,6 +10,15 @@
 
 /* Corporate/Enterprise Design System - Professional Blues and Grays */
 
+/* Safe Area CSS Variables for Mobile */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --keyboard-height: 0px;
+}
+
 @layer base {
   :root {
     --background: 0 0% 96%;
@@ -163,4 +172,67 @@
   .shadow-elegant {
     box-shadow: 0 10px 30px -10px hsl(var(--primary) / 0.2);
   }
+
+  /* Safe Area Utilities */
+  .safe-top {
+    padding-top: var(--safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: var(--safe-area-inset-bottom);
+  }
+
+  .safe-left {
+    padding-left: var(--safe-area-inset-left);
+  }
+
+  .safe-right {
+    padding-right: var(--safe-area-inset-right);
+  }
+
+  .pt-safe {
+    padding-top: max(1rem, var(--safe-area-inset-top));
+  }
+
+  .pb-safe {
+    padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+  }
+
+  .px-safe {
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
+  }
+
+  /* Keyboard-aware utilities */
+  .keyboard-aware {
+    margin-bottom: var(--keyboard-height);
+    transition: margin-bottom 0.25s ease-out;
+  }
+
+  /* Touch-friendly targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent text selection on mobile for UI elements */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Improved touch feedback */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+}
+
+/* Keyboard visibility state */
+body.keyboard-visible {
+  --keyboard-visible: 1;
+}
+
+body:not(.keyboard-visible) {
+  --keyboard-visible: 0;
 }
