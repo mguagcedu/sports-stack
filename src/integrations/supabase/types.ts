@@ -354,6 +354,7 @@ export type Database = {
           action: string
           compliance_tags: string[] | null
           created_at: string
+          data_classification: string | null
           entity_id: string | null
           entity_type: string
           id: string
@@ -361,6 +362,7 @@ export type Database = {
           ip_address: string | null
           new_data: Json | null
           old_data: Json | null
+          retention_days: number | null
           session_id: string | null
           tenant_id: string | null
           user_agent: string | null
@@ -370,6 +372,7 @@ export type Database = {
           action: string
           compliance_tags?: string[] | null
           created_at?: string
+          data_classification?: string | null
           entity_id?: string | null
           entity_type: string
           id?: string
@@ -377,6 +380,7 @@ export type Database = {
           ip_address?: string | null
           new_data?: Json | null
           old_data?: Json | null
+          retention_days?: number | null
           session_id?: string | null
           tenant_id?: string | null
           user_agent?: string | null
@@ -386,6 +390,7 @@ export type Database = {
           action?: string
           compliance_tags?: string[] | null
           created_at?: string
+          data_classification?: string | null
           entity_id?: string | null
           entity_type?: string
           id?: string
@@ -393,6 +398,7 @@ export type Database = {
           ip_address?: string | null
           new_data?: Json | null
           old_data?: Json | null
+          retention_days?: number | null
           session_id?: string | null
           tenant_id?: string | null
           user_agent?: string | null
@@ -2943,6 +2949,39 @@ export type Database = {
         }
         Relationships: []
       }
+      login_rate_limits: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          first_attempt_at: string | null
+          id: string
+          identifier: string
+          identifier_type: string
+          locked_until: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          identifier: string
+          identifier_type?: string
+          locked_until?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          identifier?: string
+          identifier_type?: string
+          locked_until?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       member_line_groups: {
         Row: {
           created_at: string | null
@@ -4320,6 +4359,51 @@ export type Database = {
           name?: string
           start_date?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      security_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          resolved_at: string | null
+          severity: string
+          source_ip: string | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          severity: string
+          source_ip?: string | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          severity?: string
+          source_ip?: string | null
+          title?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -6166,6 +6250,24 @@ export type Database = {
         Args: { _team_id?: string; _user_id: string }
         Returns: boolean
       }
+      check_rate_limit: {
+        Args: {
+          p_identifier: string
+          p_identifier_type?: string
+          p_lockout_minutes?: number
+          p_max_attempts?: number
+          p_window_minutes?: number
+        }
+        Returns: {
+          allowed: boolean
+          attempts_remaining: number
+          locked_until: string
+        }[]
+      }
+      clear_rate_limit: {
+        Args: { p_identifier: string; p_identifier_type?: string }
+        Returns: undefined
+      }
       get_org_features: { Args: { _org_id: string }; Returns: string[] }
       get_user_context: {
         Args: { _user_id: string }
@@ -6231,6 +6333,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      validate_user_session: { Args: { session_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:

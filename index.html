@@ -7,6 +7,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#0066CC" />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://ai.gateway.lovable.dev wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" />
+    
     <title>Sports Stack - Complete Athletic Program Management</title>
     <meta name="description" content="Everything your athletic program needs in one platform. Manage teams, athletes, forms, schedules, fundraising, sponsorships, and finances across every sport with built-in security and AI-powered automation." />
     <meta name="author" content="Sports Stack" />

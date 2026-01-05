@@ -6,14 +6,18 @@ import { getDefaultDashboard } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Shield, Mail, Lock, User, Loader2, AlertTriangle } from 'lucide-react';
 import { z } from 'zod';
+import { PasswordStrengthMeter } from '@/components/security/PasswordStrengthMeter';
+import { createPasswordSchema, defaultPasswordRequirements, isCommonPassword } from '@/lib/passwordValidation';
+import { checkClientRateLimit, clearClientRateLimit } from '@/lib/security';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const emailSchema = z.string().email('Please enter a valid email address').max(255);
-const passwordSchema = z.string().min(6, 'Password must be at least 6 characters').max(100);
+const passwordSchema = createPasswordSchema(defaultPasswordRequirements);
 const nameSchema = z.string().max(100).optional();
 
 export default function Auth() {
@@ -25,8 +29,10 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && !rolesLoading) {
@@ -41,10 +47,18 @@ export default function Auth() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setRateLimitError(null);
+    
+    // Client-side rate limiting
+    const rateCheck = checkClientRateLimit(`signin_${email}`, 5, 60000);
+    if (!rateCheck.allowed) {
+      const seconds = Math.ceil(rateCheck.resetIn / 1000);
+      setRateLimitError(`Too many login attempts. Please wait ${seconds} seconds before trying again.`);
+      return;
+    }
     
     try {
       emailSchema.parse(email);
-      passwordSchema.parse(password);
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast({
@@ -68,15 +82,26 @@ export default function Auth() {
           : error.message,
         variant: 'destructive'
       });
+    } else {
+      // Clear rate limit on successful login
+      clearClientRateLimit(`signin_${email}`);
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setRateLimitError(null);
+    
+    // Client-side rate limiting for signups
+    const rateCheck = checkClientRateLimit('signup', 3, 300000); // 3 attempts per 5 minutes
+    if (!rateCheck.allowed) {
+      const minutes = Math.ceil(rateCheck.resetIn / 60000);
+      setRateLimitError(`Too many signup attempts. Please wait ${minutes} minute(s) before trying again.`);
+      return;
+    }
     
     try {
       emailSchema.parse(email);
-      passwordSchema.parse(password);
       nameSchema.parse(firstName);
       nameSchema.parse(lastName);
     } catch (err) {
@@ -88,6 +113,40 @@ export default function Auth() {
         });
         return;
       }
+    }
+
+    // Check for common passwords
+    if (isCommonPassword(password)) {
+      toast({
+        title: 'Weak Password',
+        description: 'Please choose a stronger password. Avoid common words and patterns.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate password with strong requirements
+    try {
+      passwordSchema.parse(password);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast({
+          title: 'Password Requirements',
+          description: err.errors[0].message,
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
+
+    // Check password confirmation
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Password Mismatch',
+        description: 'Passwords do not match. Please try again.',
+        variant: 'destructive'
+      });
+      return;
     }
     
     setIsLoading(true);
@@ -151,6 +210,13 @@ export default function Auth() {
           </p>
         </div>
 
+        {rateLimitError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{rateLimitError}</AlertDescription>
+          </Alert>
+        )}
+
         <Card className="border-0 shadow-lg">
           <Tabs defaultValue="signin" className="w-full">
             <CardHeader className="pb-2">
@@ -175,6 +241,7 @@ export default function Auth() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10"
                         required
+                        autoComplete="email"
                       />
                     </div>
                   </div>
@@ -185,11 +252,12 @@ export default function Auth() {
                       <Input
                         id="signin-password"
                         type="password"
-                        placeholder="••••••••"
+                        placeholder="••••••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10"
                         required
+                        autoComplete="current-password"
                       />
                     </div>
                   </div>
@@ -253,6 +321,7 @@ export default function Auth() {
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
                           className="pl-10"
+                          autoComplete="given-name"
                         />
                       </div>
                     </div>
@@ -264,6 +333,7 @@ export default function Auth() {
                         placeholder="Doe"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
+                        autoComplete="family-name"
                       />
                     </div>
                   </div>
@@ -279,6 +349,7 @@ export default function Auth() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10"
                         required
+                        autoComplete="email"
                       />
                     </div>
                   </div>
@@ -289,17 +360,40 @@ export default function Auth() {
                       <Input
                         id="signup-password"
                         type="password"
-                        placeholder="••••••••"
+                        placeholder="••••••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10"
                         required
-                        minLength={6}
+                        minLength={12}
+                        autoComplete="new-password"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Must be at least 6 characters
-                    </p>
+                    <PasswordStrengthMeter 
+                      password={password} 
+                      requirements={defaultPasswordRequirements}
+                      showRequirements={true}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-confirm-password"
+                        type="password"
+                        placeholder="••••••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="pl-10"
+                        required
+                        minLength={12}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    {confirmPassword && password !== confirmPassword && (
+                      <p className="text-xs text-destructive">Passwords do not match</p>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3">
