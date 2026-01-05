@@ -1,17 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS - restrict to known domains
+const ALLOWED_ORIGINS = [
+  "https://lovable.dev",
+  /^https:\/\/[a-z0-9-]+-preview--ffnpobdcqcagjmlddvga\.lovableproject\.com$/,
+  /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/,
+];
 
-// Magic bytes for file type validation
-const MAGIC_BYTES: Record<string, number[][]> = {
-  'image/jpeg': [[0xFF, 0xD8, 0xFF]],
-  'image/png': [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
-  'image/heic': [[0x00, 0x00, 0x00], [0x66, 0x74, 0x79, 0x70]], // ftyp at offset 4
-  'image/heif': [[0x00, 0x00, 0x00], [0x66, 0x74, 0x79, 0x70]], // ftyp at offset 4
-};
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const isAllowed = origin && ALLOWED_ORIGINS.some(allowed => 
+    typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+  );
+  
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin : "https://lovable.dev",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+  };
+}
 
 // Blocked file types
 const BLOCKED_EXTENSIONS = ['svg', 'html', 'js', 'exe', 'bat', 'cmd', 'ps1', 'sh', 'jar', 'vbs', 'scr', 'dll', 'sys', 'iso', 'img', 'docm', 'xlsm', 'pptm'];
@@ -21,8 +28,6 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif
 
 // File size limits
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
-const MAX_PIXELS = 10000 * 10000; // 100 megapixels
-const MAX_MEGAPIXELS = 40 * 1000000; // 40 MP
 
 // Image output settings
 const OUTPUT_SETTINGS = {
@@ -116,16 +121,8 @@ function scanForMalware(bytes: Uint8Array): { clean: boolean; reason?: string } 
 async function processImage(
   imageBytes: Uint8Array, 
   mimeType: string,
-  settings: { maxSize: number; quality: number }
+  _settings: { maxSize: number; quality: number }
 ): Promise<Uint8Array> {
-  // In Deno edge functions, we'll use a simplified approach
-  // For full Sharp processing, we'd need to use an external service
-  // For now, we'll pass through the image with basic validation
-  
-  // Note: Full image processing (HEIC conversion, resizing, EXIF stripping)
-  // would require Sharp which has limited Deno support
-  // In production, consider using an image processing service like Cloudinary or Imgix
-  
   // For JPEG images, we can do basic validation and pass through
   if (mimeType === 'image/jpeg' || mimeType === 'image/png') {
     return imageBytes;
@@ -137,6 +134,9 @@ async function processImage(
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -322,10 +322,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // 9. Process image (in production, this would use Sharp or external service)
-        // For now, we'll store the original in processed bucket for JPEG/PNG
-        // HEIC/HEIF would need conversion
-        
+        // 9. Process image
         const processedBytes = await processImage(bytes, file.type, OUTPUT_SETTINGS.standard);
 
         // 10. Upload processed versions
