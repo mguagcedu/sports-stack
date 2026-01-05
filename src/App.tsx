@@ -9,6 +9,7 @@ import { ProtectedRoute, PublicOnlyRoute } from "@/components/guards/ProtectedRo
 import { AIChatbot } from "@/components/chat/AIChatbot";
 import { ImpersonationBanner } from "@/components/layout/ImpersonationBanner";
 import { ErrorBoundary } from "@/components/errors/ErrorBoundary";
+import { NativeInitializer } from "@/components/native/NativeInitializer";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
@@ -51,15 +52,16 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <SchoolBrandingProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <ImpersonationBanner />
-        <BrowserRouter>
-          <Routes>
+    <NativeInitializer>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <SchoolBrandingProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <ImpersonationBanner />
+          <BrowserRouter>
+            <Routes>
             {/* Public landing page */}
             <Route path="/" element={<PublicOnlyRoute><Landing /></PublicOnlyRoute>} />
             
@@ -249,8 +251,9 @@ const App = () => (
           <AIChatbot />
         </TooltipProvider>
       </SchoolBrandingProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </NativeInitializer>
   </ErrorBoundary>
 );
 
